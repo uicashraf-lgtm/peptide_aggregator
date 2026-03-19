@@ -1,0 +1,635 @@
+<?php
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class PA_Shortcodes {
+    private $api;
+
+    public function __construct(PA_Api_Client $api) {
+        $this->api = $api;
+        add_shortcode('peptide_prices_dashboard',     array($this, 'render_dashboard_shortcode'));
+        add_shortcode('peptide_suppliers_dashboard',  array($this, 'render_suppliers_shortcode'));
+                        add_shortcode('peptide_about_dashboard',      array($this, 'render_about_shortcode'));
+        add_action('wp_enqueue_scripts', array($this, 'register_assets'), 999);
+    }
+
+    public function register_assets() {
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', array(), '0.9.20');
+        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.20', false);
+        wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
+        wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
+        if (!is_admin()) {
+            wp_enqueue_style('pa-dashboard-css');
+            wp_enqueue_script('pa-dashboard-js');
+            wp_enqueue_script('pa-suppliers-js');
+            wp_enqueue_script('pa-about-js');
+
+            // Build the full PA_UI object here so it is available before dashboard.js
+            // runs regardless of whether scripts are loaded in <head> or footer.
+            $dose_labels = get_option('pa_dose_labels', array());
+            wp_add_inline_script('pa-dashboard-js',
+                'window.PA_UI = {' .
+                    'api_base:'     . json_encode($this->api->base_url()) . ',' .
+                    'sse_url:'      . json_encode($this->api->sse_url())  . ',' .
+                    'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','Ipamorelin/CJC-1295','BPC-157/TB-500','MOTS-c','BPC-157']) . ',' .
+                    'categories:'   . json_encode([
+                        ['name'=>'GLP-1','count'=>9],['name'=>'Healing','count'=>7],['name'=>'Blends','count'=>9],
+                        ['name'=>'Growth Hormones','count'=>10],['name'=>'Hormones & Reproductive','count'=>4],
+                        ['name'=>'Sleep & Recovery','count'=>1],['name'=>'Accessories','count'=>2],
+                    ]) . ',' .
+                    'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
+                    'sort_options:' . json_encode(['Popularity','Price: Low to High','Price: High to Low','Newest']) . ',' .
+                    'dose_labels:'  . json_encode(is_array($dose_labels) ? $dose_labels : new stdClass()) .
+                '};',
+                'before'
+            );
+            wp_add_inline_script('pa-suppliers-js',
+                'window.PA_SUPPLIERS_UI = window.PA_SUPPLIERS_UI || {}; window.PA_SUPPLIERS_UI.api_base = ' . json_encode($this->api->base_url()) . ';',
+                'before'
+            );
+            wp_add_inline_script('pa-about-js',
+                'window.PA_ABOUT_UI = window.PA_ABOUT_UI || {}; window.PA_ABOUT_UI.api_base = ' . json_encode($this->api->base_url()) . ';',
+                'before'
+            );
+        }
+    }
+
+    public function render_dashboard_shortcode() {
+        wp_enqueue_style('pa-dashboard-css');
+        wp_enqueue_script('pa-dashboard-js');
+
+        ob_start();
+        ?>
+        <script>
+        // PA_UI is already initialised by wp_add_inline_script() before dashboard.js loaded.
+        // These assignments only take effect if the shortcode runs after the script
+        // (e.g. footer-loaded scripts); they are harmless when scripts are in <head>.
+        window.PA_UI = window.PA_UI || {};
+        window.PA_UI.api_base = <?php echo json_encode($this->api->base_url()); ?>;
+        window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
+        </script>
+        <div class="pa-shell">
+                <section class="pa-search-panel">
+                    <div class="pa-search-row">
+                        <div class="pa-search-input-wrap">
+                            <span class="pa-search-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"></circle>
+                                    <line x1="20" y1="20" x2="16.5" y2="16.5"></line>
+                                </svg>
+                            </span>
+                            <input id="pa-search" type="search" placeholder="Search for peptides or suppliers..." />
+                        </div>
+                        <button id="pa-filter-btn" class="pa-filter-btn" type="button" aria-label="Open filters">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 5h18l-7 8v6l-4-2v-4z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="pa-popular-row">
+                        <span class="pa-label">Popular:</span>
+                        <div id="pa-popular" class="pa-chip-list"></div>
+                    </div>
+                    <div class="pa-divider"></div>
+                    <div class="pa-active-row">
+                        <div id="pa-active-filters" class="pa-active-list"></div>
+                        <button id="pa-clear-all" class="pa-clear-all" type="button">Clear All</button>
+                    </div>
+                </section>
+
+                <!-- Results bar -->
+                <div id="pa-results-bar" class="pa-results-bar">
+                    <div class="pa-results-left">
+                        <span id="pa-grid-count" class="pa-results-count"></span>
+                    </div>
+                    <div class="pa-results-right">
+                        <div class="pa-price-toggle">
+                            <span class="pa-price-toggle-label">Show prices:</span>
+                            <button id="pa-toggle-total" class="pa-ptoggle is-active" type="button">Total</button>
+                            <button id="pa-toggle-mgml" class="pa-ptoggle" type="button">mg/mL</button>
+                        </div>
+                        <label class="pa-sort-label">Sort cards by:
+                            <select id="pa-grid-sort" class="pa-grid-sort-select">
+                                <option value="name">Name</option>
+                                <option value="price_asc">Price: Low to High</option>
+                                <option value="price_desc">Price: High to Low</option>
+                                <option value="vendors">Most Vendors</option>
+                            </select>
+                        </label>
+                        <div class="pa-bar-icons">
+                            <button class="pa-bar-icon" type="button" title="Has coupon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>
+                            <button class="pa-bar-icon" type="button" title="Favourites"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+                            <button class="pa-bar-icon" type="button" title="US vendors only"><span class="pa-flag-us">US</span></button>
+                        </div>
+                        <div class="pa-view-toggle">
+                            <button id="pa-view-grid" class="pa-view-btn is-active" type="button" title="Grid view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+                            <button id="pa-view-list" class="pa-view-btn" type="button" title="List view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product grid -->
+                <div id="pa-product-grid" class="pa-product-grid">
+                    <p class="pa-loading">Loading products&#8230;</p>
+                </div>
+
+                <!-- Product detail (overlay within view) -->
+                <div id="pa-product-detail" class="pa-product-detail" style="display:none">
+                    <div class="pa-detail-layout">
+                        <div class="pa-detail-sidebar">
+                            <button id="pa-detail-back" class="pa-back-btn" type="button">&#8592; Back to Prices</button>
+                        </div>
+                        <div class="pa-detail-main">
+                            <div class="pa-detail-card">
+                                <div class="pa-detail-head">
+                                    <div>
+                                        <h2 id="pa-detail-name" class="pa-detail-name"></h2>
+                                        <span id="pa-detail-category" class="pa-cat-badge"></span>
+                                    </div>
+                                    <div id="pa-detail-head-icons" class="pa-pcard-head-icons"></div>
+                                </div>
+                                <p id="pa-detail-description" class="pa-detail-desc"></p>
+                            </div>
+                            <div id="pa-detail-dosage-section" class="pa-detail-dosage-card">
+                                <div class="pa-detail-dosage-head">
+                                    <span class="pa-detail-dosage-title">Select Dosage</span>
+                                    <div class="pa-detail-price-toggle-wrap">
+                                        <span class="pa-detail-toggle-label">Show prices:</span>
+                                        <button id="pa-detail-toggle-total" class="pa-ptoggle is-active" type="button">Total</button>
+                                        <button id="pa-detail-toggle-mgml" class="pa-ptoggle" type="button">mg/mL</button>
+                                    </div>
+                                </div>
+                                <div id="pa-detail-dosage-grid" class="pa-detail-dosage-grid"></div>
+                            </div>
+                            <div id="pa-detail-prices" class="pa-detail-prices"></div>
+                        </div>
+                    </div>
+                </div>
+        </div><!-- /.pa-shell -->
+
+        <!-- Detail supplier filter modal -->
+        <div id="pa-detail-supplier-modal" class="pa-modal" aria-hidden="true">
+            <div class="pa-modal-backdrop" data-dsm-close="1"></div>
+            <div class="pa-modal-card pa-dsm-card" role="dialog" aria-modal="true">
+                <div class="pa-modal-grip" aria-hidden="true"></div>
+                <div class="pa-modal-head">
+                    <h2>Filter Suppliers</h2>
+                    <div class="pa-modal-head-actions">
+                        <button id="pa-dsm-clear-all" class="pa-link-btn" type="button">Clear All</button>
+                        <button id="pa-dsm-close" class="pa-modal-close" type="button" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pa-dsm-search-wrap">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="pa-dsm-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input id="pa-dsm-search" class="pa-dsm-search-input" type="search" placeholder="Search suppliers...">
+                </div>
+                <div class="pa-dsm-status-row">
+                    <span id="pa-dsm-count">None selected</span>
+                    <div class="pa-dsm-status-actions">
+                        <button id="pa-dsm-select-all" class="pa-link-btn" type="button">Select All</button>
+                        <span class="pa-dot"></span>
+                        <button id="pa-dsm-clear-list" class="pa-link-btn pa-danger" type="button">Clear All</button>
+                    </div>
+                </div>
+                <div id="pa-dsm-list" class="pa-dsm-list"></div>
+                <div class="pa-modal-footer">
+                    <button id="pa-dsm-cancel" class="pa-modal-cancel-btn" type="button">Cancel</button>
+                    <button id="pa-dsm-apply" class="pa-modal-apply-btn" type="button">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter modal -->
+        <div id="pa-filter-modal" class="pa-modal" aria-hidden="true">
+            <div class="pa-modal-backdrop" data-close="1"></div>
+            <div class="pa-modal-card" role="dialog" aria-modal="true" aria-labelledby="pa-modal-title">
+                <div class="pa-modal-grip" aria-hidden="true"></div>
+                <div class="pa-modal-head">
+                    <h2 id="pa-modal-title">Filter &amp; Sort</h2>
+                    <div class="pa-modal-head-actions">
+                        <button id="pa-modal-clear-all" class="pa-link-btn" type="button">Clear All</button>
+                        <button id="pa-modal-close" class="pa-modal-close" type="button" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pa-modal-tabs">
+                    <button class="pa-modal-tab is-active" data-tab="filter" type="button">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg>
+                        Filter
+                    </button>
+                    <button class="pa-modal-tab" data-tab="sort" type="button">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 3v18"></path><path d="M6 3l-3 3"></path><path d="M6 3l3 3"></path>
+                            <path d="M18 21V3"></path><path d="M18 21l-3-3"></path><path d="M18 21l3-3"></path>
+                        </svg>
+                        Sort
+                    </button>
+                </div>
+                <div class="pa-modal-body">
+                    <div class="pa-tab-content is-active" data-content="filter">
+                        <div class="pa-toggle-list">
+                            <label class="pa-toggle-row"><span>In Stock Only</span><input type="checkbox" id="pa-instock-only"><i></i></label>
+                            <label class="pa-toggle-row"><span>Kits Only</span><input type="checkbox" id="pa-kits-only"><i></i></label>
+                            <label class="pa-toggle-row"><span>Blends Only</span><input type="checkbox" id="pa-blends-only"><i></i></label>
+                            <label class="pa-toggle-row"><span>Likes Only</span><input type="checkbox" id="pa-likes-only"><i></i></label>
+                        </div>
+                        <div class="pa-modal-divider"></div>
+                        <div class="pa-section-head">
+                            <h3>Categories</h3>
+                            <div class="pa-section-tools">
+                                <button class="pa-link-btn" data-action="toggle-category-search" type="button">Search</button>
+                                <span class="pa-dot"></span>
+                                <button class="pa-link-btn" data-action="cat-select-all" type="button">Select All</button>
+                                <span class="pa-dot"></span>
+                                <button class="pa-link-btn pa-danger" data-action="cat-clear-all" type="button">Clear All</button>
+                            </div>
+                        </div>
+                        <div id="pa-category-search-wrap" class="pa-search-inline-wrap is-hidden">
+                            <input id="pa-category-search" class="pa-search-inline" type="search" placeholder="Search categories..." />
+                        </div>
+                        <div id="pa-category-list" class="pa-check-list"></div>
+                        <div class="pa-section-head">
+                            <h3>Suppliers</h3>
+                            <div class="pa-section-tools">
+                                <button class="pa-link-btn" data-action="toggle-supplier-search" type="button">Search</button>
+                                <span class="pa-dot"></span>
+                                <label class="pa-inline-check"><input type="checkbox" id="pa-us-only"> US Only</label>
+                                <span class="pa-dot"></span>
+                                <button class="pa-link-btn" data-action="sup-select-all" type="button">Select All</button>
+                                <span class="pa-dot"></span>
+                                <button class="pa-link-btn pa-danger" data-action="sup-clear-all" type="button">Clear All</button>
+                            </div>
+                        </div>
+                        <div id="pa-supplier-search-wrap" class="pa-search-inline-wrap is-hidden">
+                            <input id="pa-supplier-search" class="pa-search-inline" type="search" placeholder="Search suppliers..." />
+                        </div>
+                        <div id="pa-supplier-list" class="pa-check-list"></div>
+                        <div class="pa-section-head">
+                            <h3>Price Range</h3>
+                            <div class="pa-section-tools">
+                                <button class="pa-link-btn" data-action="price-select-all" type="button">Select All</button>
+                                <span class="pa-dot"></span>
+                                <button class="pa-link-btn pa-danger" data-action="price-clear-all" type="button">Clear All</button>
+                            </div>
+                        </div>
+                        <div id="pa-price-range-grid" class="pa-price-grid"></div>
+                    </div>
+                    <div class="pa-tab-content" data-content="sort">
+                        <div id="pa-sort-list" class="pa-sort-list"></div>
+                    </div>
+                </div>
+                <div class="pa-modal-foot">
+                    <button id="pa-modal-cancel" class="pa-foot-btn is-cancel" type="button">Cancel</button>
+                    <button id="pa-modal-apply" class="pa-foot-btn is-apply" type="button">Apply</button>
+                </div>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function render_about_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'title' => 'About AminoPrices',
+            'lead' => 'AminoPrices helps you compare research peptide prices and suppliers in one place, so you can spend less time searching and more time evaluating options.',
+            'products_value' => '60+',
+            'products_label' => 'Products covered',
+            'suppliers_value' => '50+',
+            'suppliers_label' => 'Suppliers tracked',
+            'free_value' => '100%',
+            'free_label' => 'Free to use',
+            'speed_value' => 'Quick',
+            'speed_label' => 'Compare in minutes',
+            'suppliers_url' => home_url('/suppliers/'),
+            'prices_url' => home_url('/'),
+            'contact_title' => 'Questions or feedback?',
+            'contact_lead' => 'If you spot missing data, have a supplier suggestion, or want to share product feedback, reach out and we will take a look.',
+            'contact_label' => 'Email',
+            'contact_email' => 'contact@aminoprices.com',
+        ), $atts, 'peptide_about_dashboard');
+
+        $stats = $this->api->request('GET', '/api/stats');
+        if (!empty($stats['ok']) && is_array($stats['data'])) {
+            $data = $stats['data'];
+            if (isset($data['product_count']) && is_numeric($data['product_count'])) {
+                $atts['products_value'] = number_format_i18n((int) $data['product_count']);
+            }
+            if (isset($data['vendor_count']) && is_numeric($data['vendor_count'])) {
+                $atts['suppliers_value'] = number_format_i18n((int) $data['vendor_count']);
+            }
+        } else {
+            $vendors = $this->api->request('GET', '/api/vendors');
+            if (!empty($vendors['ok']) && is_array($vendors['data'])) {
+                $atts['suppliers_value'] = number_format_i18n(count($vendors['data']));
+            }
+            $products = $this->api->request('GET', '/api/products');
+            if (!empty($products['ok']) && is_array($products['data'])) {
+                $atts['products_value'] = number_format_i18n(count($products['data']));
+            }
+        }
+
+        wp_enqueue_style('pa-dashboard-css');
+        wp_enqueue_script('pa-about-js');
+
+        ob_start();
+        ?>
+        <script>
+        window.PA_ABOUT_UI = {
+            api_base: <?php echo json_encode($this->api->base_url()); ?>
+        };
+        </script>
+        <div class="pa-shell pa-about-shell">
+            <section class="pa-about-card">
+                <div class="pa-about-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="50" height="50" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <rect x="7" y="6" width="10" height="14" rx="2"></rect>
+                        <path d="M9 6V4h6v2"></path>
+                        <circle cx="12" cy="13" r="3"></circle>
+                    </svg>
+                </div>
+                <h1 class="pa-about-title"><?php echo esc_html($atts['title']); ?></h1>
+                <p class="pa-about-lead"><?php echo esc_html($atts['lead']); ?></p>
+                <div class="pa-about-stats">
+                    <div class="pa-about-stat">
+                        <span class="pa-about-stat-icon is-teal" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M12 2l8 4v12l-8 4-8-4V6l8-4z"></path>
+                                <path d="M12 22V12"></path>
+                                <path d="M20 6l-8 4-8-4"></path>
+                            </svg>
+                        </span>
+                        <div class="pa-about-stat-value" data-about-count="products"><?php echo esc_html($atts['products_value']); ?></div>
+                        <div class="pa-about-stat-label"><?php echo esc_html($atts['products_label']); ?></div>
+                    </div>
+                    <div class="pa-about-stat">
+                        <span class="pa-about-stat-icon is-blue" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M16 11a4 4 0 1 0-8 0"></path>
+                                <path d="M4 20a8 8 0 0 1 16 0"></path>
+                                <circle cx="12" cy="6" r="3"></circle>
+                            </svg>
+                        </span>
+                        <div class="pa-about-stat-value" data-about-count="suppliers"><?php echo esc_html($atts['suppliers_value']); ?></div>
+                        <div class="pa-about-stat-label"><?php echo esc_html($atts['suppliers_label']); ?></div>
+                    </div>
+                    <div class="pa-about-stat">
+                        <span class="pa-about-stat-icon is-green" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M12 2v20"></path>
+                                <path d="M16 6H9a3 3 0 0 0 0 6h6a3 3 0 0 1 0 6H8"></path>
+                            </svg>
+                        </span>
+                        <div class="pa-about-stat-value"><?php echo esc_html($atts['free_value']); ?></div>
+                        <div class="pa-about-stat-label"><?php echo esc_html($atts['free_label']); ?></div>
+                    </div>
+                    <div class="pa-about-stat">
+                        <span class="pa-about-stat-icon is-violet" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <circle cx="12" cy="12" r="8"></circle>
+                                <path d="M12 8v4l3 2"></path>
+                            </svg>
+                        </span>
+                        <div class="pa-about-stat-value"><?php echo esc_html($atts['speed_value']); ?></div>
+                        <div class="pa-about-stat-label"><?php echo esc_html($atts['speed_label']); ?></div>
+                    </div>
+                </div>
+                <div class="pa-about-actions">
+                    <a class="pa-about-btn is-outline" href="<?php echo esc_url($atts['suppliers_url']); ?>">Compare Suppliers</a>
+                    <a class="pa-about-btn is-primary" href="<?php echo esc_url($atts['prices_url']); ?>">View Prices</a>
+                </div>
+            </section>
+            <section class="pa-about-panels-section">
+                                <div class="pa-about-panels">
+                    <div class="pa-about-panel">
+                        <h2 class="pa-about-panel-title">How AminoPrices helps</h2>
+                        <p class="pa-about-panel-lead">Compare products and suppliers faster with consistent data.</p>
+                        <div class="pa-about-list">
+                            <div class="pa-about-list-item">
+                                <span class="pa-about-list-icon is-blue" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="6"></circle>
+                                        <line x1="20" y1="20" x2="16.5" y2="16.5"></line>
+                                    </svg>
+                                </span>
+                                <span>Search products quickly</span>
+                            </div>
+                            <div class="pa-about-list-item">
+                                <span class="pa-about-list-icon is-teal" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 6h14"></path>
+                                        <path d="M7 6l3 11"></path>
+                                        <path d="M17 6l-3 11"></path>
+                                        <path d="M9 17h6"></path>
+                                    </svg>
+                                </span>
+                                <span>Compare suppliers side-by-side</span>
+                            </div>
+                            <div class="pa-about-list-item">
+                                <span class="pa-about-list-icon is-green" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 3l7 3v6c0 4-2.5 7-7 9-4.5-2-7-5-7-9V6l7-3z"></path>
+                                    </svg>
+                                </span>
+                                <span>Keep the process transparent</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pa-about-panel">
+                        <h2 class="pa-about-panel-title">What you can review</h2>
+                        <p class="pa-about-panel-lead">Supplier profiles surface the essentials at a glance, including reviews and ratings.</p>
+                        <div class="pa-about-grid">
+                            <div class="pa-about-mini">
+                                <span class="pa-about-mini-icon is-amber" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 3l3 6 6 .5-4.5 4 1.2 6.5L12 17l-5.7 3 1.2-6.5L3 9.5 9 9l3-6z"></path>
+                                    </svg>
+                                </span>
+                                <span>Reviews &amp; ratings</span>
+                            </div>
+                            <div class="pa-about-mini">
+                                <span class="pa-about-mini-icon is-blue" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2l8 4v12l-8 4-8-4V6l8-4z"></path>
+                                        <path d="M12 22V12"></path>
+                                        <path d="M20 6l-8 4-8-4"></path>
+                                    </svg>
+                                </span>
+                                <span>Product coverage</span>
+                            </div>
+                            <div class="pa-about-mini">
+                                <span class="pa-about-mini-icon is-green" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2v20"></path>
+                                        <path d="M16 6H9a3 3 0 0 0 0 6h6a3 3 0 0 1 0 6H8"></path>
+                                    </svg>
+                                </span>
+                                <span>Price snapshots</span>
+                            </div>
+                            <div class="pa-about-mini">
+                                <span class="pa-about-mini-icon is-teal" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 3l7 3v6c0 4-2.5 7-7 9-4.5-2-7-5-7-9V6l7-3z"></path>
+                                    </svg>
+                                </span>
+                                <span>Supplier details</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="pa-about-contact">
+                <div class="pa-about-contact-card">
+                    <h2 class="pa-about-contact-title"><?php echo esc_html($atts['contact_title']); ?></h2>
+                    <p class="pa-about-contact-lead"><?php echo esc_html($atts['contact_lead']); ?></p>
+                    <div class="pa-about-contact-pill">
+                        <!-- <span class="pa-about-contact-label"><?php echo esc_html($atts['contact_label']); ?></span> -->
+                        <span class="pa-about-contact-email" data-copy-email="<?php echo esc_attr($atts['contact_email']); ?>"><?php echo esc_html($atts['contact_email']); ?></span>
+                        <button class="pa-about-copy-btn" type="button" data-copy-email="<?php echo esc_attr($atts['contact_email']); ?>" aria-label="Copy email">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function render_suppliers_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'prices_url' => home_url('/'),
+        ), $atts, 'peptide_suppliers_dashboard');
+
+        wp_enqueue_style('pa-dashboard-css');
+        wp_enqueue_script('pa-suppliers-js');
+
+        ob_start();
+        ?>
+        <script>
+        window.PA_SUPPLIERS_UI = {
+            api_base:   <?php echo json_encode($this->api->base_url()); ?>,
+            prices_url: <?php echo json_encode(esc_url($atts['prices_url'])); ?>
+        };
+        </script>
+        <div id="pas-shell" class="pa-shell">
+
+            <!-- Search panel -->
+            <section class="pa-search-panel">
+                <div class="pa-search-row">
+                    <div class="pa-search-input-wrap">
+                        <span class="pa-search-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.5" y2="16.5"></line>
+                            </svg>
+                        </span>
+                        <input id="pas-search" type="search" placeholder="Search suppliers..." />
+                    </div>
+                    <button id="pas-filter-btn" class="pa-filter-btn" type="button" aria-label="Open filters">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 5h18l-7 8v6l-4-2v-4z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="pa-popular-row">
+                    <span class="pa-label">Popular:</span>
+                    <div id="pas-popular" class="pa-chip-list"></div>
+                </div>
+                <div class="pa-divider"></div>
+                <div id="pas-active-row" class="pa-active-row">
+                    <div id="pas-active-filters" class="pa-active-list"></div>
+                    <button id="pas-clear-all" class="pa-clear-all" type="button">Clear All</button>
+                </div>
+            </section>
+
+            <!-- Results bar -->
+            <div id="pas-results-bar" class="pa-results-bar">
+                <div class="pa-results-left">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f4c842" stroke-width="2.5" style="flex-shrink:0"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span id="pas-count" class="pa-results-count"></span>
+                </div>
+                <div class="pa-results-right">
+                    <label class="pa-sort-label">Sort by:
+                        <select id="pas-sort" class="pa-grid-sort-select">
+                            <option value="name">Name</option>
+                            <option value="products">Product Count</option>
+                        </select>
+                    </label>
+                    <div class="pa-sort-dir-btns">
+                        <button id="pas-sort-asc" class="pa-sort-dir is-active" type="button" title="Ascending">&#8593;</button>
+                        <button id="pas-sort-desc" class="pa-sort-dir" type="button" title="Descending">&#8595;</button>
+                    </div>
+                    <div class="pa-bar-icons">
+                        <button id="pas-filter-coupon" class="pa-bar-icon" type="button" title="Has coupon">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                        </button>
+                        <button id="pas-filter-crypto" class="pa-bar-icon" type="button" title="Accepts crypto"><span style="font-weight:800;font-size:13px">&#8383;</span></button>
+                        <button id="pas-filter-favs" class="pa-bar-icon" type="button" title="Favourites">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        </button>
+                        <button id="pas-filter-us" class="pa-bar-icon" type="button" title="US vendors only"><span class="pa-flag-us">US</span></button>
+                    </div>
+                    <div class="pa-view-toggle">
+                        <button id="pas-view-grid" class="pa-view-btn is-active" type="button" title="Grid view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+                        <button id="pas-view-list" class="pa-view-btn" type="button" title="List view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier grid -->
+            <div id="pas-grid" class="pa-supplier-grid">
+                <p class="pa-loading">Loading suppliers&#8230;</p>
+            </div>
+
+            <!-- Payment methods modal -->
+            <div id="pa-pm-modal" class="pa-modal pa-pm-modal" aria-hidden="true">
+                <div class="pa-modal-backdrop" data-pm-close="1"></div>
+                <div class="pa-modal-card" role="dialog" aria-modal="true" aria-labelledby="pa-pm-modal-title">
+                    <div class="pa-modal-grip" aria-hidden="true"></div>
+                    <div class="pa-modal-head">
+                        <h2 id="pa-pm-modal-title">Payment Methods</h2>
+                        <div class="pa-modal-head-actions">
+                            <button class="pa-modal-close" type="button" data-pm-close="1" aria-label="Close">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="pa-modal-body">
+                        <div id="pa-pm-modal-list" class="pa-pm-modal-list"></div>
+                    </div>
+                    <div class="pa-modal-foot">
+                        <a id="pa-pm-modal-cta" class="pa-pm-modal-cta" href="#" target="_blank" rel="noopener noreferrer">Continue to Vendor</a>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /#pas-shell -->
+        <?php
+        return ob_get_clean();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

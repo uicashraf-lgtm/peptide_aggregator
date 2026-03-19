@@ -1,0 +1,457 @@
+.pa-shell {
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+  --input: #f1f5f9;
+  --line: #e2e8f0;
+  --line2: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --chip: #eef2f7;
+  --chip-active: #dbeafe;
+  --accent: #2563eb;
+  --danger: #ef4444;
+
+  max-width: 1620px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--text);
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: #f8fafc;
+}
+
+/* ---------- SEARCH PANEL ---------- */
+.pa-search-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 15px 12px 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+}
+
+.pa-search-row {
+  display: grid;
+  grid-template-columns: 1fr 56px;
+  gap: 12px;
+  align-items: center;
+}
+
+.pa-search-input-wrap { position: relative; display: flex; align-items: center; }
+
+.pa-search-icon {
+  position: absolute;
+  left: 16px;
+  color: var(--accent);
+}
+
+#pa-search, #pas-search {
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--input);
+  color: var(--text);
+  padding: 0 12px 0 44px;
+  font-size: 14px;
+}
+
+#pa-search::placeholder { color: var(--muted); }
+
+.pa-filter-btn {
+  height: 52px;
+  width: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: #eff6ff;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---------- CHIPS ---------- */
+.pa-chip {
+  background: var(--chip);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.pa-chip.is-active {
+  background: var(--chip-active);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.pa-chip:hover { background: #e2e8f0; }
+
+/* ---------- CARDS ---------- */
+.pa-product-card,
+.pa-pcard,
+.pa-scard,
+.pa-detail-card,
+.pa-detail-dosage-card,
+.pa-detail-prices {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.pa-product-card:hover,
+.pa-pcard:hover {
+  background: var(--panel-soft);
+}
+
+/* ---------- MODAL ---------- */
+.pa-modal-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+}
+
+.pa-modal-backdrop {
+  background: rgba(0,0,0,0.35);
+}
+
+/* ---------- TABLE ---------- */
+.pa-price-table thead th {
+  background: var(--panel-soft);
+  color: var(--muted);
+}
+
+.pa-price-table tbody tr:hover {
+  background: var(--panel-soft);
+}
+
+/* ---------- BUTTONS ---------- */
+.pa-foot-btn.is-cancel {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.pa-foot-btn.is-apply {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---------- NAV ---------- */
+.pa-nav-links {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.pa-nav-link {
+  color: var(--muted);
+}
+
+.pa-nav-link.is-active {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* ---------- INPUTS ---------- */
+.pa-search-inline,
+.pa-dsm-search-input {
+  background: var(--input);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+/* ---------- SECONDARY BLOCKS ---------- */
+.pa-check-item,
+.pa-sort-item,
+.pa-pcard-vendor-row,
+.pa-scard-info-row {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+/* ---------- TEXT ---------- */
+.pa-label,
+.pa-results-count,
+.pa-hero-sub {
+  color: var(--muted);
+}
+
+/* ---------- LINKS ---------- */
+.pa-buy-link {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---------- SCROLLBAR ---------- */
+.pa-modal-body,
+.pa-check-list {
+  scrollbar-color: rgba(100,116,139,0.4) transparent;
+}
+
+/* ---------- HOVER ---------- */
+.pa-check-item:hover,
+.pa-sort-item:hover,
+.pa-scard:hover {
+  background: var(--panel-soft);
+}
+
+
+/* =========================================================
+   FULL LIGHT THEME OVERRIDE (FINAL - GUARANTEED)
+   Put this at the VERY END of your CSS file
+   ========================================================= */
+
+.pa-shell {
+  --panel: #ffffff !important;
+  --panel-soft: #f8fafc !important;
+  --input: #f1f5f9 !important;
+  --line: #e2e8f0 !important;
+  --line2: #cbd5e1 !important;
+  --text: #0f172a !important;
+  --muted: #64748b !important;
+  --chip: #eef2f7 !important;
+  --chip-active: #dbeafe !important;
+  --accent: #2563eb !important;
+  --danger: #ef4444 !important;
+
+  background: #f8fafc !important;
+  color: var(--text) !important;
+}
+
+/* =========================
+   RESET DARK BACKGROUNDS
+   ========================= */
+.pa-shell * {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* =========================
+   PRIMARY SURFACES
+   ========================= */
+.pa-search-panel,
+.pa-modal-card,
+.pa-product-card,
+.pa-pcard,
+.pa-scard,
+.pa-detail-card,
+.pa-detail-dosage-card,
+.pa-detail-prices,
+.pa-about-card,
+.pa-about-panel,
+.pa-modal-footer {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
+}
+
+/* =========================
+   SECONDARY SURFACES
+   ========================= */
+.pa-pcard-vendor-row,
+.pa-check-item,
+.pa-sort-item,
+.pa-scard-info-row,
+.pa-about-stat,
+.pa-about-list-item,
+.pa-about-mini {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* =========================
+   INPUTS
+   ========================= */
+#pa-search,
+#pas-search,
+.pa-search-inline,
+.pa-dsm-search-input {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+#pa-search::placeholder,
+.pa-search-inline::placeholder,
+.pa-dsm-search-input::placeholder {
+  color: #64748b !important;
+}
+
+/* =========================
+   NAV / TABS
+   ========================= */
+.pa-nav-links {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.pa-nav-link {
+  color: #64748b !important;
+}
+
+.pa-nav-link.is-active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.pa-modal-tabs {
+  background: #f1f5f9 !important;
+}
+
+.pa-modal-tab.is-active {
+  background: #e2e8f0 !important;
+  color: #2563eb !important;
+}
+
+/* =========================
+   BUTTONS
+   ========================= */
+.pa-foot-btn.is-cancel {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.pa-foot-btn.is-apply {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.pa-buy-link {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* =========================
+   TABLES
+   ========================= */
+.pa-price-table thead th {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.pa-price-table tbody tr:hover {
+  background: #f8fafc !important;
+}
+
+/* =========================
+   HOVER STATES
+   ========================= */
+.pa-product-card:hover,
+.pa-pcard:hover,
+.pa-scard:hover,
+.pa-check-item:hover,
+.pa-sort-item:hover {
+  background: #f1f5f9 !important;
+}
+
+/* =========================
+   CHIPS
+   ========================= */
+.pa-chip {
+  background: #eef2f7 !important;
+  color: #0f172a !important;
+}
+
+.pa-chip.is-active {
+  background: #dbeafe !important;
+  color: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+/* =========================
+   MODAL BACKDROP
+   ========================= */
+.pa-modal-backdrop {
+  background: rgba(0,0,0,0.35) !important;
+}
+
+/* =========================
+   SCROLLBAR
+   ========================= */
+.pa-modal-body,
+.pa-check-list,
+.pa-sort-list {
+  scrollbar-color: rgba(100,116,139,0.4) transparent !important;
+}
+
+/* ─── Mobile: additional responsive improvements ─────────────────────────── */
+@media (max-width: 680px) {
+  /* Stack detail sidebar above main content on mobile */
+  .pa-shell .pa-detail-layout{ flex-direction: column; gap: 12px; }
+
+  /* Reduce card padding on mobile */
+  .pa-shell .pa-detail-card{ padding: 16px; }
+  .pa-shell .pa-detail-dosage-card{ padding: 16px; }
+
+  /* Allow dosage header to wrap so price toggle drops below title */
+  .pa-shell .pa-detail-dosage-head{ flex-wrap: wrap; gap: 8px; }
+
+  /* Hide verbose toggle labels to save horizontal space */
+  .pa-shell .pa-price-toggle-label{ display: none; }
+  .pa-shell .pa-detail-toggle-label{ display: none; }
+
+  /* Reduce results bar top padding */
+  .pa-shell .pa-results-bar{ padding-top: 20px; padding-bottom: 16px; }
+}
+
+/* ─── Extra-small screens (< 480px) ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  body .pa-shell{ padding: 8px; }
+
+  /* Compact search panel */
+  .pa-shell .pa-search-panel{ padding: 10px 10px 8px; border-radius: 16px; }
+  .pa-shell #pa-search, .pa-shell #pas-search{ height: 46px; font-size: 13px; }
+  .pa-shell .pa-filter-btn{ height: 46px; width: 44px; }
+
+  /* Stack results bar into two rows */
+  .pa-shell .pa-results-bar{ flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 14px; padding-bottom: 12px; }
+  .pa-shell .pa-results-right{ flex-wrap: wrap; gap: 8px; }
+
+  /* Tighter product card padding */
+  .pa-shell .pa-pcard{ padding: 14px 14px 10px; }
+
+  /* Smaller supplier card name */
+  .pa-shell .pa-scard-name{ font-size: 14px; }
+
+  /* Price grid: single column on very small screens */
+  .pa-shell .pa-price-grid{ grid-template-columns: 1fr; }
+
+  /* Detail cards: tight padding */
+  .pa-shell .pa-detail-card{ padding: 14px; }
+  .pa-shell .pa-detail-dosage-card{ padding: 14px; }
+  .pa-shell .pa-detail-name{ font-size: 18px; }
+}
+
+/* ─── Fix horizontal overflow ─────────────────────────────────────────────── */
+body .pa-shell { overflow-x: hidden; }
+
+@media (max-width: 680px) {
+  /* Compact nav tab padding */
+  .pa-shell .pa-nav-link { padding: 7px 12px; font-size: 13px; }
+
+  /* Stack detail prices bar sections vertically */
+  .pa-shell .pa-detail-prices-bar { flex-direction: column; align-items: flex-start; padding: 12px 14px; }
+  .pa-shell .pa-dpbar-center { flex-wrap: wrap; }
+  .pa-shell .pa-dpbar-right { flex-wrap: wrap; }
+
+  /* Tighter vendor list padding inside detail card */
+  .pa-shell .pa-detail-vendor-list { padding: 12px 12px 16px; }
+  .pa-shell .pa-detail-vrow { padding: 6px 10px; gap: 10px; }
+}
+
+@media (max-width: 480px) {
+  /* Shrink nav tabs further */
+  .pa-shell .pa-nav-link { padding: 6px 8px; font-size: 12px; }
+  .pa-shell .pa-nav-links { padding: 3px; gap: 2px; }
+}
+@media (max-width: 680px) {
+  /* Clip anything that bleeds out of the product card */
+  .pa-shell .pa-pcard { overflow: hidden; }
+
+  /* Tighten vendor row grid so price column has less room to overflow */
+  .pa-shell .pa-pcard-vendor-row { gap: 8px; padding: 8px 6px; }
+  .pa-shell .pa-pcard-vright { gap: 4px; max-width: 110px; }
+  .pa-shell .pa-pcard-price { font-size: 12px; }
+
+  /* Shrink coupon badge on mobile */
+  .pa-shell .pa-coupon-badge { font-size: 9px; padding: 1px 4px; letter-spacing: 0; }
+}
