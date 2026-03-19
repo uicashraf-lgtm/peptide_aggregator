@@ -14,8 +14,8 @@ jobs:
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{ ftp://46.202.183.67 }}
-          username: ${{ u982676294.aminoprices.com }}
-          password: ${{ Ashraf1988* }}
+           server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./peptide_aggregator/
           server-dir: /public_html/wp-content/plugins/peptide_aggregator/
