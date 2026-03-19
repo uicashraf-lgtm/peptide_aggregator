@@ -16,4 +16,4 @@ jobs:
           password: ${{ secrets.SFTP_PASSWORD }}
           local_path: ./peptide_aggregator/
           remote_path: /public_html/wp-content/plugins/peptide_aggregator/
-          port: 21
+          port: 22
