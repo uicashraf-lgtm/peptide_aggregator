@@ -15,13 +15,137 @@ class PA_Shortcodes {
         add_action('wp_enqueue_scripts', array($this, 'register_assets'), 999);
     }
 
+    /**
+     * Return the critical layout CSS that must load AFTER Elementor.
+     * Covers flex/grid display values only – colours live in dashboard.css.
+     */
+    private function critical_layout_css() {
+        return '
+/* pa: critical layout – injected after Elementor to guarantee source-order win */
+.pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
+.pa-shell{display:block!important;width:100%!important}
+.pa-shell .pa-search-row{display:grid!important;grid-template-columns:1fr 56px!important;gap:12px!important;align-items:center!important}
+.pa-shell .pa-search-input-wrap{position:relative!important;display:flex!important;align-items:center!important}
+.pa-shell .pa-filter-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important}
+.pa-shell .pa-popular-row{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important;margin-top:12px!important}
+.pa-shell .pa-chip-list{display:flex!important;flex-wrap:wrap!important;gap:8px!important;align-items:center!important}
+.pa-shell .pa-chip{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important}
+.pa-shell .pa-active-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+.pa-shell .pa-active-list{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
+.pa-shell .pa-results-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important;padding:20px 0 16px!important}
+.pa-shell .pa-results-left{display:flex!important;align-items:center!important;gap:8px!important}
+.pa-shell .pa-results-right{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important}
+.pa-shell .pa-price-toggle{display:flex!important;align-items:center!important;gap:6px!important}
+.pa-shell .pa-sort-label{display:flex!important;align-items:center!important;gap:8px!important;white-space:nowrap!important}
+.pa-shell .pa-bar-icons{display:flex!important;align-items:center!important;gap:4px!important}
+.pa-shell .pa-view-toggle{display:flex!important;align-items:center!important;gap:2px!important}
+.pa-shell .pa-ptoggle{display:inline-flex!important;align-items:center!important;justify-content:center!important}
+.pa-shell .pa-bar-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important}
+.pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;border:none!important}
+.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))!important;gap:16px!important;margin-top:4px!important}
+.pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}
+.pa-shell .pa-pcard{display:flex!important;flex-direction:column!important;gap:10px!important;padding:18px 18px 12px!important;cursor:pointer!important}
+.pa-shell .pa-pcard-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
+.pa-shell .pa-pcard-head-left{flex:1!important;min-width:0!important}
+.pa-shell .pa-pcard-head-icons{display:flex!important;align-items:center!important;gap:4px!important;flex-shrink:0!important}
+.pa-shell .pa-pcard-tags{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
+.pa-shell .pa-pcard-dosage{display:flex!important;align-items:center!important;gap:8px!important}
+.pa-shell .pa-dosage-scroll-wrap{display:flex!important;align-items:center!important;gap:4px!important;flex:1!important;min-width:0!important}
+.pa-shell .pa-dosage-pills{display:flex!important;gap:6px!important;overflow-x:auto!important;flex:1!important;scrollbar-width:none!important}
+.pa-shell .pa-dosage-pill{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important;flex-shrink:0!important}
+.pa-shell .pa-dosage-arrow{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important;width:24px!important;height:24px!important}
+.pa-shell .pa-pcard-vendors{display:flex!important;flex-direction:column!important;gap:6px!important}
+.pa-shell .pa-pcard-vendor-row{display:grid!important;grid-template-columns:36px 1fr auto!important;gap:10px!important;align-items:center!important;padding:8px 10px!important;border-radius:10px!important}
+.pa-shell .pa-pcard-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;flex-shrink:0!important;overflow:hidden!important}
+.pa-shell .pa-pcard-vinfo{display:flex!important;flex-direction:column!important;min-width:0!important}
+.pa-shell .pa-pcard-vright{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:3px!important;min-width:0!important}
+.pa-shell .pa-pcard-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important}
+.pa-shell .pa-coupon-badge{display:inline-flex!important;align-items:center!important;gap:3px!important}
+.pa-shell .pa-coupon-copy{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:0 2px!important}
+.pa-shell .pa-pcard-extlink{display:inline-flex!important;align-items:center!important;text-decoration:none!important}
+.pa-shell .pa-pcard-foot{display:flex!important;align-items:center!important;justify-content:space-between!important;padding-top:4px!important}
+.pa-shell .pa-icon-btn{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:4px!important;border-radius:6px!important}
+.pa-shell .pa-detail-layout{display:flex!important;gap:20px!important;align-items:flex-start!important}
+.pa-shell .pa-detail-sidebar{width:200px!important;flex-shrink:0!important}
+.pa-shell .pa-detail-main{flex:1!important;display:flex!important;flex-direction:column!important;gap:16px!important;min-width:0!important}
+.pa-shell .pa-detail-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important;margin-bottom:12px!important}
+.pa-shell .pa-detail-dosage-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;flex-wrap:wrap!important;margin-bottom:14px!important}
+.pa-shell .pa-detail-price-toggle-wrap{display:flex!important;align-items:center!important;gap:6px!important}
+.pa-shell .pa-detail-dosage-grid{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+.pa-shell .pa-detail-prices-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:10px!important;padding:14px 16px!important}
+.pa-shell .pa-dpbar-center{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important}
+.pa-shell .pa-dpbar-right{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
+.pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:8px 12px!important}
+.pa-shell .pa-nav-links{display:flex!important;gap:4px!important;padding:4px!important}
+.pa-shell .pa-sort-dir-btns{display:flex!important;align-items:center!important;gap:4px!important}
+.pa-shell .pa-sort-dir{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:30px!important;height:30px!important}
+.pa-shell .pa-supplier-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important;gap:16px!important;margin-top:4px!important}
+.pa-shell .pa-supplier-grid.is-list{grid-template-columns:1fr!important}
+.pa-shell .pa-scard{display:flex!important;flex-direction:column!important;gap:12px!important;padding:18px!important;cursor:pointer!important}
+.pa-shell .pa-scard-info-row{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:12px!important}
+.pa-shell.pa-about-shell{display:flex!important;flex-direction:column!important;gap:24px!important}
+.pa-about-stats{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:16px!important}
+.pa-about-stat{display:flex!important;flex-direction:column!important;align-items:center!important;gap:8px!important}
+.pa-about-actions{display:flex!important;justify-content:center!important;gap:12px!important;flex-wrap:wrap!important}
+.pa-about-btn{display:inline-flex!important;align-items:center!important}
+.pa-about-panels{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:20px!important}
+.pa-about-list{display:flex!important;flex-direction:column!important;gap:8px!important}
+.pa-about-list-item{display:flex!important;align-items:center!important;gap:10px!important}
+.pa-about-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
+.pa-about-mini{display:flex!important;align-items:center!important;gap:8px!important}
+.pa-about-stat-icon,.pa-about-list-icon,.pa-about-mini-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+.pa-about-contact-pill{display:inline-flex!important;align-items:center!important;gap:8px!important}
+.pa-about-copy-btn{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important}
+.pa-modal{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;z-index:999999!important;display:flex!important;align-items:flex-end!important;justify-content:center!important}
+.pa-modal[aria-hidden="true"]{display:none!important}
+.pa-modal-backdrop{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
+.pa-modal-card{position:relative!important;width:100%!important;max-width:480px!important;max-height:80vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:1!important;border-radius:22px 22px 0 0!important}
+.pa-modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:16px 20px 12px!important;flex-shrink:0!important}
+.pa-modal-head-actions{display:flex!important;align-items:center!important;gap:12px!important}
+.pa-modal-tabs{display:flex!important;gap:4px!important;padding:4px!important;margin:0 20px 12px!important;flex-shrink:0!important}
+.pa-modal-tab{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;flex:1!important;padding:8px 14px!important;border:none!important;background:none!important;cursor:pointer!important}
+.pa-modal-body{overflow-y:auto!important;flex:1!important;padding:0 20px!important;display:block!important}
+.pa-tab-content{display:none!important}
+.pa-tab-content.is-active{display:block!important}
+.pa-modal-foot,.pa-modal-footer{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 20px!important;flex-shrink:0!important}
+.pa-modal-close{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;cursor:pointer!important;background:none!important}
+.pa-toggle-list{display:flex!important;flex-direction:column!important;gap:4px!important}
+.pa-toggle-row{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:8px 0!important;cursor:pointer!important}
+.pa-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:16px 0 8px!important}
+.pa-section-tools{display:flex!important;align-items:center!important;gap:8px!important}
+.pa-check-list{display:flex!important;flex-direction:column!important;gap:4px!important;max-height:180px!important;overflow-y:auto!important;margin-bottom:8px!important}
+.pa-check-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:8px 12px!important;cursor:pointer!important}
+.pa-price-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:8px!important}
+.pa-sort-list{display:flex!important;flex-direction:column!important;gap:4px!important}
+.pa-sort-item{display:flex!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;cursor:pointer!important}
+.pa-search-inline-wrap.is-hidden{display:none!important}
+.pa-dot{display:inline-block!important;width:3px!important;height:3px!important;border-radius:50%!important}
+.pa-dsm-search-wrap{position:relative!important;display:flex!important;align-items:center!important;padding:0 20px 12px!important}
+.pa-dsm-search-icon{position:absolute!important;left:32px!important}
+.pa-dsm-status-row{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 20px 8px!important}
+.pa-dsm-status-actions{display:flex!important;align-items:center!important;gap:8px!important}
+.pa-dsm-list{overflow-y:auto!important;max-height:280px!important;padding:0 20px!important}
+.pa-inline-check{display:flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
+';
+    }
+
     public function register_assets() {
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', array(), '0.9.22');
+        // If Elementor is active, make our stylesheet load after it so our
+        // layout rules take precedence in document source order.
+        $css_deps = array();
+        if ( wp_style_is( 'elementor-frontend', 'registered' ) ) {
+            $css_deps[] = 'elementor-frontend';
+        }
+
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.23');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.20', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
         if (!is_admin()) {
             wp_enqueue_style('pa-dashboard-css');
+            // Inline CSS appended to our stylesheet – guaranteed to appear after
+            // both Elementor and dashboard.css in document order.
+            wp_add_inline_style( 'pa-dashboard-css', $this->critical_layout_css() );
             wp_enqueue_script('pa-dashboard-js');
             wp_enqueue_script('pa-suppliers-js');
             wp_enqueue_script('pa-about-js');
