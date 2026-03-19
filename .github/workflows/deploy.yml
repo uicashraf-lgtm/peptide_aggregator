@@ -1,16 +1,13 @@
 name: Deploy to Website
-
 on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -21,10 +18,3 @@ jobs:
           protocol: ftps
           local-dir: ./peptide_aggregator/
           server-dir: /public_html/wp-content/plugins/peptide_aggregator/
-```
-
-The key change is `protocol: ftps` which is more secure and more commonly allowed by hosts.
-
-Also update your `FTP_HOST` secret to just:
-```
-aminoprices.com
