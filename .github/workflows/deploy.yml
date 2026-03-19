@@ -17,7 +17,7 @@ jobs:
           server: ${{ ftp://46.202.183.67 }}
           username: ${{ u982676294.aminoprices.com }}
           password: ${{ Ashraf1988* }}
-          local-dir: ./
+          local-dir: ./peptide_aggregator/
           server-dir: /public_html/wp-content/plugins/peptide_aggregator/
 ```
 
