@@ -17,5 +17,14 @@ jobs:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
           local-dir: ./peptide_aggregator/
           server-dir: /public_html/wp-content/plugins/peptide_aggregator/
+```
+
+The key change is `protocol: ftps` which is more secure and more commonly allowed by hosts.
+
+Also update your `FTP_HOST` secret to just:
+```
+aminoprices.com
