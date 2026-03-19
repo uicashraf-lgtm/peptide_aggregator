@@ -18,7 +18,7 @@ jobs:
           username: ${{ u982676294.aminoprices.com }}
           password: ${{ Ashraf1988* }}
           local-dir: ./peptide_aggregator/
-          server-dir: /public_html/wp-content/plugins/peptide_aggregator/
+          server-dir: /public_html/wp-content/plugins/
 ```
 
 4. Change `server-dir` to match your actual folder path on the server
