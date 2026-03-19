@@ -8,14 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          local_path: ./peptide_aggregator/
-          remote_path: /public_html/wp-content/plugins/peptide_aggregator/
-          port: 65002
-          sftp_only: true
-          sftpArgs: "-o PreferredAuthentications=password -o PubkeyAuthentication=no"
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./peptide_aggregator/
+          server-dir: /public_html/wp-content/plugins/peptide_aggregator/
+          port: 21
