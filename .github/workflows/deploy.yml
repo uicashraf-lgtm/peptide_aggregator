@@ -17,24 +17,5 @@ jobs:
           server: ${{ ftp://46.202.183.67 }}
           username: ${{ u982676294.aminoprices.com }}
           password: ${{ Ashraf1988* }}
-          local-dir: ./
-          server-dir: /public_html/wp-content/plugins/
-```
-
-4. Change `server-dir` to match your actual folder path on the server
-5. Click **Commit changes**
-
----
-
-## Step 4 — Test It
-From now on, every time you upload or change files in GitHub:
-- GitHub Actions automatically runs
-- Your files get pushed to your website via FTP
-
-To check it worked go to your repo → **Actions tab** → you'll see a green checkmark if it succeeded or red X if something went wrong.
-
----
-
-## The Full Flow
-```
-Edit files → Upload to GitHub → GitHub auto-deploys → Live on your website
+          local-dir: ./peptide_aggregator/
+          server-dir: /public_html/wp-content/plugins/peptide_aggregator/
