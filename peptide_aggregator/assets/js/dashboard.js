@@ -475,15 +475,20 @@
     foot.appendChild(arrow);
     card.appendChild(foot);
 
-    card.addEventListener('click', function () { loadProductDetail(p._activeId || p.id, p.name); });
+    card.addEventListener('click', function () {
+      console.log('[PA] card clicked', {id: p._activeId || p.id, name: p.name});
+      loadProductDetail(p._activeId || p.id, p.name);
+    });
     return card;
   }
 
   // ─── Product detail ────────────────────────────────────────────────────────
   async function loadProductDetail(productId, productName) {
+    console.log('[PA] loadProductDetail', {productId: productId, productName: productName});
     const grid = document.getElementById('pa-product-grid');
     const bar = document.getElementById('pa-results-bar');
     const detail = document.getElementById('pa-product-detail');
+    console.log('[PA] detail elements', {grid: !!grid, bar: !!bar, detail: !!detail});
     const nameEl = document.getElementById('pa-detail-name');
     const catEl = document.getElementById('pa-detail-category');
     const descEl = document.getElementById('pa-detail-description');
@@ -607,6 +612,7 @@
         renderDetailPricesFallback(allPrices);
       }
     } catch (e) {
+      console.error('[PA] loadProductDetail error:', e);
       if (pricesEl) pricesEl.innerHTML = '<p class="pa-error">Error loading prices.</p>';
     }
   }
