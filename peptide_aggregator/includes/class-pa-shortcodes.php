@@ -89,7 +89,23 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-prices-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:10px!important;padding:14px 16px!important}
 .pa-shell .pa-dpbar-center{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important}
 .pa-shell .pa-dpbar-right{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
-.pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:8px 12px!important}
+.pa-shell .pa-dpbar-left{display:flex!important;align-items:center!important;gap:8px!important}
+.pa-shell .pa-dpbar-titles{display:flex!important;flex-direction:column!important;gap:1px!important}
+.pa-shell .pa-dpbar-stock-btn,.pa-shell .pa-dpbar-sort-btn,.pa-shell .pa-dpbar-supplier-btn{display:inline-flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
+.pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important}
+.pa-shell .pa-detail-vrow{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:8px 12px!important;border-radius:10px!important}
+.pa-shell .pa-detail-vrow-left{display:flex!important;align-items:center!important;gap:12px!important;flex:1!important;min-width:0!important}
+.pa-shell .pa-detail-vrow-right{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:4px!important;flex-shrink:0!important}
+.pa-shell .pa-vendor-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;min-width:40px!important;flex-shrink:0!important;overflow:hidden!important;border-radius:50%!important}
+.pa-shell .pa-vendor-avatar img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
+.pa-shell .pa-vendor-info{display:flex!important;flex-direction:column!important;gap:2px!important;min-width:0!important}
+.pa-shell .pa-detail-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important}
+.pa-shell .pa-detail-link-icon{display:inline-flex!important;align-items:center!important;text-decoration:none!important}
+.pa-shell .pa-coupon-wrap{display:flex!important;align-items:center!important;gap:4px!important}
+.pa-shell .pa-coupon-copy-btn{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:0 2px!important}
+.pa-shell .pa-ddosage-btn{display:flex!important;flex-direction:column!important;align-items:center!important;gap:3px!important;cursor:pointer!important}
+.pa-shell .pa-ddosage-label{display:flex!important;align-items:center!important;gap:3px!important}
+.pa-shell .pa-back-btn{display:inline-flex!important;align-items:center!important;gap:6px!important;cursor:pointer!important;white-space:nowrap!important}
 .pa-shell .pa-nav-links{display:flex!important;gap:4px!important;padding:4px!important}
 .pa-shell .pa-sort-dir-btns{display:flex!important;align-items:center!important;gap:4px!important}
 .pa-shell .pa-sort-dir{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:30px!important;height:30px!important}
@@ -151,7 +167,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.24');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.25');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.22', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
