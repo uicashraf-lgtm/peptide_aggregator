@@ -826,6 +826,12 @@ class PA_Admin {
             var currentVendor = 0;
             var currentDoseLabelProductName = '';
             var currentDoseLabels = {};
+            // Must match the DOSAGE_RE in dashboard.js so admin keys align with frontend keys
+            var ADMIN_DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)$/i;
+            function stripDosageSuffix(name) {
+                var m = (name || '').match(ADMIN_DOSAGE_RE);
+                return m ? name.slice(0, name.length - m[0].length).trim() : name;
+            }
 
             function esc(str) {
                 var d = document.createElement('div');
@@ -1259,7 +1265,9 @@ class PA_Admin {
                 setVal('pa_pf_url', p.product_url);
 
                 // ── Dose labels ─────────────────────────────────────────────
-                currentDoseLabelProductName = (p.name || '').toLowerCase().trim();
+                // Strip dosage suffix from product name so the key matches the
+                // base-name key that groupByDosage() produces on the frontend.
+                currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
                 // Collect dosages: prefer explicit dosages array, fall back to
                 // available_dosages objects (extract label), then empty.
@@ -1514,6 +1522,10 @@ class PA_Admin {
         }
         check_ajax_referer('pa_dose_labels_action', '_wpnonce');
         $product_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        // Strip dosage suffix (e.g. " 5mg") so the key matches the base-name
+        // key that groupByDosage() produces on the frontend dashboard.
+        $product_name = preg_replace('/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $product_name);
+        $product_name = trim($product_name);
         $labels_json  = wp_unslash($_POST['labels'] ?? '{}');
         $labels       = json_decode($labels_json, true);
         if (!is_array($labels)) {
