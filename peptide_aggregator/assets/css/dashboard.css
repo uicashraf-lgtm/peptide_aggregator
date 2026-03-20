@@ -488,27 +488,31 @@
   flex-direction: column !important;
 }
 
-/* Vendor row: 3-column grid — avatar | info | price+actions (matches card view) */
+/* Vendor row: 3-column grid — avatar | info | price+actions */
 .pa-shell .pa-detail-vrow {
   display: grid !important;
-  grid-template-columns: 36px 1fr auto !important;
-  gap: 10px !important;
+  grid-template-columns: 40px 1fr auto !important;
+  gap: 12px !important;
   align-items: center !important;
-  padding: 8px 10px !important;
-  border-radius: 10px !important;
+  padding: 12px 10px !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+.pa-shell .pa-detail-vrow:last-child {
+  border-bottom: none !important;
 }
 
 .pa-shell .pa-vendor-avatar {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  border-radius: 8px !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 50% !important;
   background: #2a3f5a !important;
   color: #fff !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   overflow: hidden !important;
   flex-shrink: 0 !important;
@@ -550,11 +554,10 @@
 
 .pa-shell .pa-detail-vrow-right {
   display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-  gap: 6px !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
   flex-shrink: 0 !important;
-  min-width: 90px !important;
 }
 
 .pa-shell .pa-detail-price-wrap {
@@ -1191,8 +1194,7 @@
 .pa-shell .pa-detail-vendor-list {
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
-  padding: 4px 10px 14px !important;
+  padding: 0 10px 6px !important;
 }
 
 .pa-product-card:hover,
