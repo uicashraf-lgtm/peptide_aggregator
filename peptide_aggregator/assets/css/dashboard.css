@@ -1535,8 +1535,8 @@ body .pa-shell { overflow-x: hidden; }
   .pa-shell .pa-dpbar-right { flex-wrap: wrap; }
 
   /* Tighter vendor list padding inside detail card */
-  .pa-shell .pa-detail-vendor-list { padding: 12px 12px 16px; }
-  .pa-shell .pa-detail-vrow { padding: 6px 10px; gap: 10px; }
+  .pa-shell .pa-detail-vendor-list { padding: 0 10px 6px; }
+  .pa-shell .pa-detail-vrow { padding: 12px 10px; gap: 12px; }
 }
 
 @media (max-width: 480px) {
