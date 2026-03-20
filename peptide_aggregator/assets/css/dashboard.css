@@ -18,8 +18,9 @@
 }
 
 /* Detail view show/hide — pa-hidden/pa-visible toggled on each element.
-   #pa-product-detail starts hidden via inline style="display:none" in HTML.
-   Adding pa-visible overrides it; removing pa-visible restores the inline hidden. */
+   none!important on #pa-product-detail defeats any Elementor display:block!important
+   that would otherwise override the inline style="display:none". */
+#pa-product-detail              { display: none !important; }
 #pa-product-detail.pa-visible   { display: block !important; }
 #pa-product-grid.pa-hidden      { display: none !important; }
 #pa-results-bar.pa-hidden       { display: none !important; }
