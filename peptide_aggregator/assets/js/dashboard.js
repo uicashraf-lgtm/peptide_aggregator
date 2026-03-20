@@ -477,19 +477,13 @@
 
   // ─── Product detail ────────────────────────────────────────────────────────
   async function loadProductDetail(productId, productName) {
-    const grid = document.getElementById('pa-product-grid');
-    const bar = document.getElementById('pa-results-bar');
-    const detail = document.getElementById('pa-product-detail');
+    const shell = document.querySelector('.pa-shell');
     const nameEl = document.getElementById('pa-detail-name');
     const catEl = document.getElementById('pa-detail-category');
     const descEl = document.getElementById('pa-detail-description');
     const pricesEl = document.getElementById('pa-detail-prices');
 
-    if (grid) grid.style.setProperty('display', 'none', 'important');
-    if (bar) bar.style.setProperty('display', 'none', 'important');
-    if (detail) detail.style.setProperty('display', 'block', 'important');
-    const searchPanel = document.querySelector('.pa-search-panel');
-    if (searchPanel) searchPanel.style.setProperty('display', 'none', 'important');
+    if (shell) shell.classList.add('pa-in-detail');
     if (nameEl) nameEl.textContent = productName;
     if (pricesEl) pricesEl.innerHTML = '';
     state.detailProductName = productName;
@@ -913,11 +907,8 @@
   }
 
   function showProductGrid() {
-    document.getElementById('pa-product-detail').style.setProperty('display', 'none', 'important');
-    document.getElementById('pa-product-grid').style.removeProperty('display');
-    document.getElementById('pa-results-bar').style.removeProperty('display');
-    const searchPanel = document.querySelector('.pa-search-panel');
-    if (searchPanel) searchPanel.style.removeProperty('display');
+    const shell = document.querySelector('.pa-shell');
+    if (shell) shell.classList.remove('pa-in-detail');
   }
 
   // ─── SSE ──────────────────────────────────────────────────────────────────
