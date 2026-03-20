@@ -205,15 +205,23 @@ class PA_Shortcodes {
         wp_enqueue_style('pa-dashboard-css');
         wp_enqueue_script('pa-dashboard-js');
 
+        // Read dose labels here so they are always available regardless of
+        // whether wp_add_inline_script ran first (caching plugins, page builders,
+        // etc. can alter script output order).
+        $sc_dose_labels_raw = get_option('pa_dose_labels', array());
+        $sc_dose_labels = array();
+        foreach ( (array) $sc_dose_labels_raw as $k => $v ) {
+            $sc_dose_labels[ strtolower( trim( $k ) ) ] = $v;
+        }
         ob_start();
         ?>
         <script>
-        // PA_UI is already initialised by wp_add_inline_script() before dashboard.js loaded.
-        // These assignments only take effect if the shortcode runs after the script
-        // (e.g. footer-loaded scripts); they are harmless when scripts are in <head>.
+        // Ensure PA_UI and dose_labels are always present no matter when this
+        // inline block executes relative to dashboard.js.
         window.PA_UI = window.PA_UI || {};
         window.PA_UI.api_base = <?php echo json_encode($this->api->base_url()); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
+        window.PA_UI.dose_labels = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
         </script>
         <div class="pa-shell">
                 <section class="pa-search-panel">
