@@ -13,6 +13,19 @@ class PA_Shortcodes {
         add_shortcode('peptide_suppliers_dashboard',  array($this, 'render_suppliers_shortcode'));
                         add_shortcode('peptide_about_dashboard',      array($this, 'render_about_shortcode'));
         add_action('wp_enqueue_scripts', array($this, 'register_assets'), 999);
+        // wp_head at the latest possible priority so our <style> block appears
+        // after every theme / Elementor stylesheet regardless of their load order.
+        add_action('wp_head', array($this, 'print_head_layout_css'), 9999);
+    }
+
+    /**
+     * Output a <style> block in <head> at priority 9999.
+     * Being last in document order means it wins all same-specificity !important
+     * battles without needing to know what the theme/Elementor is doing.
+     */
+    public function print_head_layout_css() {
+        if ( is_admin() ) return;
+        echo '<style id="pa-head-layout">' . $this->critical_layout_css() . '</style>' . "\n";
     }
 
     /**
@@ -32,7 +45,7 @@ class PA_Shortcodes {
 .pa-shell .pa-chip{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important}
 .pa-shell .pa-active-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-active-list{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
-.pa-shell .pa-results-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important;padding:20px 0 16px!important}
+.pa-shell .pa-results-bar{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important;padding:20px 0 16px!important}
 .pa-shell .pa-results-left{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-results-right{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important}
 .pa-shell .pa-price-toggle{display:flex!important;align-items:center!important;gap:6px!important}
@@ -56,7 +69,8 @@ class PA_Shortcodes {
 .pa-shell .pa-dosage-arrow{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important;width:24px!important;height:24px!important}
 .pa-shell .pa-pcard-vendors{display:flex!important;flex-direction:column!important;gap:6px!important}
 .pa-shell .pa-pcard-vendor-row{display:grid!important;grid-template-columns:36px 1fr auto!important;gap:10px!important;align-items:center!important;padding:8px 10px!important;border-radius:10px!important}
-.pa-shell .pa-pcard-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;flex-shrink:0!important;overflow:hidden!important}
+.pa-shell .pa-pcard-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;flex-shrink:0!important;overflow:hidden!important}
+.pa-shell .pa-pcard-avatar img{display:block!important;width:100%!important;height:100%!important;max-width:36px!important;max-height:36px!important;object-fit:contain!important}
 .pa-shell .pa-pcard-vinfo{display:flex!important;flex-direction:column!important;min-width:0!important}
 .pa-shell .pa-pcard-vright{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:3px!important;min-width:0!important}
 .pa-shell .pa-pcard-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important}
@@ -137,7 +151,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.23');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.24');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.20', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
