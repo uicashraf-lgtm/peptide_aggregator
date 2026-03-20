@@ -552,8 +552,9 @@
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-end !important;
-  gap: 4px !important;
+  gap: 6px !important;
   flex-shrink: 0 !important;
+  min-width: 90px !important;
 }
 
 .pa-shell .pa-detail-price-wrap {
@@ -593,7 +594,7 @@
   background: none !important;
   border: none !important;
   cursor: pointer !important;
-  padding: 0 2px !important;
+  padding: 0 4px !important;
   opacity: 0.6 !important;
 }
 .pa-shell .pa-coupon-copy-btn:hover { opacity: 1 !important; }
