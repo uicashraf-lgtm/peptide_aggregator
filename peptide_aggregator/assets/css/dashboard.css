@@ -18,13 +18,13 @@
 }
 
 /* Detail view show/hide — pa-hidden/pa-visible toggled on each element.
-   #pa-product-detail is explicitly hidden unless .pa-visible is present, using
-   !important so theme/Elementor rules cannot override it and create blank space. */
-#pa-product-detail:not(.pa-visible) { display: none !important; }
-#pa-product-detail.pa-visible       { display: block !important; }
-#pa-product-grid.pa-hidden          { display: none !important; }
-#pa-results-bar.pa-hidden           { display: none !important; }
-.pa-search-panel.pa-hidden          { display: none !important; }
+   none!important on #pa-product-detail defeats any Elementor display:block!important
+   that would otherwise override the inline style="display:none". */
+#pa-product-detail              { display: none !important; }
+#pa-product-detail.pa-visible   { display: block !important; }
+#pa-product-grid.pa-hidden      { display: none !important; }
+#pa-results-bar.pa-hidden       { display: none !important; }
+.pa-search-panel.pa-hidden      { display: none !important; }
 
 /* ── Search panel ── */
 .pa-shell .pa-search-panel {

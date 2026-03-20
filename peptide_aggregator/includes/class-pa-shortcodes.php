@@ -38,7 +38,8 @@ class PA_Shortcodes {
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
 .pa-shell{display:block!important;width:100%!important}
 /* detail view show/hide — pa-hidden/pa-visible toggled on each element */
-#pa-product-detail:not(.pa-visible){display:none!important}
+/* #pa-product-detail default: none!important overrides any Elementor display:block!important */
+#pa-product-detail{display:none!important}
 #pa-product-detail.pa-visible{display:block!important}
 #pa-product-grid.pa-hidden{display:none!important}
 #pa-results-bar.pa-hidden{display:none!important}
