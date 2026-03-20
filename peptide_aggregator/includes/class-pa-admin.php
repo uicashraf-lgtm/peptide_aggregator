@@ -1154,7 +1154,10 @@ class PA_Admin {
                     return;
                 }
                 dosages.forEach(function(dose) {
-                    var customLabel = currentDoseLabels[dose] || '';
+                    // Keys in currentDoseLabels are normalized (lowercase, no spaces).
+                    // Try normalized key first so existing labels pre-populate correctly.
+                    var normKey = (dose || '').toLowerCase().replace(/\s+/g, '');
+                    var customLabel = currentDoseLabels[normKey] || currentDoseLabels[dose] || '';
                     var row = document.createElement('div');
                     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
                     var origSpan = document.createElement('span');
@@ -1258,7 +1261,15 @@ class PA_Admin {
                 // ── Dose labels ─────────────────────────────────────────────
                 currentDoseLabelProductName = (p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
-                renderDoseLabelsSection(p.dosages || []);
+                // Collect dosages: prefer explicit dosages array, fall back to
+                // available_dosages objects (extract label), then empty.
+                var doseLabelList = [];
+                if (p.dosages && p.dosages.length) {
+                    doseLabelList = p.dosages;
+                } else if (p.available_dosages && p.available_dosages.length) {
+                    doseLabelList = p.available_dosages.map(function(d) { return d.label || d; });
+                }
+                renderDoseLabelsSection(doseLabelList);
 
                 document.getElementById('pa-product-form-wrap').scrollIntoView({behavior:'smooth', block:'start'});
             }
