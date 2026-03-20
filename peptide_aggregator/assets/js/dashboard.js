@@ -485,11 +485,11 @@
     const descEl = document.getElementById('pa-detail-description');
     const pricesEl = document.getElementById('pa-detail-prices');
 
-    if (grid) grid.style.display = 'none';
-    if (bar) bar.style.display = 'none';
-    if (detail) detail.style.display = 'block';
+    if (grid) grid.style.setProperty('display', 'none', 'important');
+    if (bar) bar.style.setProperty('display', 'none', 'important');
+    if (detail) detail.style.setProperty('display', 'block', 'important');
     const searchPanel = document.querySelector('.pa-search-panel');
-    if (searchPanel) searchPanel.style.display = 'none';
+    if (searchPanel) searchPanel.style.setProperty('display', 'none', 'important');
     if (nameEl) nameEl.textContent = productName;
     if (pricesEl) pricesEl.innerHTML = '';
     state.detailProductName = productName;
@@ -916,11 +916,11 @@
   }
 
   function showProductGrid() {
-    document.getElementById('pa-product-detail').style.display = 'none';
-    document.getElementById('pa-product-grid').style.display = '';
-    document.getElementById('pa-results-bar').style.display = '';
+    document.getElementById('pa-product-detail').style.setProperty('display', 'none', 'important');
+    document.getElementById('pa-product-grid').style.removeProperty('display');
+    document.getElementById('pa-results-bar').style.removeProperty('display');
     const searchPanel = document.querySelector('.pa-search-panel');
-    if (searchPanel) searchPanel.style.display = '';
+    if (searchPanel) searchPanel.style.removeProperty('display');
   }
 
   // ─── SSE ──────────────────────────────────────────────────────────────────
