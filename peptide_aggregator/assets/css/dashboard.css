@@ -491,10 +491,10 @@
 /* Vendor row: 3-column grid — avatar | info | price+actions (matches card view) */
 .pa-shell .pa-detail-vrow {
   display: grid !important;
-  grid-template-columns: 40px 1fr auto !important;
-  gap: 12px !important;
+  grid-template-columns: 36px 1fr auto !important;
+  gap: 10px !important;
   align-items: center !important;
-  padding: 8px 12px !important;
+  padding: 8px 10px !important;
   border-radius: 10px !important;
 }
 
@@ -502,13 +502,13 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  border-radius: 8px !important;
   background: #2a3f5a !important;
   color: #fff !important;
-  font-size: 13px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
   overflow: hidden !important;
   flex-shrink: 0 !important;
@@ -1180,15 +1180,18 @@
 }
 
 .pa-shell .pa-detail-card {
-  padding: 24px 28px !important;
+  padding: 18px 20px 14px !important;
 }
 
 .pa-shell .pa-detail-dosage-card {
-  padding: 20px 24px !important;
+  padding: 18px 20px !important;
 }
 
 .pa-shell .pa-detail-vendor-list {
-  padding: 4px 12px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 4px 10px 14px !important;
 }
 
 .pa-product-card:hover,
@@ -1474,8 +1477,8 @@
   .pa-shell .pa-detail-layout{ flex-direction: column; gap: 12px; }
 
   /* Reduce card padding on mobile */
-  .pa-shell .pa-detail-card{ padding: 16px 18px !important; }
-  .pa-shell .pa-detail-dosage-card{ padding: 16px 18px !important; }
+  .pa-shell .pa-detail-card{ padding: 14px 16px 12px !important; }
+  .pa-shell .pa-detail-dosage-card{ padding: 14px 16px !important; }
 
   /* Allow dosage header to wrap so price toggle drops below title */
   .pa-shell .pa-detail-dosage-head{ flex-wrap: wrap; gap: 8px; }
