@@ -39,11 +39,7 @@
     var labelMap = (UI.dose_labels && UI.dose_labels[key]) || {};
     // Normalize: lowercase + strip whitespace so "5 mg" and "5mg" both match
     var norm = (originalLabel || '').toLowerCase().replace(/\s+/g, '');
-    var result = labelMap[norm] || labelMap[originalLabel] || originalLabel;
-    if (UI.dose_labels && Object.keys(UI.dose_labels).length) {
-      console.log('[PA] getDoseLabel', {productName: productName, key: key, originalLabel: originalLabel, norm: norm, labelMap: labelMap, result: result});
-    }
-    return result;
+    return labelMap[norm] || labelMap[originalLabel] || originalLabel;
   }
 
   // ─── State ────────────────────────────────────────────────────────────────
@@ -475,20 +471,15 @@
     foot.appendChild(arrow);
     card.appendChild(foot);
 
-    card.addEventListener('click', function () {
-      console.log('[PA] card clicked', {id: p._activeId || p.id, name: p.name});
-      loadProductDetail(p._activeId || p.id, p.name);
-    });
+    card.addEventListener('click', function () { loadProductDetail(p._activeId || p.id, p.name); });
     return card;
   }
 
   // ─── Product detail ────────────────────────────────────────────────────────
   async function loadProductDetail(productId, productName) {
-    console.log('[PA] loadProductDetail', {productId: productId, productName: productName});
     const grid = document.getElementById('pa-product-grid');
     const bar = document.getElementById('pa-results-bar');
     const detail = document.getElementById('pa-product-detail');
-    console.log('[PA] detail elements', {grid: !!grid, bar: !!bar, detail: !!detail});
     const nameEl = document.getElementById('pa-detail-name');
     const catEl = document.getElementById('pa-detail-category');
     const descEl = document.getElementById('pa-detail-description');
@@ -612,7 +603,6 @@
         renderDetailPricesFallback(allPrices);
       }
     } catch (e) {
-      console.error('[PA] loadProductDetail error:', e);
       if (pricesEl) pricesEl.innerHTML = '<p class="pa-error">Error loading prices.</p>';
     }
   }
