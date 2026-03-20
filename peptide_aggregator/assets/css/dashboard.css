@@ -17,6 +17,13 @@
   width: 100% !important;
 }
 
+/* Detail view show/hide — controlled by pa-in-detail class on shell */
+.pa-shell .pa-product-detail          { display: none !important; }
+.pa-shell.pa-in-detail .pa-product-detail { display: block !important; }
+.pa-shell.pa-in-detail .pa-product-grid   { display: none !important; }
+.pa-shell.pa-in-detail .pa-results-bar    { display: none !important; }
+.pa-shell.pa-in-detail .pa-search-panel   { display: none !important; }
+
 /* ── Search panel ── */
 .pa-shell .pa-search-panel {
   margin-bottom: 16px !important;
