@@ -490,9 +490,7 @@
     if (bar)         bar.classList.add('pa-hidden');
     if (searchPanel) searchPanel.classList.add('pa-hidden');
     if (detail)      detail.classList.add('pa-visible');
-    var shell = document.querySelector('.pa-shell');
-    if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    else window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (nameEl) nameEl.textContent = productName;
     if (pricesEl) pricesEl.innerHTML = '';
     state.detailProductName = productName;
@@ -924,6 +922,7 @@
     if (grid)        grid.classList.remove('pa-hidden');
     if (bar)         bar.classList.remove('pa-hidden');
     if (searchPanel) searchPanel.classList.remove('pa-hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ─── SSE ──────────────────────────────────────────────────────────────────
