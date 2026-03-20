@@ -97,7 +97,7 @@ class PA_Shortcodes {
 .pa-shell .pa-dpbar-left{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-dpbar-titles{display:flex!important;flex-direction:column!important;gap:1px!important}
 .pa-shell .pa-dpbar-stock-btn,.pa-shell .pa-dpbar-sort-btn,.pa-shell .pa-dpbar-supplier-btn{display:inline-flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
-.pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important;gap:8px!important;padding:0 10px 10px!important}
+.pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important}
 .pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:14px 10px!important;border-radius:0!important;border-bottom:1px solid var(--line)!important}
 .pa-shell .pa-detail-vrow:last-child{border-bottom:none!important}
 .pa-shell .pa-detail-vrow-right{display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important;flex-shrink:0!important}
@@ -172,8 +172,8 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.36');
-        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.29', false);
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.37');
+        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.37', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
         if (!is_admin()) {
