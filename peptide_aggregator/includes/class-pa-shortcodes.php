@@ -93,8 +93,7 @@ class PA_Shortcodes {
 .pa-shell .pa-dpbar-titles{display:flex!important;flex-direction:column!important;gap:1px!important}
 .pa-shell .pa-dpbar-stock-btn,.pa-shell .pa-dpbar-sort-btn,.pa-shell .pa-dpbar-supplier-btn{display:inline-flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
 .pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important}
-.pa-shell .pa-detail-vrow{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:8px 12px!important;border-radius:10px!important}
-.pa-shell .pa-detail-vrow-left{display:flex!important;align-items:center!important;gap:12px!important;flex:1!important;min-width:0!important}
+.pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:8px 12px!important;border-radius:10px!important}
 .pa-shell .pa-detail-vrow-right{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:4px!important;flex-shrink:0!important}
 .pa-shell .pa-vendor-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;min-width:40px!important;flex-shrink:0!important;overflow:hidden!important;border-radius:50%!important}
 .pa-shell .pa-vendor-avatar img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
@@ -167,8 +166,8 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.25');
-        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.22', false);
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.26');
+        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.26', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
         if (!is_admin()) {

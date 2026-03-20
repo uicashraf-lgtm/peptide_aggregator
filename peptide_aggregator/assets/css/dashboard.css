@@ -480,22 +480,14 @@
   flex-direction: column !important;
 }
 
-/* Vendor row: flex with left (avatar+info) and right (price+link) */
+/* Vendor row: 3-column grid — avatar | info | price+actions (matches card view) */
 .pa-shell .pa-detail-vrow {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
+  display: grid !important;
+  grid-template-columns: 40px 1fr auto !important;
   gap: 12px !important;
+  align-items: center !important;
   padding: 8px 12px !important;
   border-radius: 10px !important;
-}
-
-.pa-shell .pa-detail-vrow-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  flex: 1 !important;
-  min-width: 0 !important;
 }
 
 .pa-shell .pa-vendor-avatar {

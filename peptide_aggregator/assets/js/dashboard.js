@@ -737,8 +737,7 @@
       var row = el('div', 'pa-detail-vrow' + (i === 0 ? ' is-best' : ''));
       if (v.listing_id) row.setAttribute('data-listing-id', v.listing_id);
 
-      // Left: avatar + name + stock
-      var left = el('div', 'pa-detail-vrow-left');
+      // Left: avatar + name + stock (direct grid children)
       var avatar = el('div', 'pa-vendor-avatar');
       if (v.logo_url) {
         var img = document.createElement('img');
@@ -754,7 +753,7 @@
       }
       var inStock = v.in_stock !== false;
       info.appendChild(el('span', 'pa-vendor-stock ' + (inStock ? 'is-in' : 'is-out'), '\u25cf ' + (inStock ? 'In Stock' : 'Out of Stock')));
-      left.appendChild(avatar); left.appendChild(info);
+
 
       // Right: coupon + price + link
       var right = el('div', 'pa-detail-vrow-right');
@@ -798,7 +797,7 @@
         right.appendChild(a);
       }
 
-      row.appendChild(left); row.appendChild(right);
+      row.appendChild(avatar); row.appendChild(info); row.appendChild(right);
       wrap.appendChild(row);
     });
     el2.appendChild(wrap);
@@ -892,12 +891,10 @@
     prices.forEach(function (p, i) {
       var row = el('div', 'pa-detail-vrow' + (i === 0 ? ' is-best' : ''));
       row.setAttribute('data-listing-id', p.listing_id);
-      var left = el('div', 'pa-detail-vrow-left');
       var avatar = el('div', 'pa-vendor-avatar', escHtml((p.vendor || '?')[0].toUpperCase()));
       var info = el('div', 'pa-vendor-info');
       info.appendChild(el('span', 'pa-vendor-name', escHtml(p.vendor)));
       if (p.last_fetched_at) info.appendChild(el('span', 'pa-vendor-updated', 'Updated ' + new Date(p.last_fetched_at).toLocaleDateString()));
-      left.appendChild(avatar); left.appendChild(info);
       var right = el('div', 'pa-detail-vrow-right');
       var priceEl = el('span', 'pa-detail-price', escHtml(fmt(p.effective_price, p.currency)));
       priceEl.setAttribute('data-listing-id', p.listing_id);
@@ -908,7 +905,7 @@
         a.className = 'pa-buy-link'; a.textContent = 'Buy \u2192';
         right.appendChild(a);
       }
-      row.appendChild(left); row.appendChild(right);
+      row.appendChild(avatar); row.appendChild(info); row.appendChild(right);
       wrap.appendChild(row);
     });
     el2.innerHTML = '';
