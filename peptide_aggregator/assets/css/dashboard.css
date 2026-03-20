@@ -486,6 +486,7 @@
 .pa-shell .pa-detail-vendor-list {
   display: flex !important;
   flex-direction: column !important;
+  gap: 8px !important;
 }
 
 /* Vendor row: 3-column grid — avatar | info | price+actions */
@@ -1194,7 +1195,8 @@
 .pa-shell .pa-detail-vendor-list {
   display: flex !important;
   flex-direction: column !important;
-  padding: 0 10px 6px !important;
+  gap: 8px !important;
+  padding: 0 10px 10px !important;
 }
 
 .pa-product-card:hover,
@@ -1535,7 +1537,7 @@ body .pa-shell { overflow-x: hidden; }
   .pa-shell .pa-dpbar-right { flex-wrap: wrap; }
 
   /* Tighter vendor list padding inside detail card */
-  .pa-shell .pa-detail-vendor-list { padding: 0 10px 6px; }
+  .pa-shell .pa-detail-vendor-list { gap: 8px; padding: 0 10px 10px; }
   .pa-shell .pa-detail-vrow { padding: 12px 10px; gap: 12px; }
 }
 
