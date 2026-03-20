@@ -166,7 +166,14 @@ class PA_Shortcodes {
 
             // Build the full PA_UI object here so it is available before dashboard.js
             // runs regardless of whether scripts are loaded in <head> or footer.
-            $dose_labels = get_option('pa_dose_labels', array());
+            // Normalize dose_labels keys to lowercase so they always match the
+            // lowercase lookup in getDoseLabel(), even if older data was saved
+            // under original-case product names.
+            $dose_labels_raw = get_option('pa_dose_labels', array());
+            $dose_labels = array();
+            foreach ( (array) $dose_labels_raw as $k => $v ) {
+                $dose_labels[ strtolower( trim( $k ) ) ] = $v;
+            }
             wp_add_inline_script('pa-dashboard-js',
                 'window.PA_UI = {' .
                     'api_base:'     . json_encode($this->api->base_url()) . ',' .
@@ -179,7 +186,7 @@ class PA_Shortcodes {
                     ]) . ',' .
                     'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
                     'sort_options:' . json_encode(['Popularity','Price: Low to High','Price: High to Low','Newest']) . ',' .
-                    'dose_labels:'  . json_encode(is_array($dose_labels) ? $dose_labels : new stdClass()) .
+                    'dose_labels:'  . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) .
                 '};',
                 'before'
             );
