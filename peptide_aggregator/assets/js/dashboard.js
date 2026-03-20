@@ -39,7 +39,11 @@
     var labelMap = (UI.dose_labels && UI.dose_labels[key]) || {};
     // Normalize: lowercase + strip whitespace so "5 mg" and "5mg" both match
     var norm = (originalLabel || '').toLowerCase().replace(/\s+/g, '');
-    return labelMap[norm] || labelMap[originalLabel] || originalLabel;
+    var result = labelMap[norm] || labelMap[originalLabel] || originalLabel;
+    if (UI.dose_labels && Object.keys(UI.dose_labels).length) {
+      console.log('[PA] getDoseLabel', {productName: productName, key: key, originalLabel: originalLabel, norm: norm, labelMap: labelMap, result: result});
+    }
+    return result;
   }
 
   // ─── State ────────────────────────────────────────────────────────────────

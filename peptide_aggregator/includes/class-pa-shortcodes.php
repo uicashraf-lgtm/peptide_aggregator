@@ -222,6 +222,7 @@ class PA_Shortcodes {
         window.PA_UI.api_base = <?php echo json_encode($this->api->base_url()); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
         window.PA_UI.dose_labels = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
+        console.log('[PA] dose_labels:', window.PA_UI.dose_labels);
         </script>
         <div class="pa-shell">
                 <section class="pa-search-panel">
