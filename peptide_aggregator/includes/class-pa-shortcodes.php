@@ -171,7 +171,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.29');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.30');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.29', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);

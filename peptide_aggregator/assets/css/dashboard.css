@@ -1179,6 +1179,18 @@
   border-radius: 16px;
 }
 
+.pa-shell .pa-detail-card {
+  padding: 24px 28px !important;
+}
+
+.pa-shell .pa-detail-dosage-card {
+  padding: 20px 24px !important;
+}
+
+.pa-shell .pa-detail-vendor-list {
+  padding: 4px 12px 16px !important;
+}
+
 .pa-product-card:hover,
 .pa-pcard:hover {
   background: var(--panel-soft);
@@ -1462,8 +1474,8 @@
   .pa-shell .pa-detail-layout{ flex-direction: column; gap: 12px; }
 
   /* Reduce card padding on mobile */
-  .pa-shell .pa-detail-card{ padding: 16px; }
-  .pa-shell .pa-detail-dosage-card{ padding: 16px; }
+  .pa-shell .pa-detail-card{ padding: 16px 18px !important; }
+  .pa-shell .pa-detail-dosage-card{ padding: 16px 18px !important; }
 
   /* Allow dosage header to wrap so price toggle drops below title */
   .pa-shell .pa-detail-dosage-head{ flex-wrap: wrap; gap: 8px; }
@@ -1499,8 +1511,8 @@
   .pa-shell .pa-price-grid{ grid-template-columns: 1fr; }
 
   /* Detail cards: tight padding */
-  .pa-shell .pa-detail-card{ padding: 14px; }
-  .pa-shell .pa-detail-dosage-card{ padding: 14px; }
+  .pa-shell .pa-detail-card{ padding: 14px !important; }
+  .pa-shell .pa-detail-dosage-card{ padding: 14px !important; }
   .pa-shell .pa-detail-name{ font-size: 18px; }
 }
 
