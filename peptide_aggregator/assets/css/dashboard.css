@@ -17,8 +17,9 @@
   width: 100% !important;
 }
 
-/* Detail view show/hide — pa-hidden/pa-visible toggled on each element */
-#pa-product-detail              { display: none !important; }
+/* Detail view show/hide — pa-hidden/pa-visible toggled on each element.
+   #pa-product-detail starts hidden via inline style="display:none" in HTML.
+   Adding pa-visible overrides it; removing pa-visible restores the inline hidden. */
 #pa-product-detail.pa-visible   { display: block !important; }
 #pa-product-grid.pa-hidden      { display: none !important; }
 #pa-results-bar.pa-hidden       { display: none !important; }

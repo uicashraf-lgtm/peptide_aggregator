@@ -37,8 +37,7 @@ class PA_Shortcodes {
 /* pa: critical layout – injected after Elementor to guarantee source-order win */
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
 .pa-shell{display:block!important;width:100%!important}
-/* detail view show/hide — pa-hidden added/removed directly on each element */
-#pa-product-detail{display:none!important}
+/* detail view show/hide — pa-hidden/pa-visible toggled on each element */
 #pa-product-detail.pa-visible{display:block!important}
 #pa-product-grid.pa-hidden{display:none!important}
 #pa-results-bar.pa-hidden{display:none!important}
@@ -172,8 +171,8 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.28');
-        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.28', false);
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.29');
+        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.29', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
         if (!is_admin()) {
@@ -310,7 +309,7 @@ class PA_Shortcodes {
                 </div>
 
                 <!-- Product detail (overlay within view) -->
-                <div id="pa-product-detail" class="pa-product-detail">
+                <div id="pa-product-detail" class="pa-product-detail" style="display:none">
                     <div class="pa-detail-layout">
                         <div class="pa-detail-sidebar">
                             <button id="pa-detail-back" class="pa-back-btn" type="button">&#8592; Back to Prices</button>
