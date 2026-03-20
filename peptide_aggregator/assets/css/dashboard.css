@@ -494,7 +494,7 @@
   grid-template-columns: 40px 1fr auto !important;
   gap: 12px !important;
   align-items: center !important;
-  padding: 12px 10px !important;
+  padding: 14px 10px !important;
   border-radius: 0 !important;
   border-bottom: 1px solid var(--line) !important;
 }
