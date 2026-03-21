@@ -753,7 +753,7 @@
         info.appendChild(el('span', 'pa-vendor-prodname', escHtml(v.product_name)));
       }
       var inStock = v.in_stock !== false;
-      info.appendChild(el('span', 'pa-vendor-stock ' + (inStock ? 'is-in' : 'is-out'), '\u25cf ' + (inStock ? 'In Stock' : 'Out of Stock')));
+      info.appendChild(el('span', 'pa-vendor-stock ' + (inStock ? 'is-in-stock' : 'is-out-of-stock'), (inStock ? 'In Stock' : 'Out of Stock')));
 
 
       // Right: coupon + price + link

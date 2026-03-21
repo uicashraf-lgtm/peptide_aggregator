@@ -786,6 +786,33 @@
     border-radius: 50% !important;
 }
 
+.pa-shell .pa-vendor-stock.is-out-of-stock {
+    color: var(--muted) !important;
+}
+
+.pa-shell .pa-vendor-prodname {
+    font-size: 11px !important;
+    color: var(--muted) !important;
+    font-weight: 400 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.pa-shell .pa-detail-prev-price {
+    font-size: 11px !important;
+    color: var(--muted) !important;
+    text-decoration: line-through !important;
+    font-weight: 500 !important;
+}
+
+.pa-shell .pa-dpbar-stock-btn.is-active,
+.pa-shell .pa-dpbar-supplier-btn.is-active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
 .pa-shell .pa-detail-price {
     font-size: 17px !important;
     font-weight: 800 !important;
