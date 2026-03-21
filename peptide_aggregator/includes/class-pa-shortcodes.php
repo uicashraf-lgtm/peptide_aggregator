@@ -168,6 +168,9 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-sidebar{width:100%!important}
 .pa-shell .pa-detail-prices-bar{flex-direction:column!important;align-items:flex-start!important}
 .pa-shell .pa-detail-dosage-head{flex-direction:column!important;align-items:flex-start!important}
+.pa-shell .pa-detail-vrow{grid-template-columns:40px 1fr!important;grid-template-rows:auto auto!important}
+.pa-shell .pa-vendor-avatar{grid-row:1/3!important;align-self:start!important;margin-top:2px!important}
+.pa-shell .pa-detail-vrow-right{grid-column:2!important;flex-wrap:wrap!important}
 }
 ';
     }
@@ -180,7 +183,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.44');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.45');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.42', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.21', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.21', false);
