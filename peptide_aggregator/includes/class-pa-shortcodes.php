@@ -280,6 +280,7 @@ class PA_Shortcodes {
                     <div class="pa-divider"></div>
                     <div class="pa-active-row">
                         <div id="pa-active-filters" class="pa-active-list"></div>
+                        <button id="pa-clear-all" class="pa-clear-all" type="button">Clear All</button>
                     </div>
                 </section>
 
@@ -361,6 +362,7 @@ class PA_Shortcodes {
                 <div class="pa-modal-head">
                     <h2>Filter Suppliers</h2>
                     <div class="pa-modal-head-actions">
+                        <button id="pa-dsm-clear-all" class="pa-link-btn" type="button">Clear All</button>
                         <button id="pa-dsm-close" class="pa-modal-close" type="button" aria-label="Close">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -732,6 +734,7 @@ class PA_Shortcodes {
                 <div class="pa-divider"></div>
                 <div id="pas-active-row" class="pa-active-row">
                     <div id="pas-active-filters" class="pa-active-list"></div>
+                    <button id="pas-clear-all" class="pa-clear-all" type="button">Clear All</button>
                 </div>
             </section>
 
