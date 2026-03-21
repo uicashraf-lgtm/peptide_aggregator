@@ -7,7 +7,6 @@
   };
 
   const API = (UI.api_base || '').replace(/\/$/, '');
-  const REST = (UI.rest_base || '').replace(/\/$/, '');
   const SSE_URL = UI.sse_url || '';
   let sseSource = null;
 
@@ -166,21 +165,14 @@
 
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
-    const url = (REST || API + '/api') + '/products';
     try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        let errMsg = 'HTTP ' + res.status;
-        try { const j = await res.json(); errMsg = (j && (j.message || j.error || JSON.stringify(j))) || errMsg; } catch (_) {}
-        throw new Error(errMsg);
-      }
+      const res = await fetch(API + '/api/products');
       const raw = await res.json();
-      if (!Array.isArray(raw)) throw new Error('Unexpected response: ' + JSON.stringify(raw).slice(0, 120));
       state.allProducts = groupByDosage(raw);
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
-      if (grid) grid.innerHTML = '<p class="pa-error">Could not load products.<br><small style="opacity:.7">URL: ' + url + '<br>' + (e && e.message ? e.message : String(e)) + '</small></p>';
+      if (grid) grid.innerHTML = '<p class="pa-error">Could not load products. Is the API running?</p>';
     }
   }
 
@@ -552,7 +544,7 @@
     // Fetch all listings for this product from API (includes all listings per vendor)
     try {
       var pId = (pData && pData.id) || productId;
-      const res = await fetch((REST || API + '/api') + '/products/' + pId + '/prices');
+      const res = await fetch(API + '/api/products/' + pId + '/prices');
       const allPrices = await res.json();
 
       // Build dosage groups from all listings (no dedup — show every listing)

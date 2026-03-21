@@ -209,7 +209,6 @@ class PA_Shortcodes {
             wp_add_inline_script('pa-dashboard-js',
                 'window.PA_UI = {' .
                     'api_base:'     . json_encode($this->api->base_url()) . ',' .
-                    'rest_base:'    . json_encode(rest_url('pa/v1'))      . ',' .
                     'sse_url:'      . json_encode($this->api->sse_url())  . ',' .
                     'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','Ipamorelin/CJC-1295','BPC-157/TB-500','MOTS-c','BPC-157']) . ',' .
                     'categories:'   . json_encode([
@@ -253,7 +252,6 @@ class PA_Shortcodes {
         // inline block executes relative to dashboard.js.
         window.PA_UI = window.PA_UI || {};
         window.PA_UI.api_base = <?php echo json_encode($this->api->base_url()); ?>;
-        window.PA_UI.rest_base = <?php echo json_encode(rest_url('pa/v1')); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
         window.PA_UI.dose_labels = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
         </script>
