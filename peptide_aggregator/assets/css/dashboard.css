@@ -76,14 +76,21 @@
   align-items: center !important;
   gap: 10px !important;
   margin-top: 12px !important;
-  flex-wrap: wrap !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
 }
 
 .pa-shell .pa-chip-list {
   display: flex !important;
-  flex-wrap: wrap !important;
+  flex-wrap: nowrap !important;
   gap: 8px !important;
   align-items: center !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+.pa-shell .pa-chip-list::-webkit-scrollbar {
+  display: none !important;
 }
 
 .pa-shell .pa-chip {
