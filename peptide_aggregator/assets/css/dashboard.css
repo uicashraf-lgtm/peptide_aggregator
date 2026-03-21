@@ -173,8 +173,14 @@
 }
 
 .pa-shell .pa-clear-all,
+#pa-clear-all,
 #pa-dsm-clear-all,
-#pas-clear-all {
+#pa-dsm-clear-list,
+#pa-modal-clear-all,
+#pas-clear-all,
+[data-action="cat-clear-all"],
+[data-action="sup-clear-all"],
+[data-action="price-clear-all"] {
     display: none !important;
 }
 
