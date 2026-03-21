@@ -166,21 +166,14 @@
 
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
-    const url = (REST || API + '/api') + '/products';
     try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        let errMsg = 'HTTP ' + res.status;
-        try { const j = await res.json(); errMsg = (j && (j.message || j.error || JSON.stringify(j))) || errMsg; } catch (_) {}
-        throw new Error(errMsg);
-      }
+      const res = await fetch((REST || API + '/api') + '/products');
       const raw = await res.json();
-      if (!Array.isArray(raw)) throw new Error('Unexpected response: ' + JSON.stringify(raw).slice(0, 120));
       state.allProducts = groupByDosage(raw);
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
-      if (grid) grid.innerHTML = '<p class="pa-error">Could not load products.<br><small style="opacity:.7">URL: ' + url + '<br>' + (e && e.message ? e.message : String(e)) + '</small></p>';
+      if (grid) grid.innerHTML = '<p class="pa-error">Could not load products. Is the API running?</p>';
     }
   }
 
