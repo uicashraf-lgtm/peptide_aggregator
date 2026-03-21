@@ -867,9 +867,6 @@
       closeDsmModal();
       renderDetailVendors(state.detailCurrentVendors);
     });
-    document.getElementById('pa-dsm-clear-all').addEventListener('click', function() {
-      state.detailSupplierDraft.clear(); renderDsmList(document.getElementById('pa-dsm-search').value);
-    });
     document.getElementById('pa-dsm-clear-list').addEventListener('click', function() {
       state.detailSupplierDraft.clear(); renderDsmList(document.getElementById('pa-dsm-search').value);
     });
@@ -1263,14 +1260,6 @@
         if (e.key === 'Enter') { e.preventDefault(); renderProductGrid(filteredProducts()); showProductGrid(); }
       });
     }
-    const clearBtn = document.getElementById('pa-clear-all');
-    if (clearBtn) clearBtn.addEventListener('click', function () {
-      state.activeFilters.clear();
-      state.tagFilters.clear();
-      renderPopular();
-      renderActiveFilters();
-      renderProductGrid(filteredProducts());
-    });
 
     const sort = document.getElementById('pa-grid-sort');
     if (sort) sort.addEventListener('change', function () { renderProductGrid(filteredProducts()); showProductGrid(); });
