@@ -173,6 +173,11 @@
 }
 
 .pa-shell .pa-clear-all,
+#pa-dsm-clear-all,
+#pas-clear-all {
+    display: none !important;
+}
+
 .pa-shell [onclick*="clear"],
 .pa-shell .clear-btn {
     height: 26px !important;
