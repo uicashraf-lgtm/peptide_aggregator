@@ -5,7 +5,7 @@
 .pa-shell {
     --panel:        #ffffff;
     --panel-soft:   #f7f9fc;
-    --bg-main:      #f0f4f8;
+    --bg-main:      #f8fafc;
     --text:         #1a2332;
     --text-soft:    #3d4f63;
     --muted:        #6b7a90;
@@ -170,6 +170,27 @@
     align-items: center !important;
     gap: 6px !important;
     cursor: pointer !important;
+}
+
+.pa-shell .pa-active-chip {
+    height: 28px !important;
+    padding: 0 10px !important;
+    border-radius: 99px !important;
+    background: var(--accent) !important;
+    border: 1px solid var(--accent) !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-active-chip span {
+    font-size: 12px !important;
+    line-height: 1 !important;
 }
 
 .pa-shell .pa-clear-all,
