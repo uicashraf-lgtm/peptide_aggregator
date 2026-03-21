@@ -32,6 +32,7 @@ register_deactivation_hook(__FILE__, function () {
 require_once PA_PLUGIN_DIR . 'includes/class-pa-api-client.php';
 require_once PA_PLUGIN_DIR . 'includes/class-pa-admin.php';
 require_once PA_PLUGIN_DIR . 'includes/class-pa-shortcodes.php';
+require_once PA_PLUGIN_DIR . 'includes/class-pa-rest.php';
 
 final class Peptide_Aggregator_Plugin {
     public function __construct() {
@@ -43,6 +44,7 @@ final class Peptide_Aggregator_Plugin {
         $api_client = new PA_Api_Client();
         new PA_Admin($api_client);
         new PA_Shortcodes($api_client);
+        new PA_Rest($api_client);
     }
 }
 
