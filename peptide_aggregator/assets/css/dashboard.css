@@ -406,10 +406,20 @@
     white-space: nowrap !important;
 }
 
+/* Dosage label */
+.pa-shell .pa-dosage-label {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
 /* Dosage pills */
 .pa-shell .pa-dosage-pill {
-    height: 30px !important;
-    padding: 0 12px !important;
+    height: 24px !important;
+    padding: 0 8px !important;
     border-radius: 99px !important;
     background: var(--panel-soft) !important;
     border: 1.5px solid var(--line) !important;
@@ -489,6 +499,7 @@
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    text-transform: capitalize !important;
 }
 
 .pa-shell .pa-pcard-stock {
@@ -679,7 +690,7 @@
 
 /* Detail dosage buttons */
 .pa-shell .pa-ddosage-btn {
-    padding: 10px 14px !important;
+    padding: 6px 10px !important;
     border-radius: var(--radius-md) !important;
     background: var(--panel-soft) !important;
     border: 1.5px solid var(--line) !important;
