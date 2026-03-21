@@ -176,9 +176,9 @@
     height: 28px !important;
     padding: 0 10px !important;
     border-radius: 99px !important;
-    background: var(--accent) !important;
+    background: transparent !important;
     border: 1px solid var(--accent) !important;
-    color: #fff !important;
+    color: var(--accent) !important;
     font-size: 12px !important;
     font-weight: 500 !important;
     display: inline-flex !important;
