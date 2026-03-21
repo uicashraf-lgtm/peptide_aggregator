@@ -479,6 +479,19 @@
       viewList.classList.add('is-active'); if (viewGrid) viewGrid.classList.remove('is-active');
     });
 
+    var clearBtn = document.getElementById('pas-clear-all');
+    if (clearBtn) clearBtn.addEventListener('click', function() {
+      state.couponOnly = false; state.cryptoOnly = false;
+      state.favsOnly = false; state.usOnly = false; state.query = '';
+      if (searchEl) searchEl.value = '';
+      ['pas-filter-coupon','pas-filter-crypto','pas-filter-favs','pas-filter-us'].forEach(function(id) {
+        var b = document.getElementById(id); if (b) b.classList.remove('is-active');
+      });
+      renderPopularChips();
+      renderActiveFilters();
+      filterAndRender();
+    });
+
     loadVendors();
   });
 })();
