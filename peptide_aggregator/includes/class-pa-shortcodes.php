@@ -47,8 +47,8 @@ class PA_Shortcodes {
 .pa-shell .pa-search-row{display:grid!important;grid-template-columns:1fr 56px!important;gap:12px!important;align-items:center!important}
 .pa-shell .pa-search-input-wrap{position:relative!important;display:flex!important;align-items:center!important}
 .pa-shell .pa-filter-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important}
-.pa-shell .pa-popular-row{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important;margin-top:12px!important}
-.pa-shell .pa-chip-list{display:flex!important;flex-wrap:wrap!important;gap:8px!important;align-items:center!important}
+.pa-shell .pa-popular-row{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:nowrap!important;margin-top:12px!important;overflow:hidden!important}
+.pa-shell .pa-chip-list{display:flex!important;flex-wrap:nowrap!important;gap:8px!important;align-items:center!important;overflow-x:auto!important;scrollbar-width:none!important}
 .pa-shell .pa-chip{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important}
 .pa-shell .pa-active-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-active-list{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
@@ -174,7 +174,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.39');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.40');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.40', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.20', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.20', false);
