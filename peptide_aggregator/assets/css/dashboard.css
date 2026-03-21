@@ -1269,3 +1269,29 @@
     width: 3px !important;
     height: 3px !important;
 }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 600px) {
+    /* Detail view: stack sidebar above main instead of side-by-side */
+    .pa-shell .pa-detail-layout {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .pa-shell .pa-detail-sidebar {
+        width: 100% !important;
+    }
+
+    /* Prices bar: stack left/center/right vertically */
+    .pa-shell .pa-detail-prices-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    /* Dosage head: allow wrapping more naturally */
+    .pa-shell .pa-detail-dosage-head {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+}
