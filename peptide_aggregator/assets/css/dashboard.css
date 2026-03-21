@@ -150,12 +150,11 @@
     height: 1px !important;
     background: var(--line) !important;
     margin: 14px 0 12px !important;
-    display: none !important;
+    display: none !important; /* hidden unless filters are active — JS toggles */
 }
 
-.pa-shell .pa-active-row,
-#pas-active-row {
-    display: none !important;
+.pa-shell .pa-active-row {
+    min-height: 0 !important;
 }
 
 .pa-shell .pa-active-tag {
