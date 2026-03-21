@@ -444,10 +444,17 @@
 
 .pa-shell .pa-dosage-arrow {
     color: var(--muted) !important;
-    background: none !important;
-    border: none !important;
+    background: var(--panel-soft) !important;
+    border: 1.5px solid var(--line) !important;
+    border-radius: 99px !important;
     cursor: pointer !important;
     padding: 0 !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-dosage-arrow:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
 }
 
 /* Vendor rows */
