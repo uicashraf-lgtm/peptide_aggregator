@@ -7,6 +7,7 @@
   };
 
   const API = (UI.api_base || '').replace(/\/$/, '');
+  const REST = (UI.rest_base || '').replace(/\/$/, '');
   const SSE_URL = UI.sse_url || '';
   let sseSource = null;
 
@@ -166,7 +167,7 @@
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
     try {
-      const res = await fetch(API + '/api/products');
+      const res = await fetch((REST || API + '/api') + '/products');
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
       renderProductGrid(state.allProducts);
@@ -544,7 +545,7 @@
     // Fetch all listings for this product from API (includes all listings per vendor)
     try {
       var pId = (pData && pData.id) || productId;
-      const res = await fetch(API + '/api/products/' + pId + '/prices');
+      const res = await fetch((REST || API + '/api') + '/products/' + pId + '/prices');
       const allPrices = await res.json();
 
       // Build dosage groups from all listings (no dedup — show every listing)
