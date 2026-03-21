@@ -727,6 +727,7 @@
 }
 
 .pa-shell .pa-detail-vrow {
+    display: grid !important;
     grid-template-columns: 40px 1fr auto !important;
     padding: 14px 8px !important;
     border-bottom: 1px solid var(--line-soft) !important;
@@ -764,6 +765,9 @@
     font-weight: 600 !important;
     color: var(--text) !important;
     line-height: 1.3 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 .pa-shell .pa-vendor-stock {
