@@ -1,1568 +1,492 @@
 /* ============================================================
-   CORE LAYOUT  (Elementor-safe: !important on all display /
-   flex / grid properties so page-builder resets cannot win)
+   AMINO-PRICES CONSOLIDATED PREMIUM THEME
+   Restructured for performance and design consistency
    ============================================================ */
-
-/* Box-sizing reset */
-.pa-shell,
-.pa-shell *,
-.pa-shell *::before,
-.pa-shell *::after {
-  box-sizing: border-box !important;
-}
-
-/* Shell container */
 .pa-shell {
-  display: block !important;
-  width: 100% !important;
+    --panel: #ffffff;
+    --panel-soft: #f8fafc;
+    --bg-main: #f1f5f9;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --accent-soft: rgba(37, 99, 235, 0.08);
+    --line: #e2e8f0;
+    --success: #10b981;
+    --danger: #ef4444;
+    background-color: #f8fafc !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
 }
-
-/* Detail view show/hide — pa-hidden/pa-visible toggled on each element.
-   none!important on #pa-product-detail defeats any Elementor display:block!important
-   that would otherwise override the inline style="display:none". */
-#pa-product-detail              { display: none !important; height: 0 !important; max-height: 0 !important; overflow: hidden !important; }
-#pa-product-detail.pa-visible   { display: block !important; height: auto !important; max-height: none !important; overflow: visible !important; }
-#pa-product-grid.pa-hidden      { display: none !important; }
-#pa-results-bar.pa-hidden       { display: none !important; }
-.pa-search-panel.pa-hidden      { display: none !important; }
-
-/* ── Search panel ── */
+/* ─── 1. Main Search & Navigation ─── */
 .pa-shell .pa-search-panel {
-  margin-bottom: 16px !important;
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
 }
-
-.pa-shell .pa-search-row {
-  display: grid !important;
-  grid-template-columns: 1fr 56px !important;
-  gap: 12px !important;
-  align-items: center !important;
+.pa-shell #pa-search {
+    height: 46px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--line) !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
 }
-
-.pa-shell .pa-search-input-wrap {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
+.pa-shell #pa-search:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 4px var(--accent-soft) !important;
 }
-
-.pa-shell .pa-search-icon {
-  position: absolute !important;
-  left: 16px !important;
+/* ─── 2. Product Card Structure ─── */
+.pa-shell .pa-pcard {
+    background: var(--panel) !important;
+    border: 1px solid #edf2f7 !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
 }
+.pa-shell .pa-pcard:hover {
+    transform: translateY(-5px) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.08) !important;
+}
+/* ─── 3. Dosage & Category Badges ─── */
+.pa-shell .pa-dosage-pill {
+    height: 32px !important;
+    padding: 0 16px !important;
+    border-radius: 99px !important; /* Premium Pill Shape */
+    background-color: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    color: var(--muted) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+.pa-shell .pa-dosage-pill.is-active {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+}
+.pa-shell .pa-cat-badge {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border-radius: 6px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
+/* ─── 4. Vendor Rows (Restructured for Horizontal Flow) ─── */
+.pa-shell .pa-pcard-vendor-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 64px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 8px !important;
+    border-radius: 12px !important;
+    background-color: #f0f7ff !important; /* Soft Blue Tint Base */
+    border: 1px solid #e0e7ff !important;
+    transition: all 0.25s ease !important;
+}
+.pa-shell .pa-pcard-vendor-row:hover {
+    background-color: #e0f2fe !important; /* Slightly deeper blue hover */
+    border-color: var(--accent) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 15px rgba(37, 99, 235, 0.08) !important;
+}
+/* Vendor Info (Left) */
+.pa-shell .pa-pcard-vendor-info {
+    display: flex !important;
+    flex-direction: column !important; /* Stack Name over Stock */
+    align-items: flex-start !important;
+    gap: 2px !important;
+}
+.pa-shell .pa-pcard-vendor-name {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+}
+/* Stock Status Dots */
+.pa-shell .pa-pcard-stock {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+.pa-shell .pa-pcard-stock.is-in-stock { color: var(--success) !important; }
+.pa-shell .pa-pcard-stock.is-in-stock::before {
+    content: "" !important;
+    width: 6px !important;
+    height: 6px !important;
+    background-color: var(--success) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+/* Price & Icon (Right) */
+.pa-shell .pa-pcard-price-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    margin-left: auto !important;
+}
+.pa-shell .pa-price-data {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+}
+.pa-shell .pa-pcard-price {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    color: var(--text) !important;
+}
+/* ─── 5. UI Elements & Cleanup ─── */
+/* Hides specific product names inside the rows */
+.pa-shell .pa-pcard-vprod {
+    display: none !important;
+}
+/* Minimalist External Link Icon */
+.pa-shell .pa-pcard-extlink {
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #94a3b8 !important;
+    transition: all 0.2s ease !important;
+}
+.pa-shell .pa-pcard-extlink svg {
+    width: 20px !important;
+    height: 20px !important;
+    stroke-width: 2.2px !important;
+}
+.pa-shell .pa-pcard-extlink:hover {
+    color: var(--accent) !important;
+    transform: scale(1.1) !important;
+}
+/* Clean Coupon Badges */
+.pa-shell .pa-coupon-badge {
+    background: #ffffff !important;
+    border: 1px dashed rgba(37, 99, 235, 0.4) !important;
+    color: var(--accent) !important;
+    font-family: 'Mono', monospace !important;
+    font-size: 10px !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+}
+/* ============================================================
+   POPULAR CHIPS: ALIGNMENT & STYLE FIX
+   ============================================================ */
+/* 1. The Row Container */
+.pa-shell .pa-popular-row {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important; /* Allows chips to wrap on smaller screens */
+    gap: 10px !important;
+    margin-top: 12px !important;
+}
+/* 2. The Individual Chip */
+.pa-shell .pa-chip {
+    /* Dimensions & Shape */
+    height: 28px !important; /* Slightly shorter than dosage pills for hierarchy */
+    padding: 0 12px !important;
+    border-radius: 99px !important; /* Perfect Pill Shape */
 
+    /* Typography */
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important; /* Prevents text from sitting too low */
+    letter-spacing: 0.01em !important;
+
+    /* Colors */
+    background-color: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+
+    /* Layout */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
+}
+/* 3. Chip Hover Effect */
+.pa-shell .pa-chip:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background-color: var(--accent-soft) !important;
+    transform: translateY(-1px) !important;
+}
+/* 4. The "Popular:" Label Fix */
+.pa-shell .pa-popular-row span:first-child {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin-right: 4px !important;
+}
+/* ============================================================
+   SEARCH & FILTER BAR: HEIGHT & ALIGNMENT FIX
+   ============================================================ */
+/* 1. Ensure Search and Filter match at 46px height */
 .pa-shell #pa-search,
 .pa-shell #pas-search {
-  width: 100% !important;
-  height: 52px !important;
-  border-radius: 16px !important;
-  padding: 0 12px 0 44px !important;
-  font-size: 14px !important;
-  outline: none !important;
-  display: block !important;
+    height: 46px !important;
+    line-height: 46px !important;
+    padding: 0 16px !important;
+    box-sizing: border-box !important;
 }
-
 .pa-shell .pa-filter-btn {
-  height: 52px !important;
-  width: 48px !important;
-  border-radius: 10px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
+    height: 46px !important;
+    width: 46px !important; /* Makes it a perfect square */
+    min-width: 46px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    color: var(--accent) !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
 }
-
+/* 2. Fix the "Popular" Chips & Clear All alignment */
 .pa-shell .pa-popular-row {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  margin-top: 12px !important;
-  flex-wrap: nowrap !important;
-  overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-top: 14px !important;
+    min-height: 32px !important;
 }
-
-.pa-shell .pa-chip-list {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  gap: 8px !important;
-  align-items: center !important;
-  overflow-x: auto !important;
-  scrollbar-width: none !important;
-}
-
-.pa-shell .pa-chip-list::-webkit-scrollbar {
-  display: none !important;
-}
-
 .pa-shell .pa-chip {
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 0 12px !important;
+    border-radius: 99px !important;
+    font-size: 11px !important;
+    background: #ffffff !important;
 }
-
-.pa-shell .pa-divider {
-  height: 1px !important;
-  margin: 10px 0 6px !important;
-}
-
-.pa-shell .pa-active-row {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  min-height: 24px !important;
-}
-
-.pa-shell .pa-active-list {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 6px !important;
-  align-items: center !important;
-}
-
-/* ── Results bar ── */
-.pa-shell .pa-results-bar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  flex-wrap: wrap !important;
-  gap: 12px !important;
-  padding: 20px 0 16px !important;
-}
-
-.pa-shell .pa-results-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-shell .pa-results-right {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  flex-wrap: wrap !important;
-}
-
-.pa-shell .pa-price-toggle {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-}
-
-.pa-shell .pa-sort-label {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  white-space: nowrap !important;
-  font-size: 14px !important;
-}
-
-.pa-shell .pa-grid-sort-select {
-  padding: 5px 8px !important;
-  border-radius: 8px !important;
-  font-size: 13px !important;
-  cursor: pointer !important;
-  height: 34px !important;
-  display: inline-block !important;
-}
-
-.pa-shell .pa-bar-icons {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-
-.pa-shell .pa-view-toggle {
-  display: flex !important;
-  align-items: center !important;
-  border-radius: 8px !important;
-  padding: 3px !important;
-  gap: 2px !important;
-}
-
-.pa-shell .pa-ptoggle {
-  padding: 5px 12px !important;
-  border-radius: 8px !important;
-  cursor: pointer !important;
-  font-size: 13px !important;
-  height: 34px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.pa-shell .pa-bar-icon {
-  border-radius: 8px !important;
-  width: 34px !important;
-  height: 34px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-view-btn {
-  border: none !important;
-  border-radius: 6px !important;
-  width: 28px !important;
-  height: 28px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* ── Product grid ── */
-.pa-shell .pa-product-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
-  gap: 16px !important;
-  margin-top: 4px !important;
-}
-
-.pa-shell .pa-product-grid.is-list {
-  grid-template-columns: 1fr !important;
-}
-
-/* ── Product card ── */
-.pa-shell .pa-pcard {
-  padding: 18px 18px 12px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  cursor: pointer !important;
-}
-
-.pa-shell .pa-pcard-head {
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-}
-
-.pa-shell .pa-pcard-head-left {
-  flex: 1 !important;
-  min-width: 0 !important;
-}
-
-.pa-shell .pa-pcard-name {
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  margin: 0 !important;
-  line-height: 1.3 !important;
-}
-
-.pa-shell .pa-pcard-head-icons {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-pcard-tags {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 6px !important;
-  align-items: center !important;
-}
-
-/* ── Dosage row ── */
-.pa-shell .pa-pcard-dosage {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-shell .pa-dosage-scroll-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  flex: 1 !important;
-  min-width: 0 !important;
-}
-
-.pa-shell .pa-dosage-pills {
-  display: flex !important;
-  gap: 6px !important;
-  overflow-x: auto !important;
-  scrollbar-width: none !important;
-  flex: 1 !important;
-}
-
-.pa-shell .pa-dosage-pill {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  white-space: nowrap !important;
-  padding: 4px 10px !important;
-  border-radius: 999px !important;
-  font-size: 12px !important;
-  cursor: pointer !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-dosage-arrow {
-  border-radius: 6px !important;
-  width: 24px !important;
-  height: 24px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-}
-
-/* ── Vendor list inside card ── */
-.pa-shell .pa-pcard-vendors {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-}
-
-.pa-shell .pa-pcard-vendor-row {
-  display: grid !important;
-  grid-template-columns: 36px 1fr auto !important;
-  gap: 10px !important;
-  align-items: center !important;
-  padding: 8px 10px !important;
-  border-radius: 10px !important;
-}
-
-.pa-shell .pa-pcard-avatar {
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 8px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  overflow: hidden !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-pcard-avatar img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain !important;
-  display: block !important;
-}
-
-.pa-shell .pa-pcard-vinfo {
-  display: flex !important;
-  flex-direction: column !important;
-  min-width: 0 !important;
-}
-
-.pa-shell .pa-pcard-vright {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-  gap: 3px !important;
-  min-width: 0 !important;
-}
-
-.pa-shell .pa-pcard-price-wrap {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-}
-
+/* ============================================================
+   COUPON BADGE: RESTORING THE DASHED INTERACTIVE LOOK
+   ============================================================ */
 .pa-shell .pa-coupon-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 3px !important;
+    /* Base State */
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 4px 10px !important;
+    background: #eff6ff !important; /* Soft Blue */
+    color: var(--accent) !important;
+    border: 1px dashed rgba(37, 99, 235, 0.4) !important; /* The dashed "Clip" border */
+    border-radius: 6px !important;
+    font-family: 'Mono', monospace !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    cursor: copy !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.pa-shell .pa-coupon-badge:hover {
+    background: var(--accent) !important; /* Solid Blue on hover */
+    color: #ffffff !important;
+    border: 1px solid var(--accent) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+}
+.pa-shell .pa-coupon-badge::before {
+    content: "✂" !important; /* Restoring the scissor icon */
+    font-size: 10px !important;
+    opacity: 0.6 !important;
+}
+.pa-shell .pa-coupon-badge:hover::before {
+    opacity: 1 !important;
 }
-
-.pa-shell .pa-coupon-copy {
-  display: inline-flex !important;
-  align-items: center !important;
-  background: none !important;
-  border: none !important;
-  cursor: pointer !important;
-  padding: 0 2px !important;
-}
-
-.pa-shell .pa-pcard-extlink {
-  display: inline-flex !important;
-  align-items: center !important;
-}
-
-/* ── Card footer ── */
-.pa-shell .pa-pcard-foot {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding-top: 4px !important;
-}
-
-/* ── Icon buttons ── */
-.pa-shell .pa-icon-btn {
-  background: none !important;
-  border: none !important;
-  cursor: pointer !important;
-  padding: 4px !important;
-  border-radius: 6px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-}
-
-/* ── Badges ── */
-.pa-shell .pa-cat-badge,
-.pa-shell .pa-tag-badge {
-  display: inline-block !important;
-  padding: 3px 8px !important;
-  border-radius: 6px !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-}
-
-/* ── Detail view ── */
-.pa-shell .pa-detail-layout {
-  display: flex !important;
-  gap: 20px !important;
-  align-items: flex-start !important;
-}
-
-.pa-shell .pa-detail-sidebar {
-  width: 200px !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-detail-main {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 16px !important;
-  min-width: 0 !important;
-}
-
-.pa-shell .pa-detail-head {
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  gap: 12px !important;
-  margin-bottom: 12px !important;
-}
-
-.pa-shell .pa-detail-dosage-head {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  margin-bottom: 14px !important;
-  gap: 12px !important;
-  flex-wrap: wrap !important;
-}
-
-.pa-shell .pa-detail-price-toggle-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-}
-
-.pa-shell .pa-detail-dosage-grid {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
-}
-
-.pa-shell .pa-detail-prices-bar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  flex-wrap: wrap !important;
-  gap: 10px !important;
-  padding: 14px 16px !important;
-}
-
-.pa-shell .pa-dpbar-center {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  flex-wrap: wrap !important;
-}
-
-.pa-shell .pa-dpbar-right {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  flex-wrap: wrap !important;
-}
-
-.pa-shell .pa-detail-vendor-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
-
-/* Vendor row: 3-column grid — avatar | info | price+actions */
-.pa-shell .pa-detail-vrow {
-  display: grid !important;
-  grid-template-columns: 40px 1fr auto !important;
-  gap: 12px !important;
-  align-items: center !important;
-  padding: 14px 10px !important;
-  border-radius: 0 !important;
-  border-bottom: 1px solid var(--line) !important;
-}
-.pa-shell .pa-detail-vrow:last-child {
-  border-bottom: none !important;
-}
-
-.pa-shell .pa-vendor-avatar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  border-radius: 50% !important;
-  background: #2a3f5a !important;
-  color: #fff !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  overflow: hidden !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-vendor-avatar img {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain !important;
-}
-
-.pa-shell .pa-vendor-info {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-  min-width: 0 !important;
-}
-
-.pa-shell .pa-vendor-name {
-  font-weight: 600 !important;
-  font-size: 14px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.pa-shell .pa-vendor-prodname {
-  font-size: 11px !important;
-  opacity: 0.6 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.pa-shell .pa-vendor-stock { font-size: 11px !important; }
-.pa-shell .pa-vendor-stock.is-in  { color: #16a34a !important; }
-.pa-shell .pa-vendor-stock.is-out { color: #94a3b8 !important; }
-
-.pa-shell .pa-detail-vrow-right {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 10px !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-shell .pa-detail-price-wrap {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-}
-
-.pa-shell .pa-detail-price {
-  font-weight: 700 !important;
-  font-size: 15px !important;
-}
-
-.pa-shell .pa-detail-prev-price {
-  font-size: 11px !important;
-  text-decoration: line-through !important;
-  opacity: 0.45 !important;
-}
-
-.pa-shell .pa-detail-link-icon {
-  display: inline-flex !important;
-  align-items: center !important;
-  text-decoration: none !important;
-  opacity: 0.5 !important;
-}
-.pa-shell .pa-detail-link-icon:hover { opacity: 1 !important; }
-
-.pa-shell .pa-coupon-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-
-.pa-shell .pa-coupon-copy-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  background: none !important;
-  border: none !important;
-  cursor: pointer !important;
-  padding: 0 4px !important;
-  opacity: 0.6 !important;
-}
-.pa-shell .pa-coupon-copy-btn:hover { opacity: 1 !important; }
-
-/* Detail dosage buttons */
-.pa-shell .pa-ddosage-btn {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 3px !important;
-  padding: 10px 16px !important;
-  border-radius: 10px !important;
-  cursor: pointer !important;
-  border: 1px solid #e2e8f0 !important;
-  background: transparent !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  transition: background 0.15s !important;
-}
-
-.pa-shell .pa-ddosage-btn.is-active {
-  background: #2a5fa3 !important;
-  color: #fff !important;
-  border-color: #2a5fa3 !important;
-}
-
-.pa-shell .pa-ddosage-label {
-  display: flex !important;
-  align-items: center !important;
-  gap: 3px !important;
-}
-
-.pa-shell .pa-ddosage-price {
-  font-size: 11px !important;
-  opacity: 0.7 !important;
-}
-
-.pa-shell .pa-ddosage-btn.is-active .pa-ddosage-price { opacity: 0.85 !important; }
-
-/* Back button */
-.pa-shell .pa-back-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 8px 14px !important;
-  border-radius: 10px !important;
-  border: 1px solid #e2e8f0 !important;
-  background: transparent !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-}
-
-/* Prices bar sub-elements */
-.pa-shell .pa-dpbar-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-shell .pa-dpbar-titles {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 1px !important;
-}
-
-.pa-shell .pa-dpbar-title {
-  font-weight: 700 !important;
-  font-size: 14px !important;
-}
-
-.pa-shell .pa-dpbar-subtitle {
-  font-size: 12px !important;
-  opacity: 0.6 !important;
-}
-
-.pa-shell .pa-dpbar-stock-btn,
-.pa-shell .pa-dpbar-sort-btn,
-.pa-shell .pa-dpbar-supplier-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  padding: 6px 12px !important;
-  border-radius: 8px !important;
-  border: 1px solid #e2e8f0 !important;
-  background: transparent !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-}
-
-.pa-shell .pa-dpbar-stock-btn.is-active,
-.pa-shell .pa-dpbar-supplier-btn.is-active {
-  background: #2a5fa3 !important;
-  color: #fff !important;
-  border-color: #2a5fa3 !important;
-}
-
-/* ── Nav links ── */
-.pa-shell .pa-nav-links {
-  display: flex !important;
-  border-radius: 12px !important;
-  padding: 4px !important;
-  gap: 4px !important;
-}
-
-/* ── Sort dir buttons (suppliers) ── */
-.pa-shell .pa-sort-dir-btns {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-
-.pa-shell .pa-sort-dir {
-  width: 30px !important;
-  height: 30px !important;
-  border-radius: 6px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* ── Supplier grid ── */
-.pa-shell .pa-supplier-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-  gap: 16px !important;
-  margin-top: 4px !important;
-}
-
-.pa-shell .pa-supplier-grid.is-list {
-  grid-template-columns: 1fr !important;
-}
-
-.pa-shell .pa-scard {
-  padding: 18px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
-  cursor: pointer !important;
-}
-
-.pa-shell .pa-scard-info-row {
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 12px !important;
-  padding: 12px !important;
-  border-radius: 10px !important;
-}
-
-/* ── About shell ── */
-.pa-shell.pa-about-shell {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 24px !important;
-}
-
-.pa-about-stats {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 16px !important;
-  margin: 24px 0 !important;
-}
-
-.pa-about-stat {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-about-actions {
-  display: flex !important;
-  justify-content: center !important;
-  gap: 12px !important;
-  flex-wrap: wrap !important;
-}
-
-.pa-about-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-}
-
-.pa-about-panels {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 20px !important;
-}
-
-.pa-about-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
-
-.pa-about-list-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-}
-
-.pa-about-grid {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 8px !important;
-}
-
-.pa-about-mini {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-about-contact-pill {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-about-stat-icon,
-.pa-about-list-icon,
-.pa-about-mini-icon {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-about-copy-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  background: none !important;
-  border: none !important;
-  cursor: pointer !important;
-}
-
-/* ── Modals ── */
-.pa-modal {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  z-index: 999999 !important;
-  display: flex !important;
-  align-items: flex-end !important;
-  justify-content: center !important;
-}
-
-.pa-modal[aria-hidden="true"] {
-  display: none !important;
-}
-
-.pa-modal-backdrop {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-}
-
-.pa-modal-card {
-  position: relative !important;
-  width: 100% !important;
-  max-width: 480px !important;
-  max-height: 80vh !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  z-index: 1 !important;
-  border-radius: 22px 22px 0 0 !important;
-}
-
-.pa-modal-head {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 16px 20px 12px !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-modal-head-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-}
-
-.pa-modal-close {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  cursor: pointer !important;
-  border-radius: 8px !important;
-  background: none !important;
-}
-
-.pa-modal-tabs {
-  display: flex !important;
-  gap: 4px !important;
-  padding: 4px !important;
-  border-radius: 10px !important;
-  margin: 0 20px 12px !important;
-  flex-shrink: 0 !important;
-}
-
-.pa-modal-tab {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-  flex: 1 !important;
-  padding: 8px 14px !important;
-  border-radius: 8px !important;
-  border: none !important;
-  background: none !important;
-  cursor: pointer !important;
-}
-
-.pa-modal-body {
-  overflow-y: auto !important;
-  flex: 1 !important;
-  padding: 0 20px !important;
-  display: block !important;
-}
-
-.pa-tab-content {
-  display: none !important;
-}
-
-.pa-tab-content.is-active {
-  display: block !important;
-}
-
-.pa-modal-foot,
-.pa-modal-footer {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 14px 20px !important;
-  flex-shrink: 0 !important;
-}
-
-/* ── Filter modal internals ── */
-.pa-toggle-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-}
-
-.pa-toggle-row {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 8px 0 !important;
-  cursor: pointer !important;
-}
-
-.pa-section-head {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  margin: 16px 0 8px !important;
-}
-
-.pa-section-tools {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-check-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-  max-height: 180px !important;
-  overflow-y: auto !important;
-  margin-bottom: 8px !important;
-}
-
-.pa-check-item {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  padding: 8px 12px !important;
-  border-radius: 8px !important;
-  cursor: pointer !important;
-}
-
-.pa-price-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 6px !important;
-  margin-bottom: 8px !important;
-}
-
-.pa-sort-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-}
-
-.pa-sort-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  padding: 10px 12px !important;
-  border-radius: 8px !important;
-  cursor: pointer !important;
-}
-
-.pa-search-inline-wrap.is-hidden {
-  display: none !important;
-}
-
-.pa-search-inline,
-.pa-dsm-search-input {
-  width: 100% !important;
-  height: 38px !important;
-  border-radius: 10px !important;
-  padding: 0 12px !important;
-  font-size: 13px !important;
-  display: block !important;
-}
-
-.pa-dot {
-  display: inline-block !important;
-  width: 3px !important;
-  height: 3px !important;
-  border-radius: 50% !important;
-}
-
-/* ── DSM modal ── */
-.pa-dsm-search-wrap {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  padding: 0 20px 12px !important;
-}
-
-.pa-dsm-search-icon {
-  position: absolute !important;
-  left: 32px !important;
-}
-
-.pa-dsm-search-input {
-  padding-left: 34px !important;
-}
-
-.pa-dsm-status-row {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 0 20px 8px !important;
-}
-
-.pa-dsm-status-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.pa-dsm-list {
-  overflow-y: auto !important;
-  max-height: 280px !important;
-  padding: 0 20px !important;
-}
-
-.pa-inline-check {
-  display: flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  cursor: pointer !important;
-}
-
 /* ============================================================
-   END CORE LAYOUT
+   UTILITY CONTROLS: CLEAR ALL & TOGGLE BUTTONS
    ============================================================ */
-
+/* 1. Clear All Button (The Reset Utility) */
+.pa-shell .pa-clear-all,
+.pa-shell [onclick*="clear"],
+.pa-shell .clear-btn {
+    height: 32px !important;
+    padding: 0 14px !important;
+    border-radius: 8px !important;
+    background: #f1f5f9 !important; /* Soft Slate background */
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+}
+.pa-shell .pa-clear-all:hover {
+    background: #fee2e2 !important; /* Soft Red Tint */
+    color: var(--danger) !important;
+    border-color: #fecaca !important;
+}
+/* 2. Total / mg Toggles (The Comparison Controls) */
+.pa-shell .pa-ptoggle {
+    height: 36px !important; /* Slightly taller for primary row interaction */
+    padding: 0 16px !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    margin: 0 !important;
+}
+.pa-shell .pa-ptoggle.is-active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
+}
+/* 3. Horizontal Alignment Fix for Results Bar */
+.pa-shell .pa-results-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important; /* Tightens the space between Total/mg and Sort */
+}
+/* 4. Ensure the Toggles and Sort Select share the same vertical center */
+.pa-shell .pa-grid-sort-select {
+    height: 36px !important; /* Match the ptoggle height exactly */
+    border-radius: 10px !important;
+    padding: 0 30px 0 12px !important;
+}
 /* ============================================================
-   THEME VARIABLES & COLORS
+   PA-BAR BUTTON: TOP ROW ALIGNMENT
    ============================================================ */
+.pa-shell .pa-bar,
+.pa-shell .pa-bar-btn {
+    /* Standardize Height to match Toggles & Sort */
+    height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 12px !important;
+    border-radius: 10px !important;
 
-.pa-shell {
-  --panel: #ffffff;
-  --panel-soft: #f8fafc;
-  --input: #f1f5f9;
-  --line: #e2e8f0;
-  --line2: #cbd5e1;
-  --text: #0f172a;
-  --muted: #64748b;
-  --chip: #eef2f7;
-  --chip-active: #dbeafe;
-  --accent: #2563eb;
-  --danger: #ef4444;
+    /* Structure */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
 
-  max-width: 1620px;
-  margin: 0 auto;
-  padding: 16px;
-  color: var(--text);
-  font-family: "Manrope", "Segoe UI", sans-serif;
-  background: #f8fafc;
+    /* Colors */
+    background: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    color: var(--accent) !important;
+
+    /* Typography */
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
 }
-
-/* ---------- SEARCH PANEL ---------- */
-.pa-search-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 15px 12px 10px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+/* Hover State: Soft blue glow */
+.pa-shell .pa-bar:hover,
+.pa-shell .pa-bar-btn:hover {
+    background-color: var(--accent-soft) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    transform: translateY(-1px) !important;
 }
-
-.pa-search-row {
-  display: grid;
-  grid-template-columns: 1fr 56px;
-  gap: 12px;
-  align-items: center;
+/* Active/Pressed State */
+.pa-shell .pa-bar.is-active,
+.pa-shell .pa-bar:active {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
 }
-
-.pa-search-input-wrap { position: relative; display: flex; align-items: center; }
-
-.pa-search-icon {
-  position: absolute;
-  left: 16px;
-  color: var(--accent);
+/* Icon Resizing inside .pa-bar */
+.pa-shell .pa-bar svg,
+.pa-shell .pa-bar i {
+    width: 16px !important;
+    height: 16px !important;
+    stroke-width: 2.2px !important;
 }
+/* ============================================================
+   PA-BAR-ICON: SQUARE ACTION BUTTONS
+   ============================================================ */
+.pa-shell .pa-bar-icon {
+    /* 1. Standardize to the "Secondary Control" height */
+    height: 36px !important;
+    width: 36px !important; /* Forces a perfect square */
+    min-width: 36px !important;
 
-#pa-search, #pas-search {
-  width: 100%;
-  height: 52px;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: var(--input);
-  color: var(--text);
-  padding: 0 12px 0 44px;
-  font-size: 14px;
+    /* 2. Shape & Spacing */
+    border-radius: 10px !important;
+    padding: 0 !important; /* Removes padding to keep the icon dead-center */
+    margin: 0 !important;
+
+    /* 3. Centering Logic */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    /* 4. Colors (Matches your white/blue theme) */
+    background: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    color: var(--accent) !important;
+
+    /* 5. Interaction */
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-
-#pa-search::placeholder { color: var(--muted); }
-
-.pa-filter-btn {
-  height: 52px;
-  width: 48px;
-  border-radius: 10px;
-  border: 1px solid var(--accent);
-  background: #eff6ff;
-  color: var(--accent);
-  cursor: pointer;
+/* Hover State: Soft Glow Lift */
+.pa-shell .pa-bar-icon:hover {
+    background-color: var(--accent-soft) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.1) !important;
 }
-
-/* ---------- CHIPS ---------- */
-.pa-chip {
-  background: var(--chip);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 13px;
-  border: 1px solid transparent;
+/* Active State: Solid Blue */
+.pa-shell .pa-bar-icon.is-active,
+.pa-shell .pa-bar-icon:active {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
 }
-
-.pa-chip.is-active {
-  background: var(--chip-active);
-  color: var(--accent);
-  border-color: var(--accent);
+/* 6. Icon Precision: Standardizing the SVG inside */
+.pa-shell .pa-bar-icon svg {
+    width: 18px !important;  /* Slightly larger for clear visibility */
+    height: 18px !important;
+    stroke-width: 2.2px !important; /* Thicker lines for a "Retina" feel */
+    display: block !important;
 }
+/* ============================================================
+   POPULAR ROW: SPACING REFINEMENT
+   ============================================================ */
+.pa-shell .pa-popular-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
 
-.pa-chip:hover { background: #e2e8f0; }
+    /* Pushes the entire row (Label + Chips) down from the Search Bar */
+    margin-top: 24px !important;
 
-/* ---------- CARDS ---------- */
-.pa-product-card,
-.pa-pcard,
-.pa-scard,
-.pa-detail-card,
-.pa-detail-dosage-card,
-.pa-detail-prices {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+    /* Ensures the row stays organized and centered */
+    flex-wrap: wrap !important;
+    min-height: 32px !important;
+    width: 100% !important;
 }
-
-.pa-shell .pa-detail-card {
-  padding: 18px 20px 14px !important;
-}
-
-.pa-shell .pa-detail-dosage-card {
-  padding: 18px 20px !important;
-}
-
-.pa-shell .pa-detail-vendor-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-  padding: 10px 10px 10px !important;
-}
-
-.pa-product-card:hover,
-.pa-pcard:hover {
-  background: var(--panel-soft);
-}
-
-/* ---------- MODAL ---------- */
-.pa-modal-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-}
-
-.pa-modal-backdrop {
-  background: rgba(0,0,0,0.35);
-}
-
-/* ---------- TABLE ---------- */
-.pa-price-table thead th {
-  background: var(--panel-soft);
-  color: var(--muted);
-}
-
-.pa-price-table tbody tr:hover {
-  background: var(--panel-soft);
-}
-
-/* ---------- BUTTONS ---------- */
-.pa-foot-btn.is-cancel {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  color: var(--text);
-}
-
-.pa-foot-btn.is-apply {
-  background: var(--accent);
-  color: #fff;
-}
-
-/* ---------- NAV ---------- */
-.pa-nav-links {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-}
-
-.pa-nav-link {
-  color: var(--muted);
-}
-
-.pa-nav-link.is-active {
-  background: var(--panel);
-  color: var(--text);
-}
-
-/* ---------- INPUTS ---------- */
-.pa-search-inline,
-.pa-dsm-search-input {
-  background: var(--input);
-  border: 1px solid var(--line);
-  color: var(--text);
-}
-
-/* ---------- SECONDARY BLOCKS ---------- */
-.pa-check-item,
-.pa-sort-item,
-.pa-pcard-vendor-row,
-.pa-scard-info-row {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-}
-
-/* ---------- TEXT ---------- */
-.pa-label,
-.pa-results-count,
-.pa-hero-sub {
-  color: var(--muted);
-}
-
-/* ---------- LINKS ---------- */
-.pa-buy-link {
-  background: var(--accent);
-  color: #fff;
-}
-
-/* ---------- SCROLLBAR ---------- */
-.pa-modal-body,
-.pa-check-list {
-  scrollbar-color: rgba(100,116,139,0.4) transparent;
-}
-
-/* ---------- HOVER ---------- */
-.pa-check-item:hover,
-.pa-sort-item:hover,
-.pa-scard:hover {
-  background: var(--panel-soft);
-}
-
-
-/* =========================================================
-   FULL LIGHT THEME OVERRIDE (FINAL - GUARANTEED)
-   Put this at the VERY END of your CSS file
-   ========================================================= */
-
-.pa-shell {
-  --panel: #ffffff !important;
-  --panel-soft: #f8fafc !important;
-  --input: #f1f5f9 !important;
-  --line: #e2e8f0 !important;
-  --line2: #cbd5e1 !important;
-  --text: #0f172a !important;
-  --muted: #64748b !important;
-  --chip: #eef2f7 !important;
-  --chip-active: #dbeafe !important;
-  --accent: #2563eb !important;
-  --danger: #ef4444 !important;
-
-  background: #f8fafc !important;
-  color: var(--text) !important;
-}
-
-/* =========================
-   RESET DARK BACKGROUNDS
-   ========================= */
-.pa-shell * {
-  background-color: transparent !important;
-  color: inherit !important;
-}
-
-/* =========================
-   PRIMARY SURFACES
-   ========================= */
-.pa-search-panel,
-.pa-modal-card,
-.pa-product-card,
-.pa-pcard,
-.pa-scard,
-.pa-detail-card,
-.pa-detail-dosage-card,
-.pa-detail-prices,
-.pa-about-card,
-.pa-about-panel,
-.pa-modal-footer {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
-}
-
-/* =========================
-   SECONDARY SURFACES
-   ========================= */
-.pa-pcard-vendor-row,
-.pa-check-item,
-.pa-sort-item,
-.pa-scard-info-row,
-.pa-about-stat,
-.pa-about-list-item,
-.pa-about-mini {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-}
-
-/* =========================
-   INPUTS
-   ========================= */
-#pa-search,
-#pas-search,
-.pa-search-inline,
-.pa-dsm-search-input {
-  background: #f1f5f9 !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #0f172a !important;
-}
-
-#pa-search::placeholder,
-.pa-search-inline::placeholder,
-.pa-dsm-search-input::placeholder {
-  color: #64748b !important;
-}
-
-/* =========================
-   NAV / TABS
-   ========================= */
-.pa-nav-links {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-}
-
-.pa-nav-link {
-  color: #64748b !important;
-}
-
-.pa-nav-link.is-active {
-  background: #ffffff !important;
-  color: #0f172a !important;
-}
-
-.pa-modal-tabs {
-  background: #f1f5f9 !important;
-}
-
-.pa-modal-tab.is-active {
-  background: #e2e8f0 !important;
-  color: #2563eb !important;
-}
-
-/* =========================
-   BUTTONS
-   ========================= */
-.pa-foot-btn.is-cancel {
-  background: #f1f5f9 !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #0f172a !important;
-}
-
-.pa-foot-btn.is-apply {
-  background: #2563eb !important;
-  color: #ffffff !important;
-}
-
-.pa-buy-link {
-  background: #2563eb !important;
-  color: #ffffff !important;
-}
-
-/* =========================
-   TABLES
-   ========================= */
-.pa-price-table thead th {
-  background: #f1f5f9 !important;
-  color: #64748b !important;
-}
-
-.pa-price-table tbody tr:hover {
-  background: #f8fafc !important;
-}
-
-/* =========================
-   HOVER STATES
-   ========================= */
-.pa-product-card:hover,
-.pa-pcard:hover,
-.pa-scard:hover,
-.pa-check-item:hover,
-.pa-sort-item:hover {
-  background: #f1f5f9 !important;
-}
-
-/* =========================
-   CHIPS
-   ========================= */
-.pa-chip {
-  background: #eef2f7 !important;
-  color: #0f172a !important;
-}
-
-.pa-chip.is-active {
-  background: #dbeafe !important;
-  color: #2563eb !important;
-  border-color: #2563eb !important;
-}
-
-/* =========================
-   MODAL BACKDROP
-   ========================= */
-.pa-modal-backdrop {
-  background: rgba(0,0,0,0.35) !important;
-}
-
-/* =========================
-   SCROLLBAR
-   ========================= */
-.pa-modal-body,
-.pa-check-list,
-.pa-sort-list {
-  scrollbar-color: rgba(100,116,139,0.4) transparent !important;
-}
-
-/* ─── Mobile: additional responsive improvements ─────────────────────────── */
-@media (max-width: 680px) {
-  /* Stack detail sidebar above main content on mobile */
-  .pa-shell .pa-detail-layout{ flex-direction: column; gap: 12px; }
-
-  /* Reduce card padding on mobile */
-  .pa-shell .pa-detail-card{ padding: 14px 16px 12px !important; }
-  .pa-shell .pa-detail-dosage-card{ padding: 14px 16px !important; }
-
-  /* Allow dosage header to wrap so price toggle drops below title */
-  .pa-shell .pa-detail-dosage-head{ flex-wrap: wrap; gap: 8px; }
-
-  /* Hide verbose toggle labels to save horizontal space */
-  .pa-shell .pa-price-toggle-label{ display: none; }
-  .pa-shell .pa-detail-toggle-label{ display: none; }
-
-  /* Reduce results bar top padding */
-  .pa-shell .pa-results-bar{ padding-top: 20px; padding-bottom: 16px; }
-}
-
-/* ─── Extra-small screens (< 480px) ──────────────────────────────────────── */
-@media (max-width: 480px) {
-  body .pa-shell{ padding: 8px; }
-
-  /* Compact search panel */
-  .pa-shell .pa-search-panel{ padding: 10px 10px 8px; border-radius: 16px; }
-  .pa-shell #pa-search, .pa-shell #pas-search{ height: 46px; font-size: 13px; }
-  .pa-shell .pa-filter-btn{ height: 46px; width: 44px; }
-
-  /* Stack results bar into two rows */
-  .pa-shell .pa-results-bar{ flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 14px; padding-bottom: 12px; }
-  .pa-shell .pa-results-right{ flex-wrap: wrap; gap: 8px; }
-
-  /* Tighter product card padding */
-  .pa-shell .pa-pcard{ padding: 14px 14px 10px; }
-
-  /* Smaller supplier card name */
-  .pa-shell .pa-scard-name{ font-size: 14px; }
-
-  /* Price grid: single column on very small screens */
-  .pa-shell .pa-price-grid{ grid-template-columns: 1fr; }
-
-  /* Detail cards: tight padding */
-  .pa-shell .pa-detail-card{ padding: 14px !important; }
-  .pa-shell .pa-detail-dosage-card{ padding: 14px !important; }
-  .pa-shell .pa-detail-name{ font-size: 18px; }
-}
-
-/* ─── Fix horizontal overflow ─────────────────────────────────────────────── */
-body .pa-shell { overflow-x: hidden; }
-
-@media (max-width: 680px) {
-  /* Compact nav tab padding */
-  .pa-shell .pa-nav-link { padding: 7px 12px; font-size: 13px; }
-
-  /* Stack detail prices bar sections vertically */
-  .pa-shell .pa-detail-prices-bar { flex-direction: column; align-items: flex-start; padding: 12px 14px; }
-  .pa-shell .pa-dpbar-center { flex-wrap: wrap; }
-  .pa-shell .pa-dpbar-right { flex-wrap: wrap; }
-
-  /* Tighter vendor list padding inside detail card */
-  .pa-shell .pa-detail-vendor-list { gap: 8px; padding: 10px; }
-  .pa-shell .pa-detail-vrow { padding: 12px 10px; gap: 12px; }
-}
-
-@media (max-width: 480px) {
-  /* Shrink nav tabs further */
-  .pa-shell .pa-nav-link { padding: 6px 8px; font-size: 12px; }
-  .pa-shell .pa-nav-links { padding: 3px; gap: 2px; }
-}
-@media (max-width: 680px) {
-  /* Clip anything that bleeds out of the product card */
-  .pa-shell .pa-pcard { overflow: hidden; }
-
-  /* Tighten vendor row grid so price column has less room to overflow */
-  .pa-shell .pa-pcard-vendor-row { gap: 8px; padding: 8px 6px; }
-  .pa-shell .pa-pcard-vright { gap: 4px; max-width: 110px; }
-  .pa-shell .pa-pcard-price { font-size: 12px; }
-
-  /* Shrink coupon badge on mobile */
-  .pa-shell .pa-coupon-badge { font-size: 9px; padding: 1px 4px; letter-spacing: 0; }
+/* Optional: Ensure the "Popular:" label text doesn't feel "sunk" */
+.pa-shell .pa-popular-row span:first-child {
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
 }
