@@ -20,8 +20,8 @@
 /* Detail view show/hide — pa-hidden/pa-visible toggled on each element.
    none!important on #pa-product-detail defeats any Elementor display:block!important
    that would otherwise override the inline style="display:none". */
-#pa-product-detail              { display: none !important; }
-#pa-product-detail.pa-visible   { display: block !important; }
+#pa-product-detail              { display: none !important; height: 0 !important; max-height: 0 !important; overflow: hidden !important; }
+#pa-product-detail.pa-visible   { display: block !important; height: auto !important; max-height: none !important; overflow: visible !important; }
 #pa-product-grid.pa-hidden      { display: none !important; }
 #pa-results-bar.pa-hidden       { display: none !important; }
 .pa-search-panel.pa-hidden      { display: none !important; }
