@@ -99,7 +99,7 @@ class PA_Shortcodes {
 .pa-shell .pa-dpbar-right{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
 .pa-shell .pa-dpbar-left{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-dpbar-titles{display:flex!important;flex-direction:column!important;gap:1px!important}
-.pa-shell .pa-dpbar-stock-btn,.pa-shell .pa-dpbar-sort-btn,.pa-shell .pa-dpbar-supplier-btn,.pa-shell .pa-dpbar-kit-btn{display:inline-flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
+.pa-shell .pa-dpbar-stock-btn,.pa-shell .pa-dpbar-sort-btn,.pa-shell .pa-dpbar-supplier-btn{display:inline-flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
 .pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important}
 .pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:14px 10px!important;border-radius:0!important;border-bottom:1px solid var(--line)!important}
 .pa-shell .pa-detail-vrow:last-child{border-bottom:none!important}
