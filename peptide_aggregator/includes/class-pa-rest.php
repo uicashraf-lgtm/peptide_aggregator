@@ -41,12 +41,15 @@ class PA_Rest {
         $products = $result['data'];
         $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
         if (!empty($tag_overrides) && is_array($products)) {
-            // Overrides are now keyed by normalised base name (dosage suffix stripped,
-            // lowercase) so they apply to every dosage variant automatically.
             $dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
             foreach ($products as &$product) {
+                $pid  = (string) ($product['id'] ?? '');
                 $base = strtolower(trim(preg_replace($dosage_re, '', $product['name'] ?? '')));
-                if ($base !== '' && array_key_exists($base, $tag_overrides)) {
+                // Support both legacy numeric-ID keys (old saves) and current
+                // name-based keys (new saves), ID match takes priority.
+                if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
+                    $product['tags'] = $tag_overrides[$pid];
+                } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
                     $product['tags'] = $tag_overrides[$base];
                 }
             }
