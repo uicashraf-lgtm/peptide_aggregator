@@ -12,6 +12,29 @@
   let sseSource = null;
 
   // ─── Utility ─────────────────────────────────────────────────────────────
+  // Formulation keywords used for detail-view vendor filtering.
+  // Order matters: most specific first so the first match wins.
+  var FORMULATIONS = [
+    { key: 'capsule', label: 'Capsules',    terms: ['capsule', 'caps'] },
+    { key: 'cream',   label: 'Cream',       terms: ['cream'] },
+    { key: 'nasal',   label: 'Nasal Spray', terms: ['nasal', 'spray'] },
+    { key: 'patch',   label: 'Patch',       terms: ['patch'] },
+    { key: 'tablet',  label: 'Tablets',     terms: ['tablet', 'tab'] },
+    { key: 'powder',  label: 'Powder',      terms: ['powder'] },
+    { key: 'liquid',  label: 'Liquid',      terms: ['liquid', 'solution', 'dropper'] },
+  ];
+
+  function getFormulationKey(str) {
+    var s = (str || '').toLowerCase();
+    for (var i = 0; i < FORMULATIONS.length; i++) {
+      var f = FORMULATIONS[i];
+      for (var j = 0; j < f.terms.length; j++) {
+        if (s.includes(f.terms[j])) return f.key;
+      }
+    }
+    return null;
+  }
+
   function escHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -58,7 +81,7 @@
     applied: null,
 
     allProducts: [],
-    barFilters: { coupon: false, favourites: false, usOnly: false, kits: false, formulation: '' },
+    barFilters: { coupon: false, favourites: false, usOnly: false, kits: false },
     priceMode: 'total', // 'total' or 'mgml'
     favourites: new Set(JSON.parse(localStorage.getItem('pa_favs') || '[]')),
     activeDosages: {}, // productId -> dosage index
@@ -67,8 +90,9 @@
     detailDosages: [],        // available dosages for current detail product
     detailActiveDosage: 0,    // selected dosage index in detail view
     detailProductName: '',    // product name shown in detail view
-    detailStockFilter: 'all', // 'all' | 'instock'
-    detailTypeFilter: 'all',  // 'all' | 'kit' | 'vial'
+    detailStockFilter: 'all',       // 'all' | 'instock'
+    detailTypeFilter: 'all',        // 'all' | 'kit' | 'vial'
+    detailFormulationFilter: 'all', // 'all' | formulation key
     detailSortDir: 'asc',     // 'asc' | 'desc'
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
@@ -203,12 +227,6 @@
       list = list.filter(function (p) {
         return (p.tags || []).some(function (t) { return t.toLowerCase() === 'kit'; }) ||
                p.name.toLowerCase().includes('kit');
-      });
-    }
-    if (state.barFilters.formulation) {
-      var fKey = state.barFilters.formulation;
-      list = list.filter(function (p) {
-        return (p.tags || []).some(function (t) { return t.toLowerCase() === fKey; });
       });
     }
     // Tag filter (from popular chips)
@@ -510,6 +528,7 @@
     state.detailProductName = productName;
     state.detailStockFilter = 'all';
     state.detailTypeFilter = 'all';
+    state.detailFormulationFilter = 'all';
     state.detailSortDir = 'asc';
 
     // Find product data — try exact id first, then by name
@@ -716,8 +735,38 @@
     });
     bar.appendChild(barCenter);
 
-    // Right: sort + suppliers
+    // Right: formulation select (dynamic) + sort + suppliers
     var barRight = el('div', 'pa-dpbar-right');
+
+    // Detect which formulations appear in vendor product names
+    var detectedForms = [];
+    vendors.forEach(function(v) {
+      var k = getFormulationKey(v.product_name);
+      if (k && detectedForms.indexOf(k) === -1) detectedForms.push(k);
+    });
+    if (detectedForms.length > 1) {
+      var formSel = document.createElement('select');
+      formSel.className = 'pa-dpbar-form-select';
+      var allOpt = document.createElement('option');
+      allOpt.value = 'all';
+      allOpt.textContent = 'All forms';
+      formSel.appendChild(allOpt);
+      FORMULATIONS.forEach(function(f) {
+        if (detectedForms.indexOf(f.key) === -1) return;
+        var opt = document.createElement('option');
+        opt.value = f.key;
+        opt.textContent = f.label;
+        if (state.detailFormulationFilter === f.key) opt.selected = true;
+        formSel.appendChild(opt);
+      });
+      formSel.value = state.detailFormulationFilter;
+      formSel.addEventListener('change', function() {
+        state.detailFormulationFilter = formSel.value;
+        renderDetailVendors(vendors);
+      });
+      barRight.appendChild(formSel);
+    }
+
     var sortBtn = el('button', 'pa-dpbar-sort-btn', 'Price <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="' + (state.detailSortDir === 'asc' ? '18 11 12 5 6 11' : '6 13 12 19 18 13') + '"/></svg>');
     sortBtn.type = 'button';
     sortBtn.addEventListener('click', function() { state.detailSortDir = state.detailSortDir === 'asc' ? 'desc' : 'asc'; renderDetailVendors(vendors); });
@@ -748,6 +797,9 @@
       filtered = filtered.filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
     } else if (state.detailTypeFilter === 'vial') {
       filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
+    }
+    if (state.detailFormulationFilter !== 'all') {
+      filtered = filtered.filter(function(v) { return getFormulationKey(v.product_name) === state.detailFormulationFilter; });
     }
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
@@ -1318,12 +1370,6 @@
     const sort = document.getElementById('pa-grid-sort');
     if (sort) sort.addEventListener('change', function () { renderProductGrid(filteredProducts()); showProductGrid(); });
 
-    const formSel = document.getElementById('pa-grid-formulation');
-    if (formSel) formSel.addEventListener('change', function () {
-      state.barFilters.formulation = formSel.value;
-      renderProductGrid(filteredProducts());
-      showProductGrid();
-    });
 
     const backBtn = document.getElementById('pa-detail-back');
     if (backBtn) backBtn.addEventListener('click', showProductGrid);

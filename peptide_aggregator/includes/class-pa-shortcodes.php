@@ -101,6 +101,7 @@ class PA_Shortcodes {
 .pa-shell .pa-dpbar-left{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-dpbar-titles{display:flex!important;flex-direction:column!important;gap:1px!important}
 .pa-shell .pa-dpbar-stock-btn,.pa-shell .pa-dpbar-sort-btn,.pa-shell .pa-dpbar-supplier-btn{display:inline-flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
+.pa-shell .pa-dpbar-form-select{font-size:12px!important;padding:3px 6px!important;border-radius:6px!important;border:1px solid var(--line)!important;background:var(--surface)!important;color:var(--text)!important;cursor:pointer!important}
 .pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important}
 .pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:14px 10px!important;border-radius:0!important;border-bottom:1px solid var(--line)!important}
 .pa-shell .pa-detail-vrow:last-child{border-bottom:none!important}
@@ -330,20 +331,6 @@ class PA_Shortcodes {
                                 <option value="price_asc">Price: Low to High</option>
                                 <option value="price_desc">Price: High to Low</option>
                                 <option value="vendors">Most Vendors</option>
-                            </select>
-                        </label>
-                        <label class="pa-sort-label">Form:
-                            <select id="pa-grid-formulation" class="pa-grid-sort-select">
-                                <option value="">All</option>
-                                <option value="vial">Vials</option>
-                                <option value="capsule">Capsules</option>
-                                <option value="cream">Cream</option>
-                                <option value="liquid">Liquid</option>
-                                <option value="nasal">Nasal Spray</option>
-                                <option value="patch">Patch</option>
-                                <option value="tablet">Tablets</option>
-                                <option value="powder">Powder</option>
-                                <option value="kit">Kits</option>
                             </select>
                         </label>
                         <div class="pa-bar-icons">
