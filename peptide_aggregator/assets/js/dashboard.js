@@ -31,6 +31,16 @@
     }
     return null;
   }
+  // Resolve formulation key for a vendor: name-detection wins, product tags as fallback.
+  function vendorFormulationKey(v) {
+    var k = getFormulationKey(v.product_name);
+    if (k !== null) return k;
+    var tags = state.detailProductTags || [];
+    for (var fi = 0; fi < FORMULATIONS.length; fi++) {
+      if (tags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
+    }
+    return null;
+  }
 
   function escHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -651,7 +661,21 @@
     if (sec) sec.style.display = '';
     grid.innerHTML = '';
 
-    dosages.forEach(function(d, idx) {
+    // When a formulation is active, only show dosages that have at least one matching vendor.
+    var visibleDosages = dosages;
+    if (state.detailFormulationFilter !== 'all') {
+      visibleDosages = dosages.filter(function(d) {
+        return (d.vendors || []).some(function(v) { return vendorFormulationKey(v) === state.detailFormulationFilter; });
+      });
+      // If the active dosage is now hidden, advance to first visible one.
+      if (visibleDosages.length > 0 && !visibleDosages.some(function(d, i) { return dosages.indexOf(d) === activeIdx; })) {
+        state.detailActiveDosage = dosages.indexOf(visibleDosages[0]);
+        activeIdx = state.detailActiveDosage;
+      }
+    }
+
+    visibleDosages.forEach(function(d) {
+      var idx = dosages.indexOf(d);
       var vendors = d.vendors || [];
       var prices = vendors.map(function(v) { return v.price || 0; }).filter(function(p) { return p > 0; });
       var minPrice = prices.length ? Math.min.apply(null, prices) : null;
@@ -744,7 +768,10 @@
     [{ key: 'all', label: 'All' }].concat(FORMULATIONS).forEach(function(f) {
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === f.key ? ' is-active' : ''), f.label);
       btn.type = 'button';
-      btn.addEventListener('click', function() { state.detailFormulationFilter = f.key; renderDetailVendors(vendors); });
+      btn.addEventListener('click', (function(fKey) { return function() {
+        state.detailFormulationFilter = fKey;
+        renderDetailDosageGrid();
+      }; })(f.key));
       barRight.insertBefore(btn, formSep);
     });
 
@@ -780,19 +807,7 @@
       filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
     }
     if (state.detailFormulationFilter !== 'all') {
-      // Resolve formulation for each vendor: name-based detection wins; if no
-      // keyword in the name, fall back to the product-level tags.
-      var tagFallback = (function() {
-        var tags = state.detailProductTags || [];
-        for (var fi = 0; fi < FORMULATIONS.length; fi++) {
-          if (tags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
-        }
-        return null;
-      })();
-      filtered = filtered.filter(function(v) {
-        var key = getFormulationKey(v.product_name);
-        return (key !== null ? key : tagFallback) === state.detailFormulationFilter;
-      });
+      filtered = filtered.filter(function(v) { return vendorFormulationKey(v) === state.detailFormulationFilter; });
     }
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
