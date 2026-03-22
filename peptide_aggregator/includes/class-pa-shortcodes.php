@@ -158,14 +158,7 @@ class PA_Shortcodes {
 .pa-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:16px 0 8px!important}
 .pa-section-tools{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-check-list{display:flex!important;flex-direction:column!important;gap:4px!important;max-height:180px!important;overflow-y:auto!important;margin-bottom:8px!important}
-.pa-check-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:8px 12px!important;cursor:pointer!important;background:#ffffff!important;border:none!important;width:100%!important;border-radius:6px!important;text-align:left!important}
-.pa-check-item:hover{background:#f0f5ff!important}
-.pa-check-item.is-selected{background:#eff6ff!important}
-.pa-check-item span,.pa-check-title,.pa-check-box{color:#1a2332!important;font-size:13px!important;font-weight:500!important}
-.pa-check-item:hover span,.pa-check-item:hover .pa-check-title,.pa-check-item:hover .pa-check-box{color:#1a2332!important}
-.pa-check-item.is-selected .pa-check-title,.pa-check-item.is-selected span{color:#2563eb!important;font-weight:600!important}
-.pa-count-pill,.pa-country-pill{font-size:11px!important;color:#6b7a90!important;background:#f7f9fc!important;border-radius:10px!important;padding:1px 7px!important}
-.pa-check-item:hover .pa-count-pill,.pa-check-item:hover .pa-country-pill{color:#6b7a90!important;background:#f7f9fc!important}
+.pa-check-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:8px 12px!important;cursor:pointer!important}
 .pa-price-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:8px!important}
 .pa-price-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:7px 10px!important;border:1.5px solid #2563eb!important;border-radius:8px!important;background:#ffffff!important;color:#2563eb!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;line-height:1!important}
 .pa-price-btn:hover{background:#eff6ff!important}
@@ -176,11 +169,7 @@ class PA_Shortcodes {
 .pa-foot-btn.is-apply,.pa-modal-apply-btn{background:#2563eb!important;border:1.5px solid #2563eb!important;color:#ffffff!important}
 .pa-foot-btn.is-apply:hover,.pa-modal-apply-btn:hover{background:#1d4ed8!important;border-color:#1d4ed8!important}
 .pa-sort-list{display:flex!important;flex-direction:column!important;gap:4px!important}
-.pa-sort-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:10px 12px!important;cursor:pointer!important;background:#ffffff!important;border:none!important;width:100%!important;border-radius:6px!important;text-align:left!important}
-.pa-sort-item:hover{background:#f0f5ff!important}
-.pa-sort-item span{color:#1a2332!important;font-size:13px!important;font-weight:500!important}
-.pa-sort-item:hover span{color:#1a2332!important}
-.pa-sort-item.is-selected span,.pa-sort-item.is-active span{color:#2563eb!important;font-weight:600!important}
+.pa-sort-item{display:flex!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;cursor:pointer!important}
 .pa-search-inline-wrap.is-hidden{display:none!important}
 .pa-dot{display:inline-block!important;width:3px!important;height:3px!important;border-radius:50%!important}
 .pa-dsm-search-wrap{position:relative!important;display:flex!important;align-items:center!important;padding:0 20px 12px!important}
@@ -209,7 +198,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.63');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.62');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.42', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.21', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.21', false);
