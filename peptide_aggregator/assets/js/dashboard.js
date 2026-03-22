@@ -661,17 +661,20 @@
     if (sec) sec.style.display = '';
     grid.innerHTML = '';
 
-    // When a formulation is active, only show dosages that have at least one matching vendor.
-    var visibleDosages = dosages;
-    if (state.detailFormulationFilter !== 'all') {
-      visibleDosages = dosages.filter(function(d) {
-        return (d.vendors || []).some(function(v) { return vendorFormulationKey(v) === state.detailFormulationFilter; });
+    // Only show dosages that have at least one vendor matching the active type + formulation filters.
+    var visibleDosages = dosages.filter(function(d) {
+      return (d.vendors || []).some(function(v) {
+        var name = (v.product_name || '').toLowerCase();
+        if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
+        if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
+        if (state.detailFormulationFilter !== 'all' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
+        return true;
       });
-      // If the active dosage is now hidden, advance to first visible one.
-      if (visibleDosages.length > 0 && !visibleDosages.some(function(d, i) { return dosages.indexOf(d) === activeIdx; })) {
-        state.detailActiveDosage = dosages.indexOf(visibleDosages[0]);
-        activeIdx = state.detailActiveDosage;
-      }
+    });
+    // If the active dosage is now hidden, advance to first visible one.
+    if (visibleDosages.length > 0 && !visibleDosages.some(function(d) { return dosages.indexOf(d) === activeIdx; })) {
+      state.detailActiveDosage = dosages.indexOf(visibleDosages[0]);
+      activeIdx = state.detailActiveDosage;
     }
 
     visibleDosages.forEach(function(d) {
@@ -754,7 +757,7 @@
       var mode = pair[0], label = pair[1];
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === mode ? ' is-active' : ''), label);
       btn.type = 'button';
-      btn.addEventListener('click', function() { state.detailTypeFilter = mode; renderDetailVendors(vendors); });
+      btn.addEventListener('click', (function(m) { return function() { state.detailTypeFilter = m; renderDetailDosageGrid(); }; })(mode));
       barCenter.appendChild(btn);
     });
     bar.appendChild(barCenter);
