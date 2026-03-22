@@ -52,7 +52,7 @@ class PA_Shortcodes {
 .pa-shell .pa-chip{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important}
 .pa-shell .pa-active-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-active-list{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
-.pa-shell .pa-results-bar{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important;padding:20px 0 16px!important}
+.pa-shell .pa-results-bar{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important;padding:10px 2px!important}
 .pa-shell .pa-results-left{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-results-right{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important}
 .pa-shell .pa-price-toggle{display:flex!important;align-items:center!important;gap:6px!important}
@@ -62,9 +62,9 @@ class PA_Shortcodes {
 .pa-shell .pa-ptoggle{display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .pa-shell .pa-bar-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important}
 .pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;border:none!important}
-.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))!important;gap:16px!important;margin-top:4px!important}
+.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))!important;gap:10px!important;margin-top:4px!important}
 .pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}
-.pa-shell .pa-pcard{display:flex!important;flex-direction:column!important;gap:10px!important;padding:18px 18px 12px!important;cursor:pointer!important}
+.pa-shell .pa-pcard{display:flex!important;flex-direction:column!important;gap:10px!important;padding:14px 14px 10px!important;cursor:pointer!important}
 .pa-shell .pa-pcard-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-pcard-head-left{flex:1!important;min-width:0!important}
 .pa-shell .pa-pcard-head-icons{display:flex!important;align-items:center!important;gap:4px!important;flex-shrink:0!important}
