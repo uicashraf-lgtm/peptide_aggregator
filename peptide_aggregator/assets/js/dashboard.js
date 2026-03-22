@@ -701,10 +701,6 @@
       }
       btn.appendChild(labelSpan);
 
-      if (minPrice != null) {
-        var priceDisplay = (pricePer != null) ? ('$' + Number(pricePer).toFixed(1) + '/' + (vendors[0].amount_unit || 'mg')) : fmt(minPrice, 'USD');
-        btn.appendChild(el('span', 'pa-ddosage-price', priceDisplay));
-      }
 
       btn.addEventListener('click', function() {
         state.detailActiveDosage = idx;
