@@ -93,6 +93,7 @@
     detailStockFilter: 'all',       // 'all' | 'instock'
     detailTypeFilter: 'all',        // 'all' | 'kit' | 'vial'
     detailFormulationFilter: 'all', // 'all' | formulation key
+    detailProductTags: [],          // tags of the current detail product
     detailSortDir: 'asc',     // 'asc' | 'desc'
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
@@ -529,11 +530,13 @@
     state.detailStockFilter = 'all';
     state.detailTypeFilter = 'all';
     state.detailFormulationFilter = 'all';
+    state.detailProductTags = [];
     state.detailSortDir = 'asc';
 
     // Find product data — try exact id first, then by name
     var pData = state.allProducts.find(function (x) { return x.id === productId; }) ||
                 state.allProducts.find(function (x) { return x.name.toLowerCase() === productName.toLowerCase(); });
+    state.detailProductTags = (pData && pData.tags) || [];
 
     // Populate head icons (share + favourite)
     var iconsEl = document.getElementById('pa-detail-head-icons');
@@ -738,25 +741,22 @@
     // Right: formulation select (dynamic) + sort + suppliers
     var barRight = el('div', 'pa-dpbar-right');
 
-    // Detect which formulations appear in vendor product names
-    var detectedForms = [];
-    vendors.forEach(function(v) {
-      var k = getFormulationKey(v.product_name);
-      if (k && detectedForms.indexOf(k) === -1) detectedForms.push(k);
+    // Build formulation options from the product's own tags (admin-assigned,
+    // same workflow as the grid "Kits only" tag).
+    var formOptions = FORMULATIONS.filter(function(f) {
+      return (state.detailProductTags || []).some(function(t) { return t.toLowerCase() === f.key; });
     });
-    if (detectedForms.length > 1) {
+    if (formOptions.length > 0) {
       var formSel = document.createElement('select');
       formSel.className = 'pa-dpbar-form-select';
       var allOpt = document.createElement('option');
       allOpt.value = 'all';
       allOpt.textContent = 'All forms';
       formSel.appendChild(allOpt);
-      FORMULATIONS.forEach(function(f) {
-        if (detectedForms.indexOf(f.key) === -1) return;
+      formOptions.forEach(function(f) {
         var opt = document.createElement('option');
         opt.value = f.key;
         opt.textContent = f.label;
-        if (state.detailFormulationFilter === f.key) opt.selected = true;
         formSel.appendChild(opt);
       });
       formSel.value = state.detailFormulationFilter;
