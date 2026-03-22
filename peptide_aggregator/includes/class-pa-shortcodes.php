@@ -160,6 +160,14 @@ class PA_Shortcodes {
 .pa-check-list{display:flex!important;flex-direction:column!important;gap:4px!important;max-height:180px!important;overflow-y:auto!important;margin-bottom:8px!important}
 .pa-check-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:8px 12px!important;cursor:pointer!important}
 .pa-price-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:8px!important}
+.pa-price-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:7px 10px!important;border:1.5px solid #2563eb!important;border-radius:8px!important;background:#ffffff!important;color:#2563eb!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;line-height:1!important}
+.pa-price-btn:hover{background:#eff6ff!important}
+.pa-price-btn.is-selected{background:#2563eb!important;color:#ffffff!important}
+.pa-foot-btn,.pa-modal-cancel-btn,.pa-modal-apply-btn{height:40px!important;padding:0 22px!important;border-radius:8px!important;font-size:13px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+.pa-foot-btn.is-cancel,.pa-modal-cancel-btn{background:#f7f9fc!important;border:1.5px solid #e4e9f0!important;color:#6b7a90!important}
+.pa-foot-btn.is-cancel:hover,.pa-modal-cancel-btn:hover{color:#1a2332!important;border-color:#c0cad8!important}
+.pa-foot-btn.is-apply,.pa-modal-apply-btn{background:#2563eb!important;border:1.5px solid #2563eb!important;color:#ffffff!important}
+.pa-foot-btn.is-apply:hover,.pa-modal-apply-btn:hover{background:#1d4ed8!important;border-color:#1d4ed8!important}
 .pa-sort-list{display:flex!important;flex-direction:column!important;gap:4px!important}
 .pa-sort-item{display:flex!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;cursor:pointer!important}
 .pa-search-inline-wrap.is-hidden{display:none!important}
@@ -190,7 +198,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.61');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.62');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.42', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.21', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.21', false);
