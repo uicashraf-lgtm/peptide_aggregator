@@ -21,7 +21,7 @@ class PA_Rest {
         register_rest_route('pa/v1', '/debug/tag-overrides', array(
             'methods'             => 'GET',
             'callback'            => array($this, 'debug_tag_overrides'),
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => '__return_true',
         ));
         register_rest_route('pa/v1', '/products/(?P<id>[^/]+)/prices', array(
             'methods'             => 'GET',
