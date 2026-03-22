@@ -324,12 +324,26 @@ class PA_Shortcodes {
                             <button id="pa-toggle-total" class="pa-ptoggle is-active" type="button">Total</button>
                             <button id="pa-toggle-mgml" class="pa-ptoggle" type="button">mg/mL</button>
                         </div>
-                        <label class="pa-sort-label">Sort cards by:
+                        <label class="pa-sort-label">Sort by:
                             <select id="pa-grid-sort" class="pa-grid-sort-select">
                                 <option value="name">Name</option>
                                 <option value="price_asc">Price: Low to High</option>
                                 <option value="price_desc">Price: High to Low</option>
                                 <option value="vendors">Most Vendors</option>
+                            </select>
+                        </label>
+                        <label class="pa-sort-label">Form:
+                            <select id="pa-grid-formulation" class="pa-grid-sort-select">
+                                <option value="">All</option>
+                                <option value="vial">Vials</option>
+                                <option value="capsule">Capsules</option>
+                                <option value="cream">Cream</option>
+                                <option value="liquid">Liquid</option>
+                                <option value="nasal">Nasal Spray</option>
+                                <option value="patch">Patch</option>
+                                <option value="tablet">Tablets</option>
+                                <option value="powder">Powder</option>
+                                <option value="kit">Kits</option>
                             </select>
                         </label>
                         <div class="pa-bar-icons">
