@@ -36,10 +36,31 @@ class PA_Rest {
         $products = $result['data'];
         $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
         if (!empty($tag_overrides) && is_array($products)) {
+            // The public endpoint returns one entry per dosage variant (e.g. "BPC-157 5mg",
+            // "BPC-157 10mg") while the admin overrides only the specific ID the admin
+            // edited. Build a base-name → tags map so every dosage variant of a product
+            // inherits the same override; otherwise groupByDosage() merges the
+            // non-overridden variants and the removed tag reappears.
+            $dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+            $name_overrides = array();
+            foreach ($products as $product) {
+                $pid = (string) ($product['id'] ?? '');
+                if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
+                    $base = strtolower(trim(preg_replace($dosage_re, '', $product['name'] ?? '')));
+                    if ($base !== '') {
+                        $name_overrides[$base] = $tag_overrides[$pid];
+                    }
+                }
+            }
             foreach ($products as &$product) {
                 $pid = (string) ($product['id'] ?? '');
                 if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
                     $product['tags'] = $tag_overrides[$pid];
+                    continue;
+                }
+                $base = strtolower(trim(preg_replace($dosage_re, '', $product['name'] ?? '')));
+                if ($base !== '' && array_key_exists($base, $name_overrides)) {
+                    $product['tags'] = $name_overrides[$base];
                 }
             }
             unset($product);
