@@ -1316,4 +1316,32 @@
         grid-column: 2 !important;
         flex-wrap: wrap !important;
     }
+
+    /* Compact card margins */
+    .pa-shell .pa-search-panel {
+        padding: 10px 12px !important;
+    }
+
+    .pa-shell .pa-results-bar {
+        padding: 8px 2px !important;
+    }
+
+    .pa-shell .pa-product-grid {
+        gap: 8px !important;
+    }
+
+    .pa-shell .pa-pcard {
+        padding: 12px 12px 8px !important;
+        gap: 8px !important;
+    }
+
+    /* Detail card margins */
+    .pa-shell .pa-detail-card,
+    .pa-shell .pa-detail-dosage-card {
+        padding: 12px !important;
+    }
+
+    .pa-shell .pa-detail-layout {
+        gap: 8px !important;
+    }
 }
