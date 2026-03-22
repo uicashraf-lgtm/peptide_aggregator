@@ -33,7 +33,18 @@ class PA_Rest {
         if (!$result['ok']) {
             return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
         }
-        return rest_ensure_response($result['data']);
+        $products = $result['data'];
+        $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
+        if (!empty($tag_overrides) && is_array($products)) {
+            foreach ($products as &$product) {
+                $pid = (string) ($product['id'] ?? '');
+                if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
+                    $product['tags'] = $tag_overrides[$pid];
+                }
+            }
+            unset($product);
+        }
+        return rest_ensure_response($products);
     }
 
     public function get_prices(WP_REST_Request $req) {
