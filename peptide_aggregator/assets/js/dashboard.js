@@ -68,6 +68,7 @@
     detailActiveDosage: 0,    // selected dosage index in detail view
     detailProductName: '',    // product name shown in detail view
     detailStockFilter: 'all', // 'all' | 'instock'
+    detailKitFilter: false,   // false = show all, true = hide kits
     detailSortDir: 'asc',     // 'asc' | 'desc'
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
@@ -496,6 +497,7 @@
     if (pricesEl) pricesEl.innerHTML = '';
     state.detailProductName = productName;
     state.detailStockFilter = 'all';
+    state.detailKitFilter = false;
     state.detailSortDir = 'asc';
 
     // Find product data — try exact id first, then by name
@@ -683,7 +685,7 @@
     barLeft.appendChild(barTitles);
     bar.appendChild(barLeft);
 
-    // Center: stock filter
+    // Center: stock filter + kit filter
     var barCenter = el('div', 'pa-dpbar-center');
     ['all', 'instock'].forEach(function(mode) {
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailStockFilter === mode ? ' is-active' : ''), mode === 'all' ? 'All' : 'In Stock');
@@ -691,6 +693,11 @@
       btn.addEventListener('click', function() { state.detailStockFilter = mode; renderDetailVendors(vendors); });
       barCenter.appendChild(btn);
     });
+    var kitBtn = el('button', 'pa-dpbar-kit-btn' + (state.detailKitFilter ? ' is-active' : ''), 'Hide Kits');
+    kitBtn.type = 'button';
+    kitBtn.title = 'Toggle to hide kit products and show only single vials';
+    kitBtn.addEventListener('click', function() { state.detailKitFilter = !state.detailKitFilter; renderDetailVendors(vendors); });
+    barCenter.appendChild(kitBtn);
     bar.appendChild(barCenter);
 
     // Right: sort + suppliers
@@ -720,6 +727,11 @@
     var filtered = vendors.slice();
     if (state.detailStockFilter === 'instock') {
       filtered = filtered.filter(function(v) { return v.in_stock !== false; });
+    }
+    if (state.detailKitFilter) {
+      filtered = filtered.filter(function(v) {
+        return !v.is_kit && !(v.product_name || '').toLowerCase().includes('kit');
+      });
     }
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
