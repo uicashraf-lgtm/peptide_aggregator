@@ -1285,6 +1285,12 @@
   document.addEventListener('DOMContentLoaded', function () {
     if (!document.querySelector('.pa-shell')) return;
 
+    // Move modals to document.body so Elementor's CSS transforms don't
+    // break position:fixed (transformed ancestors create a new containing block).
+    document.querySelectorAll('.pa-modal').forEach(function (m) {
+      document.body.appendChild(m);
+    });
+
     state.applied = copyDraft(state.draft);
     renderPopular();
     renderActiveFilters();
