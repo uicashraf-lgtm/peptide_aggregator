@@ -1399,7 +1399,7 @@ class PA_Admin {
                             xhrTags.open('POST', ajaxurl);
                             xhrTags.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                             xhrTags.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
-                                + '&product_id=' + productId
+                                + '&product_name=' + encodeURIComponent(name)
                                 + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
                             PA_TAG_OVERRIDES[String(productId)] = tags.slice();
                             reloadProducts(function() {
@@ -1583,9 +1583,18 @@ class PA_Admin {
             wp_send_json_error('Unauthorized');
         }
         check_ajax_referer('pa_save_product_tags', '_wpnonce');
-        $product_id = (string) intval($_POST['product_id'] ?? 0);
-        if (!$product_id || $product_id === '0') {
-            wp_send_json_error('Invalid product ID');
+        $raw_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        if ($raw_name === '') {
+            wp_send_json_error('Invalid product name');
+            return;
+        }
+        // Strip dosage suffix and normalise to lowercase so "BPC-157 5mg" and
+        // "BPC-157 10mg" both resolve to the same key "bpc-157".
+        $base_name = strtolower(trim(preg_replace(
+            '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $raw_name
+        )));
+        if ($base_name === '') {
+            wp_send_json_error('Invalid product name');
             return;
         }
         $tags_raw = wp_unslash($_POST['tags'] ?? '[]');
@@ -1597,10 +1606,9 @@ class PA_Admin {
         $tags = array_values(array_map('sanitize_text_field', $tags));
 
         $overrides = (array) get_option('pa_product_tag_overrides', array());
-        // Always store the override, even when $tags is empty.
-        // An empty array means "admin explicitly set no tags" — deleting the
-        // entry would let the backend's scraper-assigned tags reappear.
-        $overrides[$product_id] = $tags;
+        // Key by normalised base name so the override applies to every dosage
+        // variant (e.g. "BPC-157 5mg", "BPC-157 10mg") in one shot.
+        $overrides[$base_name] = $tags;
         update_option('pa_product_tag_overrides', $overrides, false);
         wp_send_json_success(array('tags' => $tags));
     }
