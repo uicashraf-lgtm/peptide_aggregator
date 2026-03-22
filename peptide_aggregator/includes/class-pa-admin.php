@@ -1380,7 +1380,15 @@ class PA_Admin {
                             showNotice('error', errors.join(' | '));
                         } else {
                             reloadProducts(function() {
-                                // Re-select the product in the form
+                                // Override local tags with what was just saved.
+                                // The backend GET may return stale scraper-assigned tags
+                                // even after a successful PATCH, causing a visual revert.
+                                for (var i = 0; i < PA_PRODUCTS.length; i++) {
+                                    if (PA_PRODUCTS[i].id == productId) {
+                                        PA_PRODUCTS[i].tags = tags.slice();
+                                        break;
+                                    }
+                                }
                                 loadProduct(productId);
                                 showNotice('success', 'Product updated.');
                             });
