@@ -44,7 +44,10 @@ class PA_Rest {
             }
             unset($product);
         }
-        return rest_ensure_response($products);
+        $response = rest_ensure_response($products);
+        $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        $response->header('Pragma', 'no-cache');
+        return $response;
     }
 
     public function get_prices(WP_REST_Request $req) {
