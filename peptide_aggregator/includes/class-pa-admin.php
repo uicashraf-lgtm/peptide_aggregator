@@ -15,6 +15,7 @@ class PA_Admin {
         add_action('wp_ajax_pa_delete_product', array($this, 'ajax_delete_product'));
         add_action('wp_ajax_pa_delete_vendor', array($this, 'ajax_delete_vendor'));
         add_action('wp_ajax_pa_save_dose_labels', array($this, 'ajax_save_dose_labels'));
+        add_action('wp_ajax_pa_save_product_tags', array($this, 'ajax_save_product_tags'));
     }
 
     public function register_menu() {
@@ -676,6 +677,17 @@ class PA_Admin {
         $products_resp = $this->admin_get('/api/admin/products');
         $products = $products_resp['ok'] && is_array($products_resp['data']) ? $products_resp['data'] : array();
 
+        // Apply admin tag overrides — stored in WordPress so they survive scraper re-runs
+        // that re-assign tags on the backend.
+        $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
+        foreach ($products as &$product) {
+            $pid = (string) ($product['id'] ?? '');
+            if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
+                $product['tags'] = $tag_overrides[$pid];
+            }
+        }
+        unset($product);
+
         $vendors_resp = $this->admin_get('/api/admin/vendors');
         $vendors = $vendors_resp['ok'] && is_array($vendors_resp['data']) ? $vendors_resp['data'] : array();
 
@@ -820,6 +832,8 @@ class PA_Admin {
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
+            var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
+            var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
             var PER_PAGE = 25;
             var currentPage = 1;
             var currentSearch = '';
@@ -1379,16 +1393,16 @@ class PA_Admin {
                         if (errors.length) {
                             showNotice('error', errors.join(' | '));
                         } else {
+                            // Persist the tag change in WordPress so it survives page
+                            // reloads and scraper re-runs that re-assign tags on the backend.
+                            var xhrTags = new XMLHttpRequest();
+                            xhrTags.open('POST', ajaxurl);
+                            xhrTags.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                            xhrTags.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
+                                + '&product_id=' + productId
+                                + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
+                            PA_TAG_OVERRIDES[String(productId)] = tags.slice();
                             reloadProducts(function() {
-                                // Override local tags with what was just saved.
-                                // The backend GET may return stale scraper-assigned tags
-                                // even after a successful PATCH, causing a visual revert.
-                                for (var i = 0; i < PA_PRODUCTS.length; i++) {
-                                    if (PA_PRODUCTS[i].id == productId) {
-                                        PA_PRODUCTS[i].tags = tags.slice();
-                                        break;
-                                    }
-                                }
                                 loadProduct(productId);
                                 showNotice('success', 'Product updated.');
                             });
@@ -1442,7 +1456,17 @@ class PA_Admin {
                 xhr.onload = function() {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        if (Array.isArray(data)) PA_PRODUCTS = data;
+                        if (Array.isArray(data)) {
+                            // Apply admin tag overrides so scraper-assigned tags don't
+                            // revert changes made in the admin.
+                            data.forEach(function(p) {
+                                var pid = String(p.id);
+                                if (PA_TAG_OVERRIDES.hasOwnProperty(pid)) {
+                                    p.tags = PA_TAG_OVERRIDES[pid].slice();
+                                }
+                            });
+                            PA_PRODUCTS = data;
+                        }
                     } catch(e) {}
                     renderTable();
                     if (callback) callback();
@@ -1552,6 +1576,34 @@ class PA_Admin {
         }
         update_option('pa_dose_labels', $all_labels, false);
         wp_send_json_success();
+    }
+
+    public function ajax_save_product_tags() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_save_product_tags', '_wpnonce');
+        $product_id = (string) intval($_POST['product_id'] ?? 0);
+        if (!$product_id || $product_id === '0') {
+            wp_send_json_error('Invalid product ID');
+            return;
+        }
+        $tags_raw = wp_unslash($_POST['tags'] ?? '[]');
+        $tags     = json_decode($tags_raw, true);
+        if (!is_array($tags)) {
+            wp_send_json_error('Invalid tags');
+            return;
+        }
+        $tags = array_values(array_map('sanitize_text_field', $tags));
+
+        $overrides = (array) get_option('pa_product_tag_overrides', array());
+        if (empty($tags)) {
+            unset($overrides[$product_id]);
+        } else {
+            $overrides[$product_id] = $tags;
+        }
+        update_option('pa_product_tag_overrides', $overrides, false);
+        wp_send_json_success(array('tags' => $tags));
     }
 
     public function render_monitoring_page() {
