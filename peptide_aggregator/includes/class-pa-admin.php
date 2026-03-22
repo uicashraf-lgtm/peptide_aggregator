@@ -1597,11 +1597,10 @@ class PA_Admin {
         $tags = array_values(array_map('sanitize_text_field', $tags));
 
         $overrides = (array) get_option('pa_product_tag_overrides', array());
-        if (empty($tags)) {
-            unset($overrides[$product_id]);
-        } else {
-            $overrides[$product_id] = $tags;
-        }
+        // Always store the override, even when $tags is empty.
+        // An empty array means "admin explicitly set no tags" — deleting the
+        // entry would let the backend's scraper-assigned tags reappear.
+        $overrides[$product_id] = $tags;
         update_option('pa_product_tag_overrides', $overrides, false);
         wp_send_json_success(array('tags' => $tags));
     }
