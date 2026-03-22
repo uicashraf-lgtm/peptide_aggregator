@@ -724,6 +724,17 @@
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
     }
+    // Deduplicate by vendor name, keeping best (lowest) price per vendor
+    var vendorBest = {};
+    filtered.forEach(function(v) {
+      var p = v.price != null ? v.price : Infinity;
+      var existing = vendorBest[v.vendor];
+      var ep = existing && existing.price != null ? existing.price : Infinity;
+      if (!existing || p < ep) {
+        vendorBest[v.vendor] = v;
+      }
+    });
+    filtered = Object.keys(vendorBest).map(function(k) { return vendorBest[k]; });
     filtered.sort(function(a, b) {
       var d = (a.price || 0) - (b.price || 0);
       return state.detailSortDir === 'desc' ? -d : d;
