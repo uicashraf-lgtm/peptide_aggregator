@@ -1398,6 +1398,19 @@ class PA_Admin {
                             var xhrTags = new XMLHttpRequest();
                             xhrTags.open('POST', ajaxurl);
                             xhrTags.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                            xhrTags.onload = function() {
+                                try {
+                                    var r = JSON.parse(xhrTags.responseText);
+                                    if (!r.success) {
+                                        showNotice('error', 'Tag override save failed: ' + JSON.stringify(r.data));
+                                    }
+                                } catch(e) {
+                                    showNotice('error', 'Tag override save failed (bad response): ' + xhrTags.responseText.slice(0, 200));
+                                }
+                            };
+                            xhrTags.onerror = function() {
+                                showNotice('error', 'Tag override save failed: network error');
+                            };
                             xhrTags.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
                                 + '&product_name=' + encodeURIComponent(name)
                                 + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
