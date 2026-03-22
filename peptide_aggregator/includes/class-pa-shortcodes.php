@@ -137,22 +137,23 @@ class PA_Shortcodes {
 .pa-modal{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;z-index:999999!important;display:flex!important;align-items:flex-end!important;justify-content:center!important}
 .pa-modal[aria-hidden="true"]{display:none!important}
 .pa-modal-backdrop{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
-.pa-modal-card{position:relative!important;width:100%!important;max-width:480px!important;max-height:80vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:1!important;border-radius:22px 22px 0 0!important}
-.pa-modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:16px 20px 12px!important;flex-shrink:0!important}
+.pa-modal-card{position:relative!important;width:100%!important;max-width:480px!important;max-height:80vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:1!important;border-radius:22px 22px 0 0!important;background:#ffffff!important;color:#1a2332!important}
+.pa-modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:16px 20px 12px!important;flex-shrink:0!important;border-bottom:1px solid #e4e9f0!important}
 .pa-modal-head-actions{display:flex!important;align-items:center!important;gap:12px!important}
-.pa-modal-tabs{display:flex!important;gap:4px!important;padding:4px!important;margin:0 20px 12px!important;flex-shrink:0!important}
-.pa-modal-tab{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;flex:1!important;padding:8px 14px!important;border:none!important;background:none!important;cursor:pointer!important}
+.pa-modal-tabs{display:flex!important;gap:4px!important;padding:4px!important;margin:0 20px 12px!important;flex-shrink:0!important;background:#f7f9fc!important;border-radius:8px!important}
+.pa-modal-tab{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;flex:1!important;padding:8px 14px!important;border:none!important;background:none!important;cursor:pointer!important;color:#6b7a90!important}
+.pa-modal-tab.is-active{background:#ffffff!important;color:#1a2332!important;border-radius:6px!important}
 .pa-modal-body{overflow-y:auto!important;flex:1!important;padding:0 20px!important;display:block!important}
 .pa-tab-content{display:none!important}
 .pa-tab-content.is-active{display:block!important}
-.pa-modal-foot,.pa-modal-footer{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 20px!important;flex-shrink:0!important}
-.pa-modal-close{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;cursor:pointer!important;background:none!important}
+.pa-modal-foot,.pa-modal-footer{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 20px!important;flex-shrink:0!important;border-top:1px solid #e4e9f0!important;gap:8px!important}
+.pa-modal-close{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;cursor:pointer!important;background:none!important;border:none!important}
 .pa-toggle-list{display:flex!important;flex-direction:column!important;gap:4px!important}
 .pa-toggle-row{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:8px 0!important;cursor:pointer!important}
 .pa-toggle-row input[type="checkbox"]{-webkit-appearance:none!important;-moz-appearance:none!important;appearance:none!important;position:absolute!important;opacity:0!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;pointer-events:none!important}
-.pa-toggle-row i{display:inline-block!important;flex-shrink:0!important;width:36px!important;height:20px!important;background:var(--line)!important;border-radius:10px!important;position:relative!important;transition:background 0.2s ease!important}
+.pa-toggle-row i{display:inline-block!important;flex-shrink:0!important;width:36px!important;height:20px!important;background:#e4e9f0!important;border-radius:10px!important;position:relative!important;transition:background 0.2s ease!important}
 .pa-toggle-row i::after{content:""!important;position:absolute!important;width:16px!important;height:16px!important;background:#fff!important;border-radius:50%!important;top:2px!important;left:2px!important;transition:transform 0.2s ease!important}
-.pa-toggle-row input:checked~i{background:var(--accent)!important}
+.pa-toggle-row input:checked~i{background:#2563eb!important}
 .pa-toggle-row input:checked~i::after{transform:translateX(16px)!important}
 .pa-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:16px 0 8px!important}
 .pa-section-tools{display:flex!important;align-items:center!important;gap:8px!important}
@@ -189,7 +190,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.60');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.61');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.42', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.21', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.21', false);
