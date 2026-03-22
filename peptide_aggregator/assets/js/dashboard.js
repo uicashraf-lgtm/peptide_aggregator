@@ -12,32 +12,6 @@
   let sseSource = null;
 
   // ─── Utility ─────────────────────────────────────────────────────────────
-  // Known formulations — ordered from most specific to least so the first
-  // matching term wins.  'terms' are lowercase substrings to look for inside
-  // a product_name / product name string.
-  var FORMULATIONS = [
-    { key: 'kit',      label: 'Kits',        terms: ['kit'] },
-    { key: 'capsule',  label: 'Capsules',     terms: ['capsule', 'caps'] },
-    { key: 'cream',    label: 'Cream',        terms: ['cream'] },
-    { key: 'nasal',    label: 'Nasal Spray',  terms: ['nasal', 'spray'] },
-    { key: 'patch',    label: 'Patch',        terms: ['patch'] },
-    { key: 'tablet',   label: 'Tablets',      terms: ['tablet', 'tab'] },
-    { key: 'powder',   label: 'Powder',       terms: ['powder'] },
-    { key: 'liquid',   label: 'Liquid',       terms: ['liquid', 'solution', 'dropper'] },
-    { key: 'vial',     label: 'Vials',        terms: ['vial', 'injectable'] },
-  ];
-
-  function getFormulationKey(str) {
-    var s = (str || '').toLowerCase();
-    for (var i = 0; i < FORMULATIONS.length; i++) {
-      var f = FORMULATIONS[i];
-      for (var j = 0; j < f.terms.length; j++) {
-        if (s.includes(f.terms[j])) return f.key;
-      }
-    }
-    return null;
-  }
-
   function escHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -234,9 +208,7 @@
     if (state.barFilters.formulation) {
       var fKey = state.barFilters.formulation;
       list = list.filter(function (p) {
-        // Check tags first (admin-assigned), then fall back to vendor product names
-        if ((p.tags || []).some(function (t) { return t.toLowerCase() === fKey; })) return true;
-        return (p.top_vendors || []).some(function (v) { return getFormulationKey(v.product_name) === fKey; });
+        return (p.tags || []).some(function (t) { return t.toLowerCase() === fKey; });
       });
     }
     // Tag filter (from popular chips)
@@ -733,32 +705,15 @@
       btn.addEventListener('click', function() { state.detailStockFilter = mode; renderDetailVendors(vendors); });
       barCenter.appendChild(btn);
     });
-    // Detect which formulations are present in this dosage's vendor list
-    var presentKeys = [];
-    vendors.forEach(function(v) {
-      var k = getFormulationKey(v.product_name);
-      if (k && presentKeys.indexOf(k) === -1) presentKeys.push(k);
+    var typeSep = el('span', 'pa-dpbar-sep');
+    barCenter.appendChild(typeSep);
+    [['all', 'All'], ['vial', 'Vials'], ['kit', 'Kits']].forEach(function(pair) {
+      var mode = pair[0], label = pair[1];
+      var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === mode ? ' is-active' : ''), label);
+      btn.type = 'button';
+      btn.addEventListener('click', function() { state.detailTypeFilter = mode; renderDetailVendors(vendors); });
+      barCenter.appendChild(btn);
     });
-    // Only render the type group if more than one formulation is present
-    if (presentKeys.length > 1) {
-      var typeSep = el('span', 'pa-dpbar-sep');
-      barCenter.appendChild(typeSep);
-      // "All" button first
-      (function() {
-        var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === 'all' ? ' is-active' : ''), 'All');
-        btn.type = 'button';
-        btn.addEventListener('click', function() { state.detailTypeFilter = 'all'; renderDetailVendors(vendors); });
-        barCenter.appendChild(btn);
-      })();
-      // One button per detected formulation, in FORMULATIONS order
-      FORMULATIONS.forEach(function(f) {
-        if (presentKeys.indexOf(f.key) === -1) return;
-        var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === f.key ? ' is-active' : ''), f.label);
-        btn.type = 'button';
-        btn.addEventListener('click', function() { state.detailTypeFilter = f.key; renderDetailVendors(vendors); });
-        barCenter.appendChild(btn);
-      });
-    }
     bar.appendChild(barCenter);
 
     // Right: sort + suppliers
@@ -789,8 +744,10 @@
     if (state.detailStockFilter === 'instock') {
       filtered = filtered.filter(function(v) { return v.in_stock !== false; });
     }
-    if (state.detailTypeFilter !== 'all') {
-      filtered = filtered.filter(function(v) { return getFormulationKey(v.product_name) === state.detailTypeFilter; });
+    if (state.detailTypeFilter === 'kit') {
+      filtered = filtered.filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    } else if (state.detailTypeFilter === 'vial') {
+      filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
     }
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
