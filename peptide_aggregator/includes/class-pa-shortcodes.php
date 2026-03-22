@@ -76,13 +76,14 @@ class PA_Shortcodes {
 .pa-shell .pa-dosage-pill{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important;flex-shrink:0!important}
 .pa-shell .pa-dosage-arrow{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important;width:24px!important;height:24px!important}
 .pa-shell .pa-pcard-vendors{display:flex!important;flex-direction:column!important;gap:6px!important}
-.pa-shell .pa-pcard-vendor-row{display:grid!important;grid-template-columns:36px 1fr auto!important;gap:10px!important;align-items:center!important;padding:8px 10px!important;border-radius:10px!important}
+.pa-shell .pa-pcard-vendor-row{display:grid!important;grid-template-columns:36px 1fr minmax(0,auto)!important;gap:10px!important;align-items:center!important;padding:8px 10px!important;border-radius:10px!important}
 .pa-shell .pa-pcard-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;flex-shrink:0!important;overflow:hidden!important}
 .pa-shell .pa-pcard-avatar img{display:block!important;width:100%!important;height:100%!important;max-width:36px!important;max-height:36px!important;object-fit:contain!important}
 .pa-shell .pa-pcard-vinfo{display:flex!important;flex-direction:column!important;min-width:0!important}
-.pa-shell .pa-pcard-vright{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:3px!important;min-width:0!important}
+.pa-shell .pa-pcard-vright{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:3px!important;min-width:0!important;overflow:hidden!important}
 .pa-shell .pa-pcard-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important}
-.pa-shell .pa-coupon-badge{display:inline-flex!important;align-items:center!important;gap:3px!important}
+.pa-shell .pa-coupon-badge{display:inline-flex!important;align-items:center!important;gap:3px!important;max-width:100%!important;overflow:hidden!important}
+.pa-shell .pa-coupon-text{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;min-width:0!important}
 .pa-shell .pa-coupon-copy{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:0 2px!important}
 .pa-shell .pa-pcard-extlink{display:inline-flex!important;align-items:center!important;text-decoration:none!important}
 .pa-shell .pa-pcard-foot{display:flex!important;align-items:center!important;justify-content:space-between!important;padding-top:4px!important}
@@ -184,7 +185,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.57');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.58');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.42', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.21', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.21', false);
