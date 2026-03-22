@@ -566,6 +566,15 @@
     letter-spacing: 0.04em !important;
     cursor: copy !important;
     transition: all 0.15s ease !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+.pa-shell .pa-coupon-text {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
 }
 
 .pa-shell .pa-coupon-badge::before {
