@@ -58,7 +58,7 @@
     applied: null,
 
     allProducts: [],
-    barFilters: { coupon: false, favourites: false, usOnly: false },
+    barFilters: { coupon: false, favourites: false, usOnly: false, kits: false },
     priceMode: 'total', // 'total' or 'mgml'
     favourites: new Set(JSON.parse(localStorage.getItem('pa_favs') || '[]')),
     activeDosages: {}, // productId -> dosage index
@@ -68,6 +68,7 @@
     detailActiveDosage: 0,    // selected dosage index in detail view
     detailProductName: '',    // product name shown in detail view
     detailStockFilter: 'all', // 'all' | 'instock'
+    detailTypeFilter: 'all',  // 'all' | 'kit' | 'vial'
     detailSortDir: 'asc',     // 'asc' | 'desc'
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
@@ -197,6 +198,12 @@
     }
     if (state.barFilters.favourites) {
       list = list.filter(function (p) { return state.favourites.has(p.id); });
+    }
+    if (state.barFilters.kits) {
+      list = list.filter(function (p) {
+        return (p.tags || []).some(function (t) { return t.toLowerCase() === 'kit'; }) ||
+               p.name.toLowerCase().includes('kit');
+      });
     }
     // Tag filter (from popular chips)
     if (state.tagFilters.size > 0) {
@@ -496,6 +503,7 @@
     if (pricesEl) pricesEl.innerHTML = '';
     state.detailProductName = productName;
     state.detailStockFilter = 'all';
+    state.detailTypeFilter = 'all';
     state.detailSortDir = 'asc';
 
     // Find product data — try exact id first, then by name
@@ -683,12 +691,21 @@
     barLeft.appendChild(barTitles);
     bar.appendChild(barLeft);
 
-    // Center: stock filter
+    // Center: stock filter + type filter
     var barCenter = el('div', 'pa-dpbar-center');
     ['all', 'instock'].forEach(function(mode) {
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailStockFilter === mode ? ' is-active' : ''), mode === 'all' ? 'All' : 'In Stock');
       btn.type = 'button';
       btn.addEventListener('click', function() { state.detailStockFilter = mode; renderDetailVendors(vendors); });
+      barCenter.appendChild(btn);
+    });
+    var typeSep = el('span', 'pa-dpbar-sep');
+    barCenter.appendChild(typeSep);
+    [['all', 'All'], ['vial', 'Vials'], ['kit', 'Kits']].forEach(function(pair) {
+      var mode = pair[0], label = pair[1];
+      var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === mode ? ' is-active' : ''), label);
+      btn.type = 'button';
+      btn.addEventListener('click', function() { state.detailTypeFilter = mode; renderDetailVendors(vendors); });
       barCenter.appendChild(btn);
     });
     bar.appendChild(barCenter);
@@ -720,6 +737,11 @@
     var filtered = vendors.slice();
     if (state.detailStockFilter === 'instock') {
       filtered = filtered.filter(function(v) { return v.in_stock !== false; });
+    }
+    if (state.detailTypeFilter === 'kit') {
+      filtered = filtered.filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    } else if (state.detailTypeFilter === 'vial') {
+      filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
     }
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
@@ -1258,6 +1280,9 @@
         } else if (title === 'US vendors only') {
           state.barFilters.usOnly = !state.barFilters.usOnly;
           btn.classList.toggle('is-active', state.barFilters.usOnly);
+        } else if (title === 'Kits only') {
+          state.barFilters.kits = !state.barFilters.kits;
+          btn.classList.toggle('is-active', state.barFilters.kits);
         }
         renderProductGrid(filteredProducts());
       });

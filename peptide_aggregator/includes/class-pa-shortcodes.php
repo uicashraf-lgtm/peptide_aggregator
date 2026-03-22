@@ -96,6 +96,7 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-dosage-grid{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
 .pa-shell .pa-detail-prices-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:10px!important;padding:14px 16px!important}
 .pa-shell .pa-dpbar-center{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important}
+.pa-shell .pa-dpbar-sep{display:inline-block!important;width:1px!important;height:16px!important;background:var(--line)!important;margin:0 2px!important}
 .pa-shell .pa-dpbar-right{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
 .pa-shell .pa-dpbar-left{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-dpbar-titles{display:flex!important;flex-direction:column!important;gap:1px!important}
@@ -335,6 +336,7 @@ class PA_Shortcodes {
                             <button class="pa-bar-icon" type="button" title="Has coupon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>
                             <button class="pa-bar-icon" type="button" title="Favourites"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
                             <button class="pa-bar-icon" type="button" title="US vendors only"><span class="pa-flag-us">US</span></button>
+                            <button class="pa-bar-icon" type="button" title="Kits only"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></button>
                         </div>
                         <div class="pa-view-toggle">
                             <button id="pa-view-grid" class="pa-view-btn is-active" type="button" title="Grid view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
