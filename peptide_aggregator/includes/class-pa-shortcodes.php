@@ -35,8 +35,9 @@ class PA_Shortcodes {
     private function critical_layout_css() {
         return '
 /* pa: critical layout – injected after Elementor to guarantee source-order win */
+.elementor-widget-container:has(>.pa-shell){padding:0!important}
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
-.pa-shell{display:block!important;width:100%!important}
+.pa-shell{display:block!important;width:100%!important;margin:0!important}
 /* detail view show/hide — pa-hidden/pa-visible toggled on each element */
 /* belt-and-suspenders: height:0+overflow:hidden ensures no space even if display is overridden */
 #pa-product-detail{display:none!important;height:0!important;max-height:0!important;overflow:hidden!important}
@@ -183,7 +184,7 @@ class PA_Shortcodes {
             $css_deps[] = 'elementor-frontend';
         }
 
-        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.56');
+        wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, '0.9.57');
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), '0.9.42', false);
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), '0.9.21', false);
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), '0.9.21', false);

@@ -2,6 +2,11 @@
    PEPTIDE AGGREGATOR — DASHBOARD THEME
    Clean, professional design
    ============================================================ */
+
+/* Reset Elementor widget container padding so it doesn't add space around the plugin */
+.elementor-widget-container:has(> .pa-shell) {
+    padding: 0 !important;
+}
 .pa-shell {
     --panel:        #ffffff;
     --panel-soft:   #f7f9fc;
