@@ -780,7 +780,19 @@
       filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
     }
     if (state.detailFormulationFilter !== 'all') {
-      filtered = filtered.filter(function(v) { return getFormulationKey(v.product_name) === state.detailFormulationFilter; });
+      // Resolve formulation for each vendor: name-based detection wins; if no
+      // keyword in the name, fall back to the product-level tags.
+      var tagFallback = (function() {
+        var tags = state.detailProductTags || [];
+        for (var fi = 0; fi < FORMULATIONS.length; fi++) {
+          if (tags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
+        }
+        return null;
+      })();
+      filtered = filtered.filter(function(v) {
+        var key = getFormulationKey(v.product_name);
+        return (key !== null ? key : tagFallback) === state.detailFormulationFilter;
+      });
     }
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
