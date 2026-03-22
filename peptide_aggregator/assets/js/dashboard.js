@@ -15,13 +15,10 @@
   // Formulation keywords used for detail-view vendor filtering.
   // Order matters: most specific first so the first match wins.
   var FORMULATIONS = [
-    { key: 'capsule', label: 'Capsules',    terms: ['capsule', 'caps'] },
-    { key: 'cream',   label: 'Cream',       terms: ['cream'] },
-    { key: 'nasal',   label: 'Nasal Spray', terms: ['nasal', 'spray'] },
-    { key: 'patch',   label: 'Patch',       terms: ['patch'] },
-    { key: 'tablet',  label: 'Tablets',     terms: ['tablet', 'tab'] },
-    { key: 'powder',  label: 'Powder',      terms: ['powder'] },
-    { key: 'liquid',  label: 'Liquid',      terms: ['liquid', 'solution', 'dropper'] },
+    { key: 'vial',    label: 'Vial',     terms: ['vial'] },
+    { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'] },
+    { key: 'topical', label: 'Topical',  terms: ['topical', 'cream', 'gel', 'patch', 'lotion'] },
+    { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal'] },
   ];
 
   function getFormulationKey(str) {
@@ -741,30 +738,19 @@
     // Right: formulation select (dynamic) + sort + suppliers
     var barRight = el('div', 'pa-dpbar-right');
 
-    // Build formulation options from the product's own tags (admin-assigned,
-    // same workflow as the grid "Kits only" tag).
+    // Formulation toggle buttons (tag-driven, same style as Vial/Kit type buttons).
     var formOptions = FORMULATIONS.filter(function(f) {
       return (state.detailProductTags || []).some(function(t) { return t.toLowerCase() === f.key; });
     });
     if (formOptions.length > 0) {
-      var formSel = document.createElement('select');
-      formSel.className = 'pa-dpbar-form-select';
-      var allOpt = document.createElement('option');
-      allOpt.value = 'all';
-      allOpt.textContent = 'All forms';
-      formSel.appendChild(allOpt);
-      formOptions.forEach(function(f) {
-        var opt = document.createElement('option');
-        opt.value = f.key;
-        opt.textContent = f.label;
-        formSel.appendChild(opt);
+      var formSep = el('span', 'pa-dpbar-sep');
+      barRight.insertBefore(formSep, barRight.firstChild);
+      [{ key: 'all', label: 'All' }].concat(formOptions).forEach(function(f) {
+        var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === f.key ? ' is-active' : ''), f.label);
+        btn.type = 'button';
+        btn.addEventListener('click', function() { state.detailFormulationFilter = f.key; renderDetailVendors(vendors); });
+        barRight.insertBefore(btn, formSep);
       });
-      formSel.value = state.detailFormulationFilter;
-      formSel.addEventListener('change', function() {
-        state.detailFormulationFilter = formSel.value;
-        renderDetailVendors(vendors);
-      });
-      barRight.appendChild(formSel);
     }
 
     var sortBtn = el('button', 'pa-dpbar-sort-btn', 'Price <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="' + (state.detailSortDir === 'asc' ? '18 11 12 5 6 11' : '6 13 12 19 18 13') + '"/></svg>');
