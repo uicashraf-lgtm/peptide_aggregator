@@ -738,20 +738,15 @@
     // Right: formulation select (dynamic) + sort + suppliers
     var barRight = el('div', 'pa-dpbar-right');
 
-    // Formulation toggle buttons (tag-driven, same style as Vial/Kit type buttons).
-    var formOptions = FORMULATIONS.filter(function(f) {
-      return (state.detailProductTags || []).some(function(t) { return t.toLowerCase() === f.key; });
+    // Formulation toggle buttons — always visible, same style as Vial/Kit type buttons.
+    var formSep = el('span', 'pa-dpbar-sep');
+    barRight.appendChild(formSep);
+    [{ key: 'all', label: 'All' }].concat(FORMULATIONS).forEach(function(f) {
+      var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === f.key ? ' is-active' : ''), f.label);
+      btn.type = 'button';
+      btn.addEventListener('click', function() { state.detailFormulationFilter = f.key; renderDetailVendors(vendors); });
+      barRight.insertBefore(btn, formSep);
     });
-    if (formOptions.length > 0) {
-      var formSep = el('span', 'pa-dpbar-sep');
-      barRight.insertBefore(formSep, barRight.firstChild);
-      [{ key: 'all', label: 'All' }].concat(formOptions).forEach(function(f) {
-        var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === f.key ? ' is-active' : ''), f.label);
-        btn.type = 'button';
-        btn.addEventListener('click', function() { state.detailFormulationFilter = f.key; renderDetailVendors(vendors); });
-        barRight.insertBefore(btn, formSep);
-      });
-    }
 
     var sortBtn = el('button', 'pa-dpbar-sort-btn', 'Price <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="' + (state.detailSortDir === 'asc' ? '18 11 12 5 6 11' : '6 13 12 19 18 13') + '"/></svg>');
     sortBtn.type = 'button';
