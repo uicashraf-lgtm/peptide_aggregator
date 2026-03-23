@@ -519,7 +519,23 @@
           activeFormulation = fKey;
           formBtns.forEach(function(b) { b.classList.remove('is-active'); });
           fBtn.classList.add('is-active');
-          var curIdx = state.activeDosages[p.id] || 0;
+          var curIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : 0;
+          // If a specific formulation is selected, switch to the first dosage that has vendors for it
+          if (fKey !== 'all') {
+            var hasFormInCurrent = (dosages[curIdx] && dosages[curIdx].top_vendors || []).some(function(v) { return getFormulationKey(v.product_name || '') === fKey; });
+            if (!hasFormInCurrent) {
+              for (var fi = 0; fi < dosages.length; fi++) {
+                if ((dosages[fi].top_vendors || []).some(function(v) { return getFormulationKey(v.product_name || '') === fKey; })) {
+                  curIdx = fi;
+                  state.activeDosages[p.id] = fi;
+                  pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x, xi) {
+                    x.classList.toggle('is-active', xi === fi);
+                  });
+                  break;
+                }
+              }
+            }
+          }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
           renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
