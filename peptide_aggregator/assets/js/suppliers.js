@@ -136,11 +136,23 @@
       if (tpl.indexOf('{url}') !== -1) {
         return tpl.replace('{url}', base ? encodeURIComponent(base) : '');
       }
-      // Suffix mode: if not a full URL (no ://), append directly to the product URL
-      if (tpl.indexOf('://') === -1) {
-        return base ? base.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '') : '';
+      if (tpl.indexOf('://') !== -1) {
+        // Full URL: extract only the path/query/fragment and append to base
+        try {
+          var parsed = new URL(tpl);
+          var suffix = parsed.pathname + parsed.search + parsed.hash;
+          if (!suffix || suffix === '/') return base;
+          if (suffix.charAt(0) === '?') return base ? base.replace(/\/$/, '') + suffix : '';
+          return base ? base.replace(/\/$/, '') + '/' + suffix.replace(/^\//, '') : '';
+        } catch(e) {
+          return base;
+        }
       }
-      return tpl;
+      // Path or query suffix
+      if (tpl.charAt(0) === '?') {
+        return base ? base.replace(/\/$/, '') + tpl : '';
+      }
+      return base ? base.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '') : '';
     }
     return base;
   }
