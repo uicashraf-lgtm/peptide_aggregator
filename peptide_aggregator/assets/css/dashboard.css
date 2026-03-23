@@ -1401,4 +1401,13 @@
     .pa-shell .pa-detail-layout {
         gap: 8px !important;
     }
+
+    /* Smaller filter/sort buttons in detail view */
+    .pa-shell .pa-dpbar-stock-btn,
+    .pa-shell .pa-dpbar-sort-btn,
+    .pa-shell .pa-dpbar-supplier-btn {
+        height: 24px !important;
+        padding: 0 8px !important;
+        font-size: 10px !important;
+    }
 }
