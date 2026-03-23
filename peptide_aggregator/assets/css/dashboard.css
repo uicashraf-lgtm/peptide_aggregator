@@ -1388,8 +1388,12 @@
     }
 
     .pa-shell .pa-pcard {
-        padding: 12px 12px 8px !important;
+        padding: 10px 8px 6px !important;
         gap: 8px !important;
+    }
+
+    .pa-shell .pa-pcard-vendor-row {
+        padding: 8px 8px !important;
     }
 
     /* Detail card margins */
