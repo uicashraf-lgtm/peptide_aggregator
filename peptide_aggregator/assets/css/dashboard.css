@@ -1356,22 +1356,16 @@
         align-items: flex-start !important;
     }
 
-    /* Vendor rows: 2-col layout so vendor name gets full width,
-       price/link wraps below it instead of squishing the name column */
+    /* Vendor rows: keep avatar | info | price on one line */
     .pa-shell .pa-detail-vrow {
-        grid-template-columns: 40px 1fr !important;
-        grid-template-rows: auto auto !important;
-    }
-
-    .pa-shell .pa-vendor-avatar {
-        grid-row: 1 / 3 !important;
-        align-self: start !important;
-        margin-top: 2px !important;
+        grid-template-columns: 40px 1fr auto !important;
+        gap: 8px !important;
+        padding: 10px 8px !important;
     }
 
     .pa-shell .pa-detail-vrow-right {
-        grid-column: 2 !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
     }
 
     /* Compact card margins */
