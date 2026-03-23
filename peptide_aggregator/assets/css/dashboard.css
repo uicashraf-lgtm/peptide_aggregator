@@ -1420,6 +1420,11 @@
         gap: 8px !important;
     }
 
+    .pa-shell .pa-detail-vrow-right .pa-coupon-badge {
+        padding: 2px 5px !important;
+        gap: 2px !important;
+    }
+
     /* Smaller filter/sort buttons in detail view */
     .pa-shell .pa-dpbar-stock-btn,
     .pa-shell .pa-dpbar-sort-btn,
