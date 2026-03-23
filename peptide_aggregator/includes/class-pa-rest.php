@@ -33,20 +33,68 @@ class PA_Rest {
         ));
     }
 
+    /**
+     * Returns a map of lowercase vendor name -> affiliate_template.
+     * Cached in a transient for 5 minutes to avoid repeated API calls.
+     */
+    private function get_affiliate_map() {
+        $cached = get_transient('pa_affiliate_map');
+        if ($cached !== false) {
+            return $cached;
+        }
+        $map = array();
+        $result = $this->api->request('GET', '/api/admin/vendors', null, true);
+        if ($result['ok'] && is_array($result['data'])) {
+            foreach ($result['data'] as $vendor) {
+                $name = trim($vendor['name'] ?? '');
+                $tpl  = trim($vendor['affiliate_template'] ?? '');
+                if ($name !== '' && $tpl !== '') {
+                    $map[strtolower($name)] = $tpl;
+                }
+            }
+        }
+        set_transient('pa_affiliate_map', $map, 5 * MINUTE_IN_SECONDS);
+        return $map;
+    }
+
+    /**
+     * Applies an affiliate template to a product link URL.
+     *
+     * - Path suffix (no ://): appended directly after the product URL.
+     *   e.g. link=https://vendor.com/product, tpl=/ref/amino
+     *        => https://vendor.com/product/ref/amino
+     *
+     * - Template with {url}: product URL is URL-encoded into the template.
+     *   e.g. tpl=https://aff.net/go?url={url}
+     *        => https://aff.net/go?url=https%3A%2F%2F...
+     *
+     * - Full URL without {url}: returned as-is (redirect-style affiliate link).
+     */
+    private function apply_affiliate($link, $tpl) {
+        if (!$link || !$tpl) return $link;
+        if (strpos($tpl, '{url}') !== false) {
+            return str_replace('{url}', rawurlencode($link), $tpl);
+        }
+        if (strpos($tpl, '://') === false) {
+            return rtrim($link, '/') . '/' . ltrim($tpl, '/');
+        }
+        return $tpl;
+    }
+
     public function get_products() {
         $result = $this->api->request('GET', '/api/products');
         if (!$result['ok']) {
             return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
         }
         $products = $result['data'];
+
+        // Apply tag overrides.
         $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
         if (!empty($tag_overrides) && is_array($products)) {
             $dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
             foreach ($products as &$product) {
                 $pid  = (string) ($product['id'] ?? '');
                 $base = strtolower(trim(preg_replace($dosage_re, '', $product['name'] ?? '')));
-                // Support both legacy numeric-ID keys (old saves) and current
-                // name-based keys (new saves), ID match takes priority.
                 if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
                     $product['tags'] = $tag_overrides[$pid];
                 } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
@@ -55,6 +103,25 @@ class PA_Rest {
             }
             unset($product);
         }
+
+        // Apply affiliate templates to top_vendors links.
+        $affiliate_map = $this->get_affiliate_map();
+        if (!empty($affiliate_map) && is_array($products)) {
+            foreach ($products as &$product) {
+                if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
+                    foreach ($product['top_vendors'] as &$vendor) {
+                        $key = strtolower(trim($vendor['vendor'] ?? ''));
+                        $tpl = $affiliate_map[$key] ?? '';
+                        if ($tpl !== '' && !empty($vendor['link'])) {
+                            $vendor['link'] = $this->apply_affiliate($vendor['link'], $tpl);
+                        }
+                    }
+                    unset($vendor);
+                }
+            }
+            unset($product);
+        }
+
         $response = rest_ensure_response($products);
         $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
         $response->header('Pragma', 'no-cache');
@@ -91,6 +158,21 @@ class PA_Rest {
         if (!$result['ok']) {
             return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
         }
-        return rest_ensure_response($result['data']);
+        $prices = $result['data'];
+
+        // Apply affiliate templates to each price entry's link.
+        $affiliate_map = $this->get_affiliate_map();
+        if (!empty($affiliate_map) && is_array($prices)) {
+            foreach ($prices as &$price) {
+                $key = strtolower(trim($price['vendor'] ?? ''));
+                $tpl = $affiliate_map[$key] ?? '';
+                if ($tpl !== '' && !empty($price['link'])) {
+                    $price['link'] = $this->apply_affiliate($price['link'], $tpl);
+                }
+            }
+            unset($price);
+        }
+
+        return rest_ensure_response($prices);
     }
 }
