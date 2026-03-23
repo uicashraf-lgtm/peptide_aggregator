@@ -199,6 +199,8 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-vrow{grid-template-columns:40px 1fr!important;grid-template-rows:auto auto!important}
 .pa-shell .pa-vendor-avatar{grid-row:1/3!important;align-self:start!important;margin-top:2px!important}
 .pa-shell .pa-detail-vrow-right{grid-column:2!important;flex-wrap:wrap!important}
+.pa-shell .pa-pcard{padding:10px 8px 6px!important}
+.pa-shell .pa-pcard-vendor-row{padding:8px 8px!important}
 }
 ';
     }
