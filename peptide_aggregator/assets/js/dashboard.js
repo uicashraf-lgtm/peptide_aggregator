@@ -500,7 +500,7 @@
       var fk = getFormulationKey(v.product_name || '');
       if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
     });
-    if (cardFormKeys.length >= 2) {
+    if (cardFormKeys.length >= 1) {
       var formRow = el('div', 'pa-pcard-dosage');
       formRow.appendChild(el('span', 'pa-dosage-label', 'Formulation:'));
       var formBtns = [];
