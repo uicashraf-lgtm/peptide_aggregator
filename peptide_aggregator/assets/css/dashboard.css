@@ -1400,6 +1400,11 @@
         gap: 3px !important;
     }
 
+    .pa-shell .pa-pcard-extlink {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
     /* Detail card margins */
     .pa-shell .pa-detail-card,
     .pa-shell .pa-detail-dosage-card {
