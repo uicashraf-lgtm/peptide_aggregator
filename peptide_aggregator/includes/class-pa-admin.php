@@ -209,6 +209,9 @@ class PA_Admin {
             var PA_SCRAPE  = <?php echo wp_json_encode($scrape_configs); ?>;
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DELETE_NONCE = '<?php echo wp_create_nonce('pa_vendor_delete_action'); ?>';
+            var PA_AFFILIATE_TEMPLATES = <?php echo wp_json_encode((object) get_option('pa_affiliate_templates', array())); ?>;
+            var PA_WP_REST = '<?php echo esc_js(rest_url('pa/v1/')); ?>';
+            var PA_WP_NONCE = '<?php echo wp_create_nonce('wp_rest'); ?>';
             var PM_ICONS = <?php echo wp_json_encode(array_map(function($svg) {
                 return str_replace('class="pa-pm-icon"', 'class="pa-pm-cell-icon"', $svg);
             }, $pm_options)); ?>;
@@ -391,7 +394,7 @@ class PA_Admin {
                 setVal('pa_f_logo_url', v.logo_url);
                 setVal('pa_f_country', v.country);
                 setVal('pa_f_coupon_code', v.coupon_code);
-                setVal('pa_f_affiliate', v.affiliate_template);
+                setVal('pa_f_affiliate', PA_AFFILIATE_TEMPLATES[v.name.toLowerCase()] || '');
                 setPM(v.payment_methods);
                 document.getElementById('pa_f_target_urls').value = '';
                 document.getElementById('pa_f_target_urls').placeholder = 'Add new target URLs (one per line). Existing URLs are kept.';
@@ -491,7 +494,6 @@ class PA_Admin {
                     var payload = {
                         name: name,
                         base_url: baseUrl,
-                        affiliate_template: affiliate || '',
                         enabled: enabled,
                         target_urls: targetUrls,
                         logo_url: logoUrl || null,
@@ -505,6 +507,7 @@ class PA_Admin {
                         btn.disabled = false;
                         btn.textContent = 'Create Vendor';
                         if (ok) {
+                            saveAffiliateTemplate(name, affiliate);
                             var newVid = data && data.vendor_id ? data.vendor_id : null;
                             var notice = data && data.crawl_error
                                 ? 'Vendor created, but crawl could not be queued (Redis error: ' + data.crawl_error + '). Click "Crawl Now" once Redis is available.'
@@ -522,6 +525,9 @@ class PA_Admin {
                     // ── UPDATE (multiple API calls) ──────────────────────────
                     var errors = [];
                     var pending = 3; // basic + meta + scrape config
+
+                    // Save affiliate template to WP options (fire-and-forget).
+                    saveAffiliateTemplate(name, affiliate);
 
                     function checkDone() {
                         pending--;
@@ -549,7 +555,6 @@ class PA_Admin {
                         logo_url: logoUrl || null,
                         country: country || null,
                         coupon_code: couponCode || null,
-                        affiliate_template: affiliate || null,
                         payment_methods: paymentMethods.length ? paymentMethods : null
                     }, function(ok, data) {
                         if (!ok) errors.push('Meta: ' + data);
@@ -588,6 +593,21 @@ class PA_Admin {
                     }
                 }
             });
+
+            // ── WP affiliate template helper ────────────────────────────────
+            function saveAffiliateTemplate(vendorName, tpl) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', PA_WP_REST + 'affiliate-templates');
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-WP-Nonce', PA_WP_NONCE);
+                xhr.send(JSON.stringify({vendor: vendorName.toLowerCase(), template: tpl || ''}));
+                // Update local cache so subsequent vendor loads reflect the change.
+                if (tpl) {
+                    PA_AFFILIATE_TEMPLATES[vendorName.toLowerCase()] = tpl;
+                } else {
+                    delete PA_AFFILIATE_TEMPLATES[vendorName.toLowerCase()];
+                }
+            }
 
             // ── API helper ──────────────────────────────────────────────────
             function apiCall(method, path, payload, callback) {

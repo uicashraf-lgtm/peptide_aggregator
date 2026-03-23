@@ -29,6 +29,16 @@ class PA_Rest {
             'callback'            => array($this, 'debug_affiliate'),
             'permission_callback' => '__return_true',
         ));
+        register_rest_route('pa/v1', '/affiliate-templates', array(
+            'methods'             => 'GET',
+            'callback'            => array($this, 'get_affiliate_templates_endpoint'),
+            'permission_callback' => function() { return current_user_can('manage_options'); },
+        ));
+        register_rest_route('pa/v1', '/affiliate-templates', array(
+            'methods'             => 'POST',
+            'callback'            => array($this, 'save_affiliate_template_endpoint'),
+            'permission_callback' => function() { return current_user_can('manage_options'); },
+        ));
         register_rest_route('pa/v1', '/products/(?P<id>[^/]+)/prices', array(
             'methods'             => 'GET',
             'callback'            => array($this, 'get_prices'),
@@ -39,24 +49,28 @@ class PA_Rest {
         ));
     }
 
-    /**
-     * Returns a map of lowercase vendor name -> affiliate_template.
-     * Cached in a transient for 5 minutes to avoid repeated API calls.
-     */
+    public function get_affiliate_templates_endpoint() {
+        return rest_ensure_response((object) get_option('pa_affiliate_templates', array()));
+    }
+
+    public function save_affiliate_template_endpoint(WP_REST_Request $req) {
+        $vendor = strtolower(trim((string) $req->get_param('vendor')));
+        $tpl    = trim((string) $req->get_param('template'));
+        if ($vendor === '') {
+            return new WP_Error('invalid', 'vendor is required', array('status' => 400));
+        }
+        $templates = (array) get_option('pa_affiliate_templates', array());
+        if ($tpl === '') {
+            unset($templates[$vendor]);
+        } else {
+            $templates[$vendor] = $tpl;
+        }
+        update_option('pa_affiliate_templates', $templates);
+        return rest_ensure_response(array('ok' => true));
+    }
+
     private function get_affiliate_map() {
-        $map = array();
-        $result = $this->api->request('GET', '/api/admin/vendors', null, true);
-        if (!$result['ok'] || !is_array($result['data'])) {
-            return $map;
-        }
-        foreach ($result['data'] as $vendor) {
-            $name = trim($vendor['name'] ?? '');
-            $tpl  = trim($vendor['affiliate_template'] ?? '');
-            if ($name !== '' && $tpl !== '') {
-                $map[strtolower($name)] = $tpl;
-            }
-        }
-        return $map;
+        return (array) get_option('pa_affiliate_templates', array());
     }
 
     /**
