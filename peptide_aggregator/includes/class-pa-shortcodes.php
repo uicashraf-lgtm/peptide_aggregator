@@ -75,7 +75,7 @@ class PA_Shortcodes {
 .pa-shell .pa-dosage-pill{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:nowrap!important;flex-shrink:0!important}
 .pa-shell .pa-dosage-arrow{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important;width:24px!important;height:24px!important}
 .pa-shell .pa-pcard-vendors{display:flex!important;flex-direction:column!important;gap:6px!important}
-.pa-shell .pa-pcard-vendor-row{display:grid!important;grid-template-columns:36px 1fr minmax(0,auto)!important;gap:10px!important;align-items:center!important;padding:8px 10px!important;border-radius:10px!important}
+.pa-shell .pa-pcard-vendor-row{display:grid!important;grid-template-columns:36px 1fr minmax(0,auto)!important;gap:10px!important;align-items:center!important;padding:8px 6px 8px 10px!important;border-radius:10px!important}
 .pa-shell .pa-pcard-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;flex-shrink:0!important;overflow:hidden!important}
 .pa-shell .pa-pcard-avatar img{display:block!important;width:100%!important;height:100%!important;max-width:36px!important;max-height:36px!important;object-fit:contain!important}
 .pa-shell .pa-pcard-vinfo{display:flex!important;flex-direction:column!important;min-width:0!important}
@@ -200,7 +200,7 @@ class PA_Shortcodes {
 .pa-shell .pa-vendor-avatar{grid-row:1/3!important;align-self:start!important;margin-top:2px!important}
 .pa-shell .pa-detail-vrow-right{grid-column:2!important;flex-wrap:wrap!important}
 .pa-shell .pa-pcard{padding:10px 8px 6px!important}
-.pa-shell .pa-pcard-vendor-row{padding:8px 8px!important}
+.pa-shell .pa-pcard-vendor-row{padding:8px 4px 8px 8px!important}
 }
 ';
     }
