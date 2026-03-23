@@ -204,6 +204,7 @@ class PA_Shortcodes {
 .pa-shell .pa-pcard-vright{gap:3px!important}
 .pa-shell .pa-pcard-extlink{width:20px!important;height:20px!important}
 .pa-shell .pa-pcard-vright .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
+.pa-shell .pa-detail-vrow-right .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
 }
 ';
     }
