@@ -444,7 +444,14 @@
       rightBtn.type = 'button'; rightBtn.title = 'Scroll right';
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
-      var activeIdx = state.activeDosages[p.id] || 0;
+      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
+        var best = 0, bestCount = -1;
+        dosages.forEach(function(d, i) {
+          var cnt = d.vendor_count != null ? d.vendor_count : (d.top_vendors ? d.top_vendors.length : 0);
+          if (cnt > bestCount) { bestCount = cnt; best = i; }
+        });
+        return best;
+      })();
       if (activeIdx >= dosages.length) activeIdx = 0;
 
       dosages.forEach(function (d, idx) {
@@ -524,7 +531,14 @@
     }
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors
-    var activeIdx = state.activeDosages[p.id] || 0;
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
+      var best = 0, bestCount = -1;
+      dosages.forEach(function(d, i) {
+        var cnt = d.vendor_count != null ? d.vendor_count : (d.top_vendors ? d.top_vendors.length : 0);
+        if (cnt > bestCount) { bestCount = cnt; best = i; }
+      });
+      return best;
+    })();
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
