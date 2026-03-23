@@ -15,7 +15,6 @@
   // Formulation keywords used for detail-view vendor filtering.
   // Order matters: most specific first so the first match wins.
   var FORMULATIONS = [
-    { key: 'vial',    label: 'Vial',     terms: ['vial'] },
     { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'] },
     { key: 'topical', label: 'Topical',  terms: ['topical', 'cream', 'gel', 'patch', 'lotion'] },
     { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal'] },
