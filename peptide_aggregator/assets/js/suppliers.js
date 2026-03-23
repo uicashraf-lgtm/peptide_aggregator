@@ -136,6 +136,10 @@
       if (tpl.indexOf('{url}') !== -1) {
         return tpl.replace('{url}', base ? encodeURIComponent(base) : '');
       }
+      // Suffix mode: if not a full URL (no ://), append directly to the product URL
+      if (tpl.indexOf('://') === -1) {
+        return base.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '');
+      }
       return tpl;
     }
     return base;

@@ -147,7 +147,7 @@ class PA_Admin {
                         <tr><th>Logo URL</th><td><input name="logo_url" id="pa_f_logo_url" type="url" class="regular-text" placeholder="https://example.com/logo.png" /></td></tr>
                         <tr><th>Country</th><td><input name="country" id="pa_f_country" class="small-text" placeholder="US" maxlength="8" /></td></tr>
                         <tr><th>Coupon Code</th><td><input name="coupon_code" id="pa_f_coupon_code" class="regular-text" placeholder="SAVE10" /></td></tr>
-                        <tr><th>Affiliate Template</th><td><input name="affiliate_template" id="pa_f_affiliate" class="regular-text" placeholder="https://example.com/ref?url={url}" /><p class="description">Use <code>{url}</code> as placeholder for the product URL.</p></td></tr>
+                        <tr><th>Affiliate URL</th><td><input name="affiliate_template" id="pa_f_affiliate" class="regular-text" placeholder="/ref/your-id" /><p class="description">Enter a path suffix (e.g. <code>/ref/amino</code>) to append after the product URL, or a full redirect template using <code>{url}</code> as a placeholder for the encoded product URL.</p></td></tr>
                         <tr>
                             <th>Payment Methods</th>
                             <td>
