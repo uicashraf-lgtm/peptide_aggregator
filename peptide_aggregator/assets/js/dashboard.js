@@ -69,7 +69,12 @@
     var labelMap = (UI.dose_labels && UI.dose_labels[key]) || {};
     // Normalize: lowercase + strip whitespace so "5 mg" and "5mg" both match
     var norm = (originalLabel || '').toLowerCase().replace(/\s+/g, '');
-    return labelMap[norm] || labelMap[originalLabel] || originalLabel;
+    var label = labelMap[norm] || labelMap[originalLabel] || originalLabel;
+    // Convert Xgm doses to mg (e.g. "1gm" -> "1000mg")
+    label = (label || '').replace(/(\d+(?:\.\d+)?)\s*gm\b/gi, function(_, n) {
+      return (parseFloat(n) * 1000) + 'mg';
+    });
+    return label;
   }
 
   // ─── State ────────────────────────────────────────────────────────────────
