@@ -11,9 +11,8 @@
   const SSE_URL = UI.sse_url || '';
   let sseSource = null;
 
-  var affiliateMap = UI.affiliate_map || {};
   function applyAffiliate(link, vendorName) {
-    var tpl = affiliateMap[vendorName] || '';
+    var tpl = ((window.PA_UI && window.PA_UI.affiliate_map) || {})[vendorName] || '';
     if (!tpl || !link) return link;
     if (tpl.indexOf('{url}') !== -1) return tpl.replace('{url}', encodeURIComponent(link));
     if (tpl.indexOf('://') === -1) return link.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '');
