@@ -24,6 +24,11 @@ class PA_Rest {
             'callback'            => array($this, 'debug_tag_overrides'),
             'permission_callback' => '__return_true',
         ));
+        register_rest_route('pa/v1', '/debug/affiliate', array(
+            'methods'             => 'GET',
+            'callback'            => array($this, 'debug_affiliate'),
+            'permission_callback' => '__return_true',
+        ));
         register_rest_route('pa/v1', '/products/(?P<id>[^/]+)/prices', array(
             'methods'             => 'GET',
             'callback'            => array($this, 'get_prices'),
@@ -175,6 +180,60 @@ class PA_Rest {
         return rest_ensure_response(array(
             'stored_overrides' => $overrides,
             'products'         => $products_info,
+        ));
+    }
+
+    public function debug_affiliate() {
+        $affiliate_map = $this->get_affiliate_map();
+        $result = $this->api->request('GET', '/api/products');
+        $samples = array();
+        if ($result['ok'] && is_array($result['data'])) {
+            foreach (array_slice($result['data'], 0, 10) as $p) {
+                $product_name = $p['name'] ?? '';
+                // Collect vendor links from both sources
+                $vendor_links = array();
+                if (!empty($p['top_vendors']) && is_array($p['top_vendors'])) {
+                    foreach ($p['top_vendors'] as $v) {
+                        $key = strtolower(trim($v['vendor'] ?? ''));
+                        $tpl = $affiliate_map[$key] ?? '';
+                        $original = $v['link'] ?? '';
+                        $vendor_links[] = array(
+                            'source'    => 'top_vendors',
+                            'vendor'    => $v['vendor'] ?? '',
+                            'key'       => $key,
+                            'tpl'       => $tpl,
+                            'original'  => $original,
+                            'result'    => ($tpl !== '' && $original !== '') ? $this->apply_affiliate($original, $tpl) : $original,
+                        );
+                    }
+                }
+                if (!empty($p['available_dosages']) && is_array($p['available_dosages'])) {
+                    foreach (array_slice($p['available_dosages'], 0, 2) as $d) {
+                        if (!empty($d['vendors']) && is_array($d['vendors'])) {
+                            foreach ($d['vendors'] as $v) {
+                                $key = strtolower(trim($v['vendor'] ?? ''));
+                                $tpl = $affiliate_map[$key] ?? '';
+                                $original = $v['link'] ?? '';
+                                $vendor_links[] = array(
+                                    'source'    => 'available_dosages',
+                                    'vendor'    => $v['vendor'] ?? '',
+                                    'key'       => $key,
+                                    'tpl'       => $tpl,
+                                    'original'  => $original,
+                                    'result'    => ($tpl !== '' && $original !== '') ? $this->apply_affiliate($original, $tpl) : $original,
+                                );
+                            }
+                        }
+                    }
+                }
+                if (!empty($vendor_links)) {
+                    $samples[] = array('product' => $product_name, 'vendors' => $vendor_links);
+                }
+            }
+        }
+        return rest_ensure_response(array(
+            'affiliate_map' => $affiliate_map,
+            'samples'       => $samples,
         ));
     }
 
