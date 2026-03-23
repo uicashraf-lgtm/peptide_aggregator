@@ -1405,6 +1405,11 @@
         height: 20px !important;
     }
 
+    .pa-shell .pa-coupon-badge {
+        padding: 2px 5px !important;
+        gap: 2px !important;
+    }
+
     /* Detail card margins */
     .pa-shell .pa-detail-card,
     .pa-shell .pa-detail-dosage-card {
