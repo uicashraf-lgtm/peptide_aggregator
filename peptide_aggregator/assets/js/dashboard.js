@@ -11,6 +11,15 @@
   const SSE_URL = UI.sse_url || '';
   let sseSource = null;
 
+  var affiliateMap = UI.affiliate_map || {};
+  function applyAffiliate(link, vendorName) {
+    var tpl = affiliateMap[vendorName] || '';
+    if (!tpl || !link) return link;
+    if (tpl.indexOf('{url}') !== -1) return tpl.replace('{url}', encodeURIComponent(link));
+    if (tpl.indexOf('://') === -1) return link.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '');
+    return tpl;
+  }
+
   // ─── Utility ─────────────────────────────────────────────────────────────
   // Formulation keywords used for detail-view vendor filtering.
   // Order matters: most specific first so the first match wins.
@@ -338,7 +347,7 @@
     right.appendChild(priceWrap);
     if (v.link) {
       const a = document.createElement('a');
-      a.href = v.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.href = applyAffiliate(v.link, v.vendor); a.target = '_blank'; a.rel = 'noopener noreferrer';
       a.className = 'pa-pcard-extlink';
       a.innerHTML = '<svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
       a.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -954,7 +963,7 @@
 
       if (v.link) {
         var a = document.createElement('a');
-        a.href = v.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.href = applyAffiliate(v.link, v.vendor); a.target = '_blank'; a.rel = 'noopener noreferrer';
         a.className = 'pa-detail-link-icon';
         a.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
         a.addEventListener('click', function(e) { e.stopPropagation(); });
@@ -1065,7 +1074,7 @@
       right.appendChild(priceEl);
       if (p.link) {
         var a = document.createElement('a');
-        a.href = p.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.href = applyAffiliate(p.link, p.vendor); a.target = '_blank'; a.rel = 'noopener noreferrer';
         a.className = 'pa-buy-link'; a.textContent = 'Buy \u2192';
         right.appendChild(a);
       }

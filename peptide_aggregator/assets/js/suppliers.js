@@ -138,7 +138,7 @@
       }
       // Suffix mode: if not a full URL (no ://), append directly to the product URL
       if (tpl.indexOf('://') === -1) {
-        return base.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '');
+        return base ? base.replace(/\/$/, '') + '/' + tpl.replace(/^\//, '') : '';
       }
       return tpl;
     }
