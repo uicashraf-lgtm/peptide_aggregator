@@ -280,16 +280,6 @@ class PA_Shortcodes {
         foreach ( (array) $sc_dose_labels_raw as $k => $v ) {
             $sc_dose_labels[ strtolower( trim( $k ) ) ] = $v;
         }
-        // Build vendor affiliate map (name → affiliate_template) for frontend link building.
-        $sc_affiliate_map = array();
-        $vendors_result = $this->api->request('GET', '/api/admin/vendors', null, true);
-        if ( $vendors_result['ok'] && is_array($vendors_result['data']) ) {
-            foreach ( $vendors_result['data'] as $vendor ) {
-                if ( !empty($vendor['name']) && !empty($vendor['affiliate_template']) ) {
-                    $sc_affiliate_map[ $vendor['name'] ] = $vendor['affiliate_template'];
-                }
-            }
-        }
         ob_start();
         ?>
         <script>
@@ -300,7 +290,6 @@ class PA_Shortcodes {
         window.PA_UI.rest_base = <?php echo json_encode(rest_url('pa/v1')); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
         window.PA_UI.dose_labels = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
-        window.PA_UI.affiliate_map = <?php echo json_encode( empty($sc_affiliate_map) ? new stdClass() : $sc_affiliate_map ); ?>;
         </script>
         <div class="pa-shell">
                 <section class="pa-search-panel">
