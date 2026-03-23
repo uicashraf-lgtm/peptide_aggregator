@@ -9,6 +9,7 @@ class PA_Rest {
 
     public function __construct(PA_Api_Client $api) {
         $this->api = $api;
+        delete_transient('pa_affiliate_map'); // Clear any stale cached map.
         add_action('rest_api_init', array($this, 'register_routes'));
     }
 
@@ -38,22 +39,18 @@ class PA_Rest {
      * Cached in a transient for 5 minutes to avoid repeated API calls.
      */
     private function get_affiliate_map() {
-        $cached = get_transient('pa_affiliate_map');
-        if ($cached !== false) {
-            return $cached;
-        }
         $map = array();
         $result = $this->api->request('GET', '/api/admin/vendors', null, true);
-        if ($result['ok'] && is_array($result['data'])) {
-            foreach ($result['data'] as $vendor) {
-                $name = trim($vendor['name'] ?? '');
-                $tpl  = trim($vendor['affiliate_template'] ?? '');
-                if ($name !== '' && $tpl !== '') {
-                    $map[strtolower($name)] = $tpl;
-                }
+        if (!$result['ok'] || !is_array($result['data'])) {
+            return $map;
+        }
+        foreach ($result['data'] as $vendor) {
+            $name = trim($vendor['name'] ?? '');
+            $tpl  = trim($vendor['affiliate_template'] ?? '');
+            if ($name !== '' && $tpl !== '') {
+                $map[strtolower($name)] = $tpl;
             }
         }
-        set_transient('pa_affiliate_map', $map, 5 * MINUTE_IN_SECONDS);
         return $map;
     }
 
@@ -104,10 +101,11 @@ class PA_Rest {
             unset($product);
         }
 
-        // Apply affiliate templates to top_vendors links.
+        // Apply affiliate templates to all vendor links (top_vendors and available_dosages).
         $affiliate_map = $this->get_affiliate_map();
         if (!empty($affiliate_map) && is_array($products)) {
             foreach ($products as &$product) {
+                // Top-level vendor list
                 if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
                     foreach ($product['top_vendors'] as &$vendor) {
                         $key = strtolower(trim($vendor['vendor'] ?? ''));
@@ -117,6 +115,22 @@ class PA_Rest {
                         }
                     }
                     unset($vendor);
+                }
+                // Per-dosage vendor lists (used by the card view)
+                if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
+                    foreach ($product['available_dosages'] as &$dosage) {
+                        if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
+                            foreach ($dosage['vendors'] as &$vendor) {
+                                $key = strtolower(trim($vendor['vendor'] ?? ''));
+                                $tpl = $affiliate_map[$key] ?? '';
+                                if ($tpl !== '' && !empty($vendor['link'])) {
+                                    $vendor['link'] = $this->apply_affiliate($vendor['link'], $tpl);
+                                }
+                            }
+                            unset($vendor);
+                        }
+                    }
+                    unset($dosage);
                 }
             }
             unset($product);
