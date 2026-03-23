@@ -201,6 +201,7 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-vrow-right{grid-column:2!important;flex-wrap:wrap!important}
 .pa-shell .pa-pcard{padding:10px 8px 6px!important}
 .pa-shell .pa-pcard-vendor-row{padding:8px 4px 8px 8px!important}
+.pa-shell .pa-pcard-vright{gap:3px!important}
 }
 ';
     }
