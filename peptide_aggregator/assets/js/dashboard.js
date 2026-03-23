@@ -763,7 +763,7 @@
     // Formulation toggle buttons — always visible, same style as Vial/Kit type buttons.
     var formSep = el('span', 'pa-dpbar-sep');
     barRight.appendChild(formSep);
-    [{ key: 'all', label: 'All' }].concat(FORMULATIONS).forEach(function(f) {
+    [{ key: 'all', label: 'Vials' }].concat(FORMULATIONS).forEach(function(f) {
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === f.key ? ' is-active' : ''), f.label);
       btn.type = 'button';
       btn.addEventListener('click', (function(fKey) { return function() {
