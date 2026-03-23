@@ -429,6 +429,8 @@
       }
     }
 
+    var activeFormulation = 'all';
+
     if (dosages.length >= 1) {
       var dosageRow = el('div', 'pa-pcard-dosage');
       dosageRow.appendChild(el('span', 'pa-dosage-label', 'Dosage:'));
@@ -468,7 +470,8 @@
             pill.insertBefore(star, pill.firstChild);
           }
           p._activeId = d.id;
-          renderVendorRows(vendorList, d.top_vendors);
+          var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
+          renderVendorRows(vendorList, filteredByForm);
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -486,6 +489,38 @@
       }
       dosageRow.appendChild(scrollWrap);
       card.appendChild(dosageRow);
+    }
+
+    // Formulation filter row — shown only when 2+ formulations exist across vendors
+    var allCardVendors = [];
+    dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
+    if (allCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { allCardVendors.push(v); });
+    var cardFormKeys = [];
+    allCardVendors.forEach(function(v) {
+      var fk = getFormulationKey(v.product_name || '');
+      if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
+    });
+    if (cardFormKeys.length >= 2) {
+      var formRow = el('div', 'pa-pcard-dosage');
+      formRow.appendChild(el('span', 'pa-dosage-label', 'Formulation:'));
+      var formBtns = [];
+      [{ key: 'all', label: 'All' }].concat(FORMULATIONS.filter(function(f) { return cardFormKeys.indexOf(f.key) !== -1; })).forEach(function(f) {
+        var btn = el('button', 'pa-dosage-pill' + (f.key === 'all' ? ' is-active' : ''), f.label);
+        btn.type = 'button';
+        btn.addEventListener('click', (function(fKey, fBtn) { return function(e) {
+          e.stopPropagation();
+          activeFormulation = fKey;
+          formBtns.forEach(function(b) { b.classList.remove('is-active'); });
+          fBtn.classList.add('is-active');
+          var curIdx = state.activeDosages[p.id] || 0;
+          var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
+          var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
+          renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
+        }; })(f.key, btn));
+        formBtns.push(btn);
+        formRow.appendChild(btn);
+      });
+      card.appendChild(formRow);
     }
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors
