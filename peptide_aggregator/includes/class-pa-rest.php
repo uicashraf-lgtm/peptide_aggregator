@@ -69,13 +69,25 @@ class PA_Rest {
      */
     private function apply_affiliate($link, $tpl) {
         if (!$link || !$tpl) return $link;
+        // Redirect template: replace {url} placeholder with the encoded product URL.
         if (strpos($tpl, '{url}') !== false) {
             return str_replace('{url}', rawurlencode($link), $tpl);
         }
-        if (strpos($tpl, '://') === false) {
-            return rtrim($link, '/') . '/' . ltrim($tpl, '/');
+        // Full URL entered (e.g. https://aminoprices.com/ref/amino):
+        // Extract just the path/query suffix and append it to the product URL.
+        if (strpos($tpl, '://') !== false) {
+            $parsed = parse_url($tpl);
+            $suffix = ($parsed['path'] ?? '');
+            if (isset($parsed['query']))    $suffix .= '?' . $parsed['query'];
+            if (isset($parsed['fragment'])) $suffix .= '#' . $parsed['fragment'];
+            if ($suffix === '' || $suffix === '/') return $link;
+            $tpl = $suffix;
         }
-        return $tpl;
+        // Path or query suffix: append to the product URL.
+        if (substr($tpl, 0, 1) === '?') {
+            return rtrim($link, '/') . $tpl;
+        }
+        return rtrim($link, '/') . '/' . ltrim($tpl, '/');
     }
 
     public function get_products() {
