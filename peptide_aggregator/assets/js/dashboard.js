@@ -447,7 +447,7 @@
       var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
         var best = 0, bestCount = -1;
         dosages.forEach(function(d, i) {
-          var cnt = d.vendor_count != null ? d.vendor_count : (d.top_vendors ? d.top_vendors.length : 0);
+          var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
           if (cnt > bestCount) { bestCount = cnt; best = i; }
         });
         return best;
@@ -534,7 +534,7 @@
     var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
       var best = 0, bestCount = -1;
       dosages.forEach(function(d, i) {
-        var cnt = d.vendor_count != null ? d.vendor_count : (d.top_vendors ? d.top_vendors.length : 0);
+        var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
         if (cnt > bestCount) { bestCount = cnt; best = i; }
       });
       return best;
