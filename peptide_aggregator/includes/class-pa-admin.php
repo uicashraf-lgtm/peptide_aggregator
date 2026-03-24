@@ -1442,6 +1442,7 @@ class PA_Admin {
                                 showNotice('error', 'Tag override save failed: network error');
                             };
                             xhrTags.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
+                                + '&product_id=' + encodeURIComponent(productId)
                                 + '&product_name=' + encodeURIComponent(name)
                                 + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
                             PA_TAG_OVERRIDES[String(productId)] = tags.slice();
@@ -1626,9 +1627,10 @@ class PA_Admin {
             wp_send_json_error('Unauthorized');
         }
         check_ajax_referer('pa_save_product_tags', '_wpnonce');
-        $raw_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
-        if ($raw_name === '') {
-            wp_send_json_error('Invalid product name');
+        $product_id = intval($_POST['product_id'] ?? 0);
+        $raw_name   = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        if ($product_id === 0 && $raw_name === '') {
+            wp_send_json_error('Invalid product');
             return;
         }
         // Strip dosage suffix and normalise to lowercase so "BPC-157 5mg" and
@@ -1636,8 +1638,12 @@ class PA_Admin {
         $base_name = strtolower(trim(preg_replace(
             '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $raw_name
         )));
-        if ($base_name === '') {
-            wp_send_json_error('Invalid product name');
+        // Use numeric product ID as the override key when available so we can target
+        // individual products (e.g. tag the kit product without tagging the vials product).
+        // Fall back to base_name for backwards compatibility.
+        $override_key = $product_id > 0 ? (string) $product_id : $base_name;
+        if ($override_key === '') {
+            wp_send_json_error('Invalid product');
             return;
         }
         $tags_raw = wp_unslash($_POST['tags'] ?? '[]');
@@ -1649,9 +1655,7 @@ class PA_Admin {
         $tags = array_values(array_map('sanitize_text_field', $tags));
 
         $overrides = (array) get_option('pa_product_tag_overrides', array());
-        // Key by normalised base name so the override applies to every dosage
-        // variant (e.g. "BPC-157 5mg", "BPC-157 10mg") in one shot.
-        $overrides[$base_name] = $tags;
+        $overrides[$override_key] = $tags;
         update_option('pa_product_tag_overrides', $overrides, false);
         wp_send_json_success(array('tags' => $tags));
     }
