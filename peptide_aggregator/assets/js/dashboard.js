@@ -235,11 +235,15 @@
       list = list.filter(function (p) {
         if ((p.tags || []).some(function (t) { return t.toLowerCase() === 'kit'; })) return true;
         if (p.name.toLowerCase().includes('kit')) return true;
-        // Check vendor product_name fields (kits may be vendor listings under a base product)
-        if ((p.top_vendors || []).some(function (v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
-        // Also check across all available dosages
+        // available_dosages label may be "Kit" (kit as a dosage/type option)
+        if ((p.available_dosages || []).some(function (d) {
+          return (d.label || d || '').toString().toLowerCase().includes('kit');
+        })) return true;
+        // Check vendor product_name / product fields (raw API may use either field name)
+        function vendorHasKit(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); }
+        if ((p.top_vendors || []).some(vendorHasKit)) return true;
         return (p.available_dosages || []).some(function (d) {
-          return (d.vendors || []).some(function (v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+          return (d.vendors || []).some(vendorHasKit);
         });
       });
     }
