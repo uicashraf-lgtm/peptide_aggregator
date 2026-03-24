@@ -132,6 +132,35 @@ class PA_Rest {
             unset($product);
         }
 
+        // Auto-tag products whose vendor listings mention "kit" in the product name.
+        // The /prices endpoint exposes this per-listing, but /products does not surface it
+        // on the product itself — so we detect it here and inject a "kit" tag.
+        if (is_array($products)) {
+            foreach ($products as &$product) {
+                if (in_array('kit', array_map('strtolower', (array) ($product['tags'] ?? [])), true)) {
+                    continue; // already tagged
+                }
+                $has_kit = false;
+                foreach ((array) ($product['top_vendors'] ?? []) as $v) {
+                    $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                    if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                }
+                if (!$has_kit) {
+                    foreach ((array) ($product['available_dosages'] ?? []) as $d) {
+                        foreach ((array) ($d['vendors'] ?? []) as $v) {
+                            $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                            if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
+                        }
+                    }
+                }
+                if ($has_kit) {
+                    $product['tags']   = (array) ($product['tags'] ?? []);
+                    $product['tags'][] = 'kit';
+                }
+            }
+            unset($product);
+        }
+
         // Apply affiliate templates to all vendor links (top_vendors and available_dosages).
         $affiliate_map = $this->get_affiliate_map();
         if (!empty($affiliate_map) && is_array($products)) {
