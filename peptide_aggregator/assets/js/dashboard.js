@@ -1162,7 +1162,15 @@
       chip.innerHTML = escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
       chip.addEventListener('click', function () {
         state.activeFilters.delete(name);
+        // Also clear the matching applied toggle so it doesn't re-apply
+        if (state.applied) {
+          if (name === 'In Stock Only') state.applied.toggles.instock = false;
+          if (name === 'Kits Only') state.applied.toggles.kits = false;
+          if (name === 'Blends Only') state.applied.toggles.blends = false;
+          if (name === 'Likes Only') state.applied.toggles.likes = false;
+        }
         renderActiveFilters();
+        renderProductGrid(filteredProducts());
       });
       host.appendChild(chip);
     });
@@ -1287,6 +1295,8 @@
     state.applied.suppliers.forEach(function (s) { state.activeFilters.add(s); });
     state.applied.priceRanges.forEach(function (p) { state.activeFilters.add(p); });
     renderActiveFilters();
+    renderProductGrid(filteredProducts());
+    showProductGrid();
     closeModal(false);
   }
 
