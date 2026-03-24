@@ -228,13 +228,20 @@
         return (p.top_vendors || []).some(function (v) { return !!v.coupon_code; });
       });
     }
-    if (state.barFilters.favourites) {
+    if (state.barFilters.favourites || (state.applied && state.applied.toggles.likes)) {
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
-    if (state.barFilters.kits) {
+    if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(function (p) {
         return (p.tags || []).some(function (t) { return t.toLowerCase() === 'kit'; }) ||
                p.name.toLowerCase().includes('kit');
+      });
+    }
+    if (state.applied && state.applied.toggles.blends) {
+      list = list.filter(function (p) {
+        return (p.category && p.category.toLowerCase() === 'blends') ||
+               (p.tags || []).some(function (t) { return t.toLowerCase() === 'blend'; }) ||
+               p.name.toLowerCase().includes('blend');
       });
     }
     // Tag filter (from popular chips)
