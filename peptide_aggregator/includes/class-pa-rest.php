@@ -132,25 +132,45 @@ class PA_Rest {
             unset($product);
         }
 
-        // Auto-tag products whose vendor listings mention "kit" in the product name.
-        // The /prices endpoint exposes this per-listing, but /products does not surface it
-        // on the product itself — so we detect it here and inject a "kit" tag.
+        // Tag products as "kit" using the admin-configured kit product name list.
+        // The /products endpoint does not expose per-vendor product names, so automatic
+        // detection is not possible; the admin lists product base names in Settings instead.
+        $kit_names_raw = get_option('pa_kit_product_names', '');
+        $kit_names     = array_filter(array_map('trim', explode("\n", strtolower(str_replace("\r", '', $kit_names_raw)))));
+        $dosage_re_kit = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+        if (!empty($kit_names) && is_array($products)) {
+            foreach ($products as &$product) {
+                $base = strtolower(trim(preg_replace($dosage_re_kit, '', $product['name'] ?? '')));
+                if (in_array($base, $kit_names, true) &&
+                    !in_array('kit', array_map('strtolower', (array) ($product['tags'] ?? [])), true)
+                ) {
+                    $product['tags']   = (array) ($product['tags'] ?? []);
+                    $product['tags'][] = 'kit';
+                }
+            }
+            unset($product);
+        }
+
+        // Also auto-detect from available_dosages labels (e.g. label "Kit" or "(10 vials/Kit)").
         if (is_array($products)) {
             foreach ($products as &$product) {
                 if (in_array('kit', array_map('strtolower', (array) ($product['tags'] ?? [])), true)) {
-                    continue; // already tagged
+                    continue;
                 }
                 $has_kit = false;
-                foreach ((array) ($product['top_vendors'] ?? []) as $v) {
-                    $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                    if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                foreach ((array) ($product['available_dosages'] ?? []) as $d) {
+                    $lbl = strtolower($d['label'] ?? (is_string($d) ? $d : ''));
+                    if ($lbl !== '' && strpos($lbl, 'kit') !== false) { $has_kit = true; break; }
+                    // Also check vendor product_name within each dosage (populated by some backends)
+                    foreach ((array) ($d['vendors'] ?? []) as $v) {
+                        $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                        if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
+                    }
                 }
                 if (!$has_kit) {
-                    foreach ((array) ($product['available_dosages'] ?? []) as $d) {
-                        foreach ((array) ($d['vendors'] ?? []) as $v) {
-                            $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                            if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
-                        }
+                    foreach ((array) ($product['top_vendors'] ?? []) as $v) {
+                        $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                        if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
                     }
                 }
                 if ($has_kit) {
