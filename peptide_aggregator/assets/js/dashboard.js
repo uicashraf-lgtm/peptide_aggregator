@@ -220,7 +220,7 @@
     // In Stock Only (from modal filter — uses real in_stock boolean from API)
     if (state.applied && state.applied.toggles.instock) {
       list = list.filter(function (p) {
-        return (p.top_vendors || []).some(function (v) { return v.in_stock === true; });
+        return (p.top_vendors || []).some(function (v) { return !!v.in_stock; });
       });
     }
     if (state.barFilters.coupon) {
