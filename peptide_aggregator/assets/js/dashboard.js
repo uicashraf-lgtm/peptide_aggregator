@@ -233,8 +233,14 @@
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(function (p) {
-        return (p.tags || []).some(function (t) { return t.toLowerCase() === 'kit'; }) ||
-               p.name.toLowerCase().includes('kit');
+        if ((p.tags || []).some(function (t) { return t.toLowerCase() === 'kit'; })) return true;
+        if (p.name.toLowerCase().includes('kit')) return true;
+        // Check vendor product_name fields (kits may be vendor listings under a base product)
+        if ((p.top_vendors || []).some(function (v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        // Also check across all available dosages
+        return (p.available_dosages || []).some(function (d) {
+          return (d.vendors || []).some(function (v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+        });
       });
     }
     if (state.applied && state.applied.toggles.blends) {
