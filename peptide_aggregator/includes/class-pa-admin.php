@@ -29,6 +29,9 @@ class PA_Admin {
     public function register_settings() {
         register_setting('pa_settings_group', PA_Api_Client::OPT_BASE_URL);
         register_setting('pa_settings_group', PA_Api_Client::OPT_API_TOKEN);
+        register_setting('pa_settings_group', 'pa_kit_product_names', array(
+            'sanitize_callback' => function ($v) { return sanitize_textarea_field($v ?? ''); },
+        ));
     }
 
     private function render_notice($type, $message) {
@@ -56,6 +59,13 @@ class PA_Admin {
                     <tr>
                         <th scope="row"><label for="<?php echo esc_attr(PA_Api_Client::OPT_API_TOKEN); ?>">API Bearer Token (optional)</label></th>
                         <td><input name="<?php echo esc_attr(PA_Api_Client::OPT_API_TOKEN); ?>" id="<?php echo esc_attr(PA_Api_Client::OPT_API_TOKEN); ?>" type="text" class="regular-text" value="<?php echo esc_attr(get_option(PA_Api_Client::OPT_API_TOKEN, '')); ?>" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="pa_kit_product_names">Kit Products</label></th>
+                        <td>
+                            <textarea name="pa_kit_product_names" id="pa_kit_product_names" rows="6" class="large-text"><?php echo esc_textarea(get_option('pa_kit_product_names', '')); ?></textarea>
+                            <p class="description">Enter the base name of each product that has kit variants &mdash; one per line, case-insensitive. These products will automatically receive a <code>kit</code> tag so the &ldquo;Kits only&rdquo; filter works.<br>Example: <code>retatrutide</code></p>
+                        </td>
                     </tr>
                 </table>
                 <?php submit_button(); ?>
