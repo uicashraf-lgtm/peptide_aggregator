@@ -314,6 +314,29 @@
     return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
   }
 
+  // Returns true if a dosage entry is a kit dosage (label or any vendor product_name contains "kit").
+  function isKitDosage(d) {
+    if ((d.label || '').toLowerCase().includes('kit')) return true;
+    return (d.top_vendors || []).some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+  }
+
+  // When the kits filter is active, pick the first kit dosage index; otherwise pick the dosage
+  // with the most vendors. Returns the best index from the dosages array.
+  function bestDosageIdx(dosages) {
+    var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
+    if (kitsActive) {
+      for (var i = 0; i < dosages.length; i++) {
+        if (isKitDosage(dosages[i])) return i;
+      }
+    }
+    var best = 0, bestCount = -1;
+    dosages.forEach(function(d, i) {
+      var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
+      if (cnt > bestCount) { bestCount = cnt; best = i; }
+    });
+    return best;
+  }
+
   function vendorInitials(name) {
     return (name || '?').split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
   }
@@ -484,14 +507,7 @@
       rightBtn.type = 'button'; rightBtn.title = 'Scroll right';
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
-      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-        var best = 0, bestCount = -1;
-        dosages.forEach(function(d, i) {
-          var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
-          if (cnt > bestCount) { bestCount = cnt; best = i; }
-        });
-        return best;
-      })();
+      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages);
       if (activeIdx >= dosages.length) activeIdx = 0;
 
       dosages.forEach(function (d, idx) {
@@ -518,7 +534,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, filteredByForm);
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -578,7 +594,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -587,19 +603,12 @@
     }
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors
-    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-      var best = 0, bestCount = -1;
-      dosages.forEach(function(d, i) {
-        var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
-        if (cnt > bestCount) { bestCount = cnt; best = i; }
-      });
-      return best;
-    })();
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages);
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, defaultVendors);
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
     card.appendChild(vendorList);
 
     // Footer
