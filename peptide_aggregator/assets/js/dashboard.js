@@ -482,7 +482,7 @@
     if (p.available_dosages && p.available_dosages.length >= 1) {
       dosages = p.available_dosages.map(function(d) {
         var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
-        var vendors = (d && d.vendors) ? d.vendors : p.top_vendors || [];
+        var vendors = (d && d.vendors && d.vendors.length > 0) ? d.vendors : p.top_vendors || [];
         return { label: lbl, id: p.id, top_vendors: vendors, vendor_count: vendors.length };
       }).filter(function(d) { return d.label; });
     } else {
