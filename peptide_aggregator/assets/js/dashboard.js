@@ -403,6 +403,15 @@
   }
 
   function buildProductCard(p) {
+    // Debug: log kit-relevant vendor data so we can see why the kit filter does/doesn't work.
+    var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
+    if (kitsOn) {
+      console.log('[PA kit-debug]', p.name, {
+        tags: p.tags,
+        top_vendors: (p.top_vendors || []).map(function(v) { return {vendor: v.vendor, product_name: v.product_name, product: v.product}; }),
+        available_dosages: (p.available_dosages || []).map(function(d) { return {label: d.label, vendors: (d.vendors || []).map(function(v) { return {vendor: v.vendor, product_name: v.product_name, product: v.product}; })}; }),
+      });
+    }
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
 
