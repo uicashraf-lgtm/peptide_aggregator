@@ -248,18 +248,11 @@
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+      // Only show products explicitly tagged as kits by the server.
+      // Client-side auto-detection via vendor product_name is intentionally removed — it
+      // caused products to appear even when the admin had removed their kit tag.
       list = list.filter(function (p) {
-        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
-        var allVendors = [];
-        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
-        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })) return true;
-        // Fallback: admin/server tag.
-        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
-        // Last resort: available_dosages label.
-        return (p.available_dosages || []).some(function (d) {
-          return (d.label || d || '').toString().toLowerCase().includes('kit');
-        });
+        return (p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
       });
     }
     if (state.applied && state.applied.toggles.blends) {
