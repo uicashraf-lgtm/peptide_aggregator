@@ -402,11 +402,14 @@
     // Debug: log kit-relevant vendor data so we can see why the kit filter does/doesn't work.
     var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
     if (kitsOn) {
-      console.log('[PA kit-debug]', p.name, {
-        tags: p.tags,
-        top_vendors: (p.top_vendors || []).map(function(v) { return {vendor: v.vendor, product_name: v.product_name, product: v.product}; }),
-        available_dosages: (p.available_dosages || []).map(function(d) { return {label: d.label, vendors: (d.vendors || []).map(function(v) { return {vendor: v.vendor, product_name: v.product_name, product: v.product}; })}; }),
+      console.group('[PA kit-debug] ' + p.name);
+      console.log('tags:', p.tags);
+      console.log('top_vendors:', (p.top_vendors || []).map(function(v) { return v.vendor + ' | product_name=' + (v.product_name || '(none)') + ' | product=' + (v.product || '(none)'); }));
+      (p.available_dosages || []).forEach(function(d, di) {
+        var labelHasKit = (d.label || '').toLowerCase().includes('kit');
+        console.log('dosage[' + di + '] label="' + d.label + '"' + (labelHasKit ? ' ← HAS KIT' : '') + ':', (d.vendors || []).map(function(v) { var pnKit = (v.product_name||'').toLowerCase().includes('kit'); return v.vendor + ' | product_name=' + (v.product_name || '(none)') + (pnKit ? ' ← KIT' : ''); }));
       });
+      console.groupEnd();
     }
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
