@@ -92,6 +92,7 @@
     priceMode: 'total', // 'total' or 'mgml'
     favourites: new Set(JSON.parse(localStorage.getItem('pa_favs') || '[]')),
     activeDosages: {}, // productId -> dosage index
+    kitVendorCache: {}, // productId -> {vendorName: true} — populated from /prices when kit filter on
     tagFilters: new Set(), // tags selected from popular chips
     detailPriceMode: 'total', // price toggle in detail view
     detailDosages: [],        // available dosages for current detail product
@@ -302,6 +303,7 @@
 
   // When the kits filter is active, collect all vendor names that sell a kit for product p.
   // Searches top_vendors AND every available_dosage's vendors — not just the active dosage.
+  // Also merges in any names from state.kitVendorCache (fetched from /prices endpoint).
   function collectKitVendorNames(p) {
     var names = {};
     // top_vendors
@@ -315,7 +317,32 @@
         if (labelIsKit || (v.product_name || v.product || '').toLowerCase().includes('kit')) names[v.vendor] = true;
       });
     });
+    // Merge in cached kit vendor names fetched from /prices (more complete data source).
+    var cached = state.kitVendorCache[p.id];
+    if (cached) { Object.keys(cached).forEach(function(n) { names[n] = true; }); }
     return names;
+  }
+
+  // Fetch /prices for a kit-tagged product and cache the kit vendor names.
+  // Re-renders the grid once data arrives so the card updates immediately.
+  function fetchKitVendors(productId) {
+    if (state.kitVendorCache[productId] !== undefined) return; // already fetched or in-flight
+    state.kitVendorCache[productId] = null; // mark as in-flight
+    var url = (REST || API + '/api') + '/products/' + encodeURIComponent(productId) + '/prices';
+    fetch(url).then(function(r) { return r.json(); }).then(function(prices) {
+      var names = {};
+      if (Array.isArray(prices)) {
+        prices.forEach(function(v) {
+          if ((v.product_name || '').toLowerCase().includes('kit')) names[v.vendor] = true;
+        });
+      }
+      state.kitVendorCache[productId] = names;
+      console.log('[PA kit-vendor] prices fetch done for', productId, '— kit vendors:', Object.keys(names));
+      renderProductGrid(filteredProducts());
+    }).catch(function(err) {
+      console.warn('[PA kit-vendor] prices fetch failed for', productId, err);
+      state.kitVendorCache[productId] = {}; // mark as done (empty) so we don't retry
+    });
   }
 
   // Filter a vendor list to only kit vendors. kitNames is the result of collectKitVendorNames.
@@ -414,8 +441,9 @@
     // Debug: log kit-relevant vendor data so we can see why the kit filter does/doesn't work.
     var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
     var kitNames = kitsOn ? collectKitVendorNames(p) : null;
-    if (kitsOn) {
-      console.log('[PA kit-debug] ' + p.name + ' — kit vendor names found:', Object.keys(kitNames || {}));
+    if (kitsOn && kitNames && Object.keys(kitNames).length === 0) {
+      // Products list API has no product_name for vendors — fetch /prices for accurate kit vendor info.
+      fetchKitVendors(p.id);
     }
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
