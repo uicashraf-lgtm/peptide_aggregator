@@ -308,17 +308,24 @@
   }
 
   // When the kits filter is active, restrict a vendor list to kit vendors only.
-  // dosageLabel: the label of the dosage these vendors belong to (e.g. "2mg Kit").
-  // - If the dosage label itself contains "kit", all vendors on it are kit vendors → pass through.
-  // - If vendor product_name signals are present, filter to kit vendors only.
-  // - Otherwise show all vendors: filteredProducts() already confirmed this product is a kit;
-  //   we just can't pinpoint which rows are kit-specific without product_name data.
-  function kitFilterVendors(vendors, dosageLabel) {
+  // Mirrors the detail-view Kits button: filter by product_name/product containing 'kit'.
+  // dosageLabel: if the label contains 'kit', all vendors on that dosage are kit vendors.
+  // topVendors: p.top_vendors, used as fallback — it has product_name more reliably than
+  //             available_dosages.vendors (same reason the detail view uses the prices endpoint).
+  function kitFilterVendors(vendors, dosageLabel, topVendors) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
     if ((dosageLabel || '').toLowerCase().includes('kit')) return vendors || [];
     var vendorsArr = vendors || [];
+    // Try filtering the dosage vendor list directly.
     var kitVendors = vendorsArr.filter(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); });
-    return kitVendors.length > 0 ? kitVendors : vendorsArr;
+    if (kitVendors.length > 0) return kitVendors;
+    // Fallback to top_vendors — has product_name more reliably (mirrors detail view data source).
+    if (topVendors && topVendors.length > 0) {
+      var kitTop = topVendors.filter(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); });
+      if (kitTop.length > 0) return kitTop;
+    }
+    // No kit signals: show all (product was confirmed as kit by filteredProducts).
+    return vendorsArr;
   }
 
   function vendorInitials(name) {
@@ -532,7 +539,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d.label));
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d.label, p.top_vendors));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -592,7 +599,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage && curDosage.label));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage && curDosage.label, p.top_vendors));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -619,7 +626,7 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage && activeDosage.label));
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage && activeDosage.label, p.top_vendors));
     card.appendChild(vendorList);
 
     // Footer
