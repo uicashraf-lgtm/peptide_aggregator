@@ -700,10 +700,14 @@ class PA_Admin {
         // Apply admin tag overrides — stored in WordPress so they survive scraper re-runs
         // that re-assign tags on the backend.
         $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
+        $dosage_re_admin = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
         foreach ($products as &$product) {
-            $pid = (string) ($product['id'] ?? '');
+            $pid  = (string) ($product['id'] ?? '');
+            $base = strtolower(trim(preg_replace($dosage_re_admin, '', $product['name'] ?? '')));
             if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
                 $product['tags'] = $tag_overrides[$pid];
+            } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
+                $product['tags'] = $tag_overrides[$base];
             }
         }
         unset($product);
@@ -1433,6 +1437,7 @@ class PA_Admin {
                             };
                             xhrTags.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
                                 + '&product_name=' + encodeURIComponent(name)
+                                + '&product_id=' + encodeURIComponent(String(productId))
                                 + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
                             PA_TAG_OVERRIDES[String(productId)] = tags.slice();
                             reloadProducts(function() {
@@ -1642,6 +1647,12 @@ class PA_Admin {
         // Key by normalised base name so the override applies to every dosage
         // variant (e.g. "BPC-157 5mg", "BPC-157 10mg") in one shot.
         $overrides[$base_name] = $tags;
+        // Also key by product ID (string) so the admin UI can look it up directly
+        // without needing to re-normalise the name.
+        $product_id = sanitize_text_field(wp_unslash($_POST['product_id'] ?? ''));
+        if ($product_id !== '') {
+            $overrides[$product_id] = $tags;
+        }
         update_option('pa_product_tag_overrides', $overrides, false);
         wp_send_json_success(array('tags' => $tags));
     }
