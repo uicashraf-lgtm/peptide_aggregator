@@ -311,10 +311,14 @@
   // (matches product_name the same way the detail-view "Kits" button does).
   // dosage is optional. If the dosage label itself contains "kit", all its vendors are kit
   // vendors regardless of product_name, so skip the name filter in that case.
+  // If product_name filtering returns zero results (product is a kit at the product level but
+  // vendor entries don't carry "kit" in their name), fall back to showing all vendors so the
+  // card never shows "No prices scraped yet" for a product that genuinely has pricing data.
   function kitFilterVendors(vendors, dosage) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    var filtered = (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    return filtered.length > 0 ? filtered : (vendors || []);
   }
 
   // Returns true if a dosage entry is a kit dosage (label or any vendor product_name contains "kit").
