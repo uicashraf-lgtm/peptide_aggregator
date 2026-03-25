@@ -212,8 +212,15 @@
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
     try {
-      const res = await fetch((REST || API + '/api') + '/products');
-      const raw = await res.json();
+      // Use products inlined into the page by PHP (zero extra request).
+      // Fall back to a fetch only if the inline data is absent.
+      let raw;
+      if (UI.initial_products && Array.isArray(UI.initial_products) && UI.initial_products.length) {
+        raw = UI.initial_products;
+      } else {
+        const res = await fetch((REST || API + '/api') + '/products');
+        raw = await res.json();
+      }
       state.allProducts = groupByDosage(raw);
       // Debug: log any products that have non-empty tags so kit filter issues are visible.
       var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
