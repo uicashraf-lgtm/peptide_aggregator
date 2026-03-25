@@ -114,8 +114,7 @@ class PA_Rest {
         $cached = get_transient('pa_products_cache');
         if ($cached !== false) {
             $response = rest_ensure_response($cached);
-            $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
-            $response->header('Pragma', 'no-cache');
+            $response->header('Cache-Control', 'public, max-age=60');
             return $response;
         }
 
@@ -219,8 +218,7 @@ class PA_Rest {
         set_transient('pa_products_cache', $products, 60);
 
         $response = rest_ensure_response($products);
-        $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
-        $response->header('Pragma', 'no-cache');
+        $response->header('Cache-Control', 'public, max-age=60');
         return $response;
     }
 
