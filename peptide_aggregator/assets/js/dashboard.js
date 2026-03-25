@@ -105,6 +105,7 @@
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
     detailCurrentVendors: [],        // full unfiltered vendor list for current dosage
+    priceCache: {},                  // productId -> prices array from /prices endpoint
   };
 
   function copyDraft(src) {
@@ -226,6 +227,22 @@
     }
   }
 
+  // Fetch /prices for all products and cache in state.priceCache, then call done().
+  // Already-cached products are skipped. Safe to call multiple times.
+  function prefetchAllPrices(done) {
+    var products = state.allProducts;
+    var needed = products.filter(function(p) { return state.priceCache[p.id] === undefined; });
+    if (needed.length === 0) { done(); return; }
+    var pending = needed.length;
+    function tick() { if (--pending === 0) done(); }
+    needed.forEach(function(p) {
+      fetch((REST || API + '/api') + '/products/' + p.id + '/prices')
+        .then(function(r) { return r.json(); })
+        .then(function(data) { state.priceCache[p.id] = data; tick(); })
+        .catch(function() { state.priceCache[p.id] = []; tick(); });
+    });
+  }
+
   function filteredProducts() {
     let list = state.allProducts.slice();
     const q = (document.getElementById('pa-search') || {}).value || '';
@@ -248,17 +265,12 @@
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      list = list.filter(function (p) {
-        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
-        var allVendors = [];
-        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
-        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
-        // Fallback: admin/server tag.
-        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
-        // Last resort: available_dosages label.
-        return (p.available_dosages || []).some(function (d) {
-          return (d.label || d || '').toString().toLowerCase().includes('kit');
+      // Use /prices data (same source as detail view kit button) — checks product_name/product field.
+      list = list.filter(function(p) {
+        var prices = state.priceCache[p.id];
+        if (!prices) return false;
+        return prices.some(function(v) {
+          return (v.product_name || v.product || '').toLowerCase().includes('kit');
         });
       });
     }
@@ -307,11 +319,10 @@
     });
   }
 
-  // When the kits filter is active, restrict a vendor list to kit products only
-  // (matches product_name the same way the detail-view "Kits" button does).
+  // When the kits filter is active, product cards still show all their vendors.
+  // The kit detection is done at the product level via priceCache (see filteredProducts).
   function kitFilterVendors(vendors) {
-    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
-    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    return vendors || [];
   }
 
   function vendorInitials(name) {
@@ -1327,9 +1338,17 @@
     state.applied.suppliers.forEach(function (s) { state.activeFilters.add(s); });
     state.applied.priceRanges.forEach(function (p) { state.activeFilters.add(p); });
     renderActiveFilters();
-    renderProductGrid(filteredProducts());
-    showProductGrid();
-    closeModal(false);
+    if (state.applied.toggles.kits) {
+      prefetchAllPrices(function() {
+        renderProductGrid(filteredProducts());
+        showProductGrid();
+        closeModal(false);
+      });
+    } else {
+      renderProductGrid(filteredProducts());
+      showProductGrid();
+      closeModal(false);
+    }
   }
 
   function clearDraft() {
@@ -1462,6 +1481,12 @@
         } else if (title === 'Kits only') {
           state.barFilters.kits = !state.barFilters.kits;
           btn.classList.toggle('is-active', state.barFilters.kits);
+          if (state.barFilters.kits) {
+            prefetchAllPrices(function() { renderProductGrid(filteredProducts()); });
+          } else {
+            renderProductGrid(filteredProducts());
+          }
+          return;
         }
         renderProductGrid(filteredProducts());
       });
