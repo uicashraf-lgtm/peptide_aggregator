@@ -106,6 +106,7 @@
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
     detailCurrentVendors: [],        // full unfiltered vendor list for current dosage
+    priceCache: {},                  // productId -> prices array from /prices endpoint
   };
 
   function copyDraft(src) {
@@ -225,6 +226,22 @@
       const grid = document.getElementById('pa-product-grid');
       if (grid) grid.innerHTML = '<p class="pa-error">Could not load products. Is the API running?</p>';
     }
+  }
+
+  // Fetch /prices for all products and cache in state.priceCache, then call done().
+  // Already-cached products are skipped. Safe to call multiple times.
+  function prefetchAllPrices(done) {
+    var products = state.allProducts;
+    var needed = products.filter(function(p) { return state.priceCache[p.id] === undefined; });
+    if (needed.length === 0) { done(); return; }
+    var pending = needed.length;
+    function tick() { if (--pending === 0) done(); }
+    needed.forEach(function(p) {
+      fetch((REST || API + '/api') + '/products/' + p.id + '/prices')
+        .then(function(r) { return r.json(); })
+        .then(function(data) { state.priceCache[p.id] = data; tick(); })
+        .catch(function() { state.priceCache[p.id] = []; tick(); });
+    });
   }
 
   function filteredProducts() {
