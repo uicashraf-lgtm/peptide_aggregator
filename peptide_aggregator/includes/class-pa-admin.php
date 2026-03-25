@@ -1654,6 +1654,7 @@ class PA_Admin {
             $overrides[$product_id] = $tags;
         }
         update_option('pa_product_tag_overrides', $overrides, false);
+        delete_transient('pa_products_cache');
         wp_send_json_success(array('tags' => $tags));
     }
 

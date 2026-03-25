@@ -66,6 +66,7 @@ class PA_Rest {
             $templates[$vendor] = $tpl;
         }
         update_option('pa_affiliate_templates', $templates);
+        delete_transient('pa_products_cache');
         return rest_ensure_response(array('ok' => true));
     }
 
@@ -110,6 +111,14 @@ class PA_Rest {
     }
 
     public function get_products() {
+        $cached = get_transient('pa_products_cache');
+        if ($cached !== false) {
+            $response = rest_ensure_response($cached);
+            $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+            $response->header('Pragma', 'no-cache');
+            return $response;
+        }
+
         $result = $this->api->request('GET', '/api/products');
         if (!$result['ok']) {
             return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
@@ -206,6 +215,8 @@ class PA_Rest {
             }
             unset($product);
         }
+
+        set_transient('pa_products_cache', $products, 60);
 
         $response = rest_ensure_response($products);
         $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
