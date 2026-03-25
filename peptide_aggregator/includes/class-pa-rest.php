@@ -132,18 +132,29 @@ class PA_Rest {
             unset($product);
         }
 
-        // Auto-tag products as 'kit' when any vendor listing has 'kit' in its product name.
-        // Admin tag overrides (applied above) take precedence; this only fills in the gap
-        // for products that have no override but whose vendors sell kit formulations.
+        // Auto-tag products as 'kit' when the API signals kit availability.
+        // Checks (in order of reliability for the /products endpoint):
+        //   1. available_dosages label contains 'kit' (e.g. "Kit", "5mg Kit")
+        //   2. top_vendors product_name contains 'kit' (present when the field is populated)
+        //   3. available_dosages vendor product_name contains 'kit'
+        // Admin tag overrides applied above always take precedence.
         if (is_array($products)) {
             foreach ($products as &$product) {
                 if (in_array('kit', array_map('strtolower', (array) ($product['tags'] ?? [])), true)) {
                     continue; // already tagged
                 }
                 $has_kit = false;
-                foreach ((array) ($product['top_vendors'] ?? []) as $v) {
-                    $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                    if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                // Check available_dosages labels first — most reliable field in /products response.
+                foreach ((array) ($product['available_dosages'] ?? []) as $d) {
+                    $lbl = strtolower(is_array($d) ? ($d['label'] ?? '') : (string) $d);
+                    if ($lbl !== '' && strpos($lbl, 'kit') !== false) { $has_kit = true; break; }
+                }
+                // Fall back to vendor product_name fields.
+                if (!$has_kit) {
+                    foreach ((array) ($product['top_vendors'] ?? []) as $v) {
+                        $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                        if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                    }
                 }
                 if (!$has_kit) {
                     foreach ((array) ($product['available_dosages'] ?? []) as $d) {
