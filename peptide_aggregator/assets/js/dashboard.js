@@ -518,7 +518,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
+          renderVendorRows(vendorList, filteredByForm);
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -578,7 +578,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
+          renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -599,7 +599,7 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
+    renderVendorRows(vendorList, defaultVendors);
     card.appendChild(vendorList);
 
     // Footer
