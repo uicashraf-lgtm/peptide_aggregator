@@ -88,6 +88,7 @@
     applied: null,
 
     allProducts: [],
+    priceCache: {}, // productId -> raw /prices array; used by front-page kit filter
     barFilters: { coupon: false, favourites: false, usOnly: false, kits: false },
     priceMode: 'total', // 'total' or 'mgml'
     favourites: new Set(JSON.parse(localStorage.getItem('pa_favs') || '[]')),
@@ -248,18 +249,21 @@
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+      // Show products that are confirmed kit products.
+      // If /prices data is already cached for a product, use that (same source as detail view).
+      // Otherwise fall back to summary-data signals so the grid isn't empty on first activation.
       list = list.filter(function (p) {
-        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
+        // Definitive: cached /prices data (same data as detail view) — most accurate.
+        if (state.priceCache[p.id]) {
+          return kitVendorsFromPrices(state.priceCache[p.id]).length > 0;
+        }
+        // Summary fallback: vendor product_name / product fields in /products data.
         var allVendors = [];
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
         (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
         if (allVendors.some(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })) return true;
-        // Fallback: admin/server tag.
-        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
-        // Last resort: available_dosages label.
-        return (p.available_dosages || []).some(function (d) {
-          return (d.label || d || '').toString().toLowerCase().includes('kit');
-        });
+        // Last fallback: server-supplied 'kit' tag (set by PHP auto-tagger or admin).
+        return (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
       });
     }
     if (state.applied && state.applied.toggles.blends) {
@@ -307,42 +311,32 @@
     });
   }
 
-  // When the kits filter is active, restrict a vendor list to kit vendors only.
-  // dosageLabel: optional label of the currently-shown dosage — if the dosage itself
-  // is a kit dosage (label contains 'kit') all its vendors are kit vendors and are shown as-is.
-  // Otherwise checks vendor product_name / product fields. Falls back to showing all
-  // vendors so kit-tagged products never show "No prices scraped yet".
-  function kitFilterVendors(vendors, dosageLabel) {
-    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
-    // If the whole dosage is a kit, every vendor in it is a kit vendor.
-    if (dosageLabel && dosageLabel.toLowerCase().includes('kit')) return vendors || [];
-    var kitVendors = (vendors || []).filter(function(v) {
-      return (v.product_name || v.product || '').toLowerCase().includes('kit');
-    });
-    return kitVendors.length > 0 ? kitVendors : (vendors || []);
+  // Fetch /prices for a product and cache the result.
+  // Returns a promise that resolves to the raw price array.
+  function fetchPrices(productId) {
+    if (state.priceCache[productId]) return Promise.resolve(state.priceCache[productId]);
+    return fetch((REST || API + '/api') + '/products/' + productId + '/prices')
+      .then(function(r) { return r.json(); })
+      .then(function(prices) { state.priceCache[productId] = prices; return prices; });
   }
 
-  // When the kits filter is active, return the index of the best dosage to show:
-  // prefers dosages whose vendors are kit products, then dosages labeled 'kit',
-  // then the dosage with the most vendors (default).
-  function kitBestDosageIdx(dosages) {
-    var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-    if (kitsActive) {
-      for (var i = 0; i < dosages.length; i++) {
-        if ((dosages[i].top_vendors || []).some(function(v) {
-          return (v.product_name || v.product || '').toLowerCase().includes('kit');
-        })) return i;
-      }
-      for (var j = 0; j < dosages.length; j++) {
-        if ((dosages[j].label || '').toLowerCase().includes('kit')) return j;
-      }
-    }
-    var best = 0, bestCount = -1;
-    dosages.forEach(function(d, i) {
-      var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
-      if (cnt > bestCount) { bestCount = cnt; best = i; }
-    });
-    return best;
+  // Given a raw /prices array (same format as detail view), return only kit vendors
+  // sorted by price — identical logic to the detail-view "Kits" button.
+  function kitVendorsFromPrices(prices) {
+    return (Array.isArray(prices) ? prices : [])
+      .filter(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })
+      .map(function(v) {
+        return {
+          vendor: v.vendor, price: v.effective_price, previous_price: v.previous_price,
+          product_name: v.product_name || v.product,
+          link: v.link, logo_url: v.logo_url, coupon_code: v.coupon_code,
+          in_stock: v.in_stock, country: v.country,
+          amount_mg: v.amount_mg, amount_unit: v.amount_unit, price_per_mg: v.price_per_mg
+        };
+      })
+      .sort(function(a, b) {
+        return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
+      });
   }
 
   function vendorInitials(name) {
@@ -541,8 +535,22 @@
             pill.insertBefore(star, pill.firstChild);
           }
           p._activeId = d.id;
-          var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d.label));
+          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+            // Same as detail view: use /prices data and filter to kit vendors only.
+            if (state.priceCache[p.id]) {
+              renderVendorRows(vendorList, kitVendorsFromPrices(state.priceCache[p.id]));
+            } else {
+              vendorList.innerHTML = '<p class="pa-pcard-empty" style="opacity:.6">Loading\u2026</p>';
+              fetchPrices(p.id).then(function(prices) {
+                renderVendorRows(vendorList, kitVendorsFromPrices(prices));
+              }).catch(function() {
+                renderVendorRows(vendorList, d.top_vendors || []);
+              });
+            }
+          } else {
+            var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
+            renderVendorRows(vendorList, filteredByForm);
+          }
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -602,7 +610,20 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage ? curDosage.label : ''));
+          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+            if (state.priceCache[p.id]) {
+              renderVendorRows(vendorList, kitVendorsFromPrices(state.priceCache[p.id]));
+            } else {
+              vendorList.innerHTML = '<p class="pa-pcard-empty" style="opacity:.6">Loading\u2026</p>';
+              fetchPrices(p.id).then(function(prices) {
+                renderVendorRows(vendorList, kitVendorsFromPrices(prices));
+              }).catch(function() {
+                renderVendorRows(vendorList, curVendors);
+              });
+            }
+          } else {
+            renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
+          }
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -611,12 +632,34 @@
     }
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors
-    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : kitBestDosageIdx(dosages);
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
+      var best = 0, bestCount = -1;
+      dosages.forEach(function(d, i) {
+        var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
+        if (cnt > bestCount) { bestCount = cnt; best = i; }
+      });
+      return best;
+    })();
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage ? activeDosage.label : ''));
+
+    if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+      // Fetch the same /prices data the detail view uses and apply identical kit filtering.
+      if (state.priceCache[p.id]) {
+        renderVendorRows(vendorList, kitVendorsFromPrices(state.priceCache[p.id]));
+      } else {
+        vendorList.innerHTML = '<p class="pa-pcard-empty" style="opacity:.6">Loading\u2026</p>';
+        fetchPrices(p.id).then(function(prices) {
+          renderVendorRows(vendorList, kitVendorsFromPrices(prices));
+        }).catch(function() {
+          renderVendorRows(vendorList, defaultVendors);
+        });
+      }
+    } else {
+      renderVendorRows(vendorList, defaultVendors);
+    }
     card.appendChild(vendorList);
 
     // Footer
