@@ -310,11 +310,15 @@
   // When the kits filter is active, restrict a vendor list to kit vendors only.
   // dosageLabel: the label of the dosage these vendors belong to (e.g. "2mg Kit").
   // - If the dosage label itself contains "kit", all vendors on it are kit vendors → pass through.
-  // - Otherwise filter by vendor product_name (same signal the detail-view "Kits" button uses).
+  // - If vendor product_name signals are present, filter to kit vendors only.
+  // - Otherwise show all vendors: filteredProducts() already confirmed this product is a kit;
+  //   we just can't pinpoint which rows are kit-specific without product_name data.
   function kitFilterVendors(vendors, dosageLabel) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
     if ((dosageLabel || '').toLowerCase().includes('kit')) return vendors || [];
-    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    var vendorsArr = vendors || [];
+    var kitVendors = vendorsArr.filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    return kitVendors.length > 0 ? kitVendors : vendorsArr;
   }
 
   function vendorInitials(name) {
@@ -1333,7 +1337,7 @@
     state.applied = copyDraft(state.draft);
     ['In Stock Only', 'Kits Only', 'Blends Only', 'Likes Only'].forEach(function (t) { state.activeFilters.delete(t); });
     if (state.applied.toggles.instock) state.activeFilters.add('In Stock Only');
-    if (state.applied.toggles.kits) state.activeFilters.add('Kits Only');
+    if (state.applied.toggles.kits) { state.activeFilters.add('Kits Only'); state.activeDosages = {}; }
     if (state.applied.toggles.blends) state.activeFilters.add('Blends Only');
     if (state.applied.toggles.likes) state.activeFilters.add('Likes Only');
     Array.from(UI.categories || []).forEach(function (c) { state.activeFilters.delete(c.name); });
@@ -1478,6 +1482,8 @@
         } else if (title === 'Kits only') {
           state.barFilters.kits = !state.barFilters.kits;
           btn.classList.toggle('is-active', state.barFilters.kits);
+          // Clear stored dosage selections so cards auto-select the kit dosage.
+          if (state.barFilters.kits) state.activeDosages = {};
         }
         renderProductGrid(filteredProducts());
       });
