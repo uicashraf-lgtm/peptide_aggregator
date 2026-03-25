@@ -92,7 +92,6 @@
     priceMode: 'total', // 'total' or 'mgml'
     favourites: new Set(JSON.parse(localStorage.getItem('pa_favs') || '[]')),
     activeDosages: {}, // productId -> dosage index
-    kitVendorCache: {}, // productId -> {vendorName: true} — populated from /prices when kit filter on
     tagFilters: new Set(), // tags selected from popular chips
     detailPriceMode: 'total', // price toggle in detail view
     detailDosages: [],        // available dosages for current detail product
@@ -158,10 +157,10 @@
           // Use vendor+kit-type as the key so a vendor can appear once as kit
           // and once as non-kit (needed for the kits filter to work correctly).
           (d.vendors || []).forEach(function(v) {
-            var vIsKit = (v.product_name || v.product || '').toLowerCase().includes('kit');
+            var vIsKit = (v.product_name || '').toLowerCase().includes('kit');
             if (!existing.vendors.some(function(ev) {
               return ev.vendor === v.vendor &&
-                (ev.product_name || ev.product || '').toLowerCase().includes('kit') === vIsKit;
+                (ev.product_name || '').toLowerCase().includes('kit') === vIsKit;
             })) {
               existing.vendors.push(v);
             }
@@ -182,7 +181,7 @@
           var vIsKit = (v.product_name || '').toLowerCase().includes('kit');
           if (!(grp.top_vendors || []).some(function(ev) {
             return ev.vendor === v.vendor &&
-              (ev.product_name || ev.product || '').toLowerCase().includes('kit') === vIsKit;
+              (ev.product_name || '').toLowerCase().includes('kit') === vIsKit;
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(v);
@@ -249,11 +248,18 @@
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      // Only show products explicitly tagged as kits by the server.
-      // Client-side auto-detection via vendor product_name is intentionally removed — it
-      // caused products to appear even when the admin had removed their kit tag.
       list = list.filter(function (p) {
-        return (p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
+        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
+        var allVendors = [];
+        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
+        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
+        if (allVendors.some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        // Fallback: admin/server tag.
+        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
+        // Last resort: available_dosages label.
+        return (p.available_dosages || []).some(function (d) {
+          return (d.label || d || '').toString().toLowerCase().includes('kit');
+        });
       });
     }
     if (state.applied && state.applied.toggles.blends) {
@@ -301,66 +307,11 @@
     });
   }
 
-  // When the kits filter is active, collect all vendor names that sell a kit for product p.
-  // Searches top_vendors AND every available_dosage's vendors — not just the active dosage.
-  // Also merges in any names from state.kitVendorCache (fetched from /prices endpoint).
-  function collectKitVendorNames(p) {
-    var names = {};
-    // top_vendors
-    (p.top_vendors || []).forEach(function(v) {
-      if ((v.product_name || v.product || '').toLowerCase().includes('kit')) names[v.vendor] = true;
-    });
-    // available_dosages
-    (p.available_dosages || []).forEach(function(d) {
-      var labelIsKit = (d.label || '').toLowerCase().includes('kit');
-      (d.vendors || []).forEach(function(v) {
-        if (labelIsKit || (v.product_name || v.product || '').toLowerCase().includes('kit')) names[v.vendor] = true;
-      });
-    });
-    // Merge in cached kit vendor names fetched from /prices (more complete data source).
-    var cached = state.kitVendorCache[p.id];
-    if (cached) { Object.keys(cached).forEach(function(n) { names[n] = true; }); }
-    return names;
-  }
-
-  // Fetch /prices for a kit-tagged product and cache the kit vendor names.
-  // Re-renders the grid once data arrives so the card updates immediately.
-  function fetchKitVendors(productId) {
-    if (state.kitVendorCache[productId] !== undefined) return; // already fetched or in-flight
-    state.kitVendorCache[productId] = null; // mark as in-flight
-    var url = (REST || API + '/api') + '/products/' + encodeURIComponent(productId) + '/prices';
-    fetch(url).then(function(r) { return r.json(); }).then(function(prices) {
-      var names = {};
-      if (Array.isArray(prices)) {
-        prices.forEach(function(v) {
-          if ((v.product_name || '').toLowerCase().includes('kit')) names[v.vendor] = true;
-        });
-      }
-      state.kitVendorCache[productId] = names;
-      console.log('[PA kit-vendor] prices fetch done for', productId, '— kit vendors:', Object.keys(names));
-      renderProductGrid(filteredProducts());
-    }).catch(function(err) {
-      console.warn('[PA kit-vendor] prices fetch failed for', productId, err);
-      state.kitVendorCache[productId] = {}; // mark as done (empty) so we don't retry
-    });
-  }
-
-  // Filter a vendor list to only kit vendors. kitNames is the result of collectKitVendorNames.
-  // If no kit vendor names were found (empty object), returns all vendors unchanged.
-  function kitFilterVendors(vendors, kitNames) {
+  // When the kits filter is active, restrict a vendor list to kit products only
+  // (matches product_name the same way the detail-view "Kits" button does).
+  function kitFilterVendors(vendors) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
-    var vendorsArr = vendors || [];
-    if (!kitNames || Object.keys(kitNames).length === 0) {
-      console.log('[PA kit-vendor] no kit signals in any dosage — showing all', vendorsArr.length);
-      return vendorsArr;
-    }
-    var filtered = vendorsArr.filter(function(v) { return kitNames[v.vendor]; });
-    if (filtered.length === 0) {
-      console.log('[PA kit-vendor] kit names found but none match active dosage vendors — showing all', {kitNames: kitNames, vendors: vendorsArr.map(function(v){return v.vendor;})});
-      return vendorsArr;
-    }
-    console.log('[PA kit-vendor] filtered to', filtered.length, 'kit vendors:', filtered.map(function(v){return v.vendor;}));
-    return filtered;
+    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
   }
 
   function vendorInitials(name) {
@@ -438,13 +389,6 @@
   }
 
   function buildProductCard(p) {
-    // Debug: log kit-relevant vendor data so we can see why the kit filter does/doesn't work.
-    var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-    var kitNames = kitsOn ? collectKitVendorNames(p) : null;
-    if (kitsOn && kitNames && Object.keys(kitNames).length === 0) {
-      // Products list API has no product_name for vendors — fetch /prices for accurate kit vendor info.
-      fetchKitVendors(p.id);
-    }
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
 
@@ -541,13 +485,6 @@
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
       var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-        // When kits filter is on, prefer the first kit dosage (label contains "kit").
-        var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-        if (kitsOn) {
-          for (var ki = 0; ki < dosages.length; ki++) {
-            if ((dosages[ki].label || '').toLowerCase().includes('kit')) return ki;
-          }
-        }
         var best = 0, bestCount = -1;
         dosages.forEach(function(d, i) {
           var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
@@ -581,7 +518,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, kitNames));
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -641,7 +578,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), kitNames));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -649,16 +586,8 @@
       card.appendChild(formRow);
     }
 
-    // Vendor rows — use active dosage's vendors if available, else top_vendors.
-    // When kits filter is on, ignore saved dosage state so we always pick the kit dosage.
-    var kitsOnForIdx = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-    var activeIdx = (!kitsOnForIdx && state.activeDosages[p.id] != null) ? state.activeDosages[p.id] : (function() {
-      var kitsOn = kitsOnForIdx;
-      if (kitsOn) {
-        for (var ki = 0; ki < dosages.length; ki++) {
-          if ((dosages[ki].label || '').toLowerCase().includes('kit')) return ki;
-        }
-      }
+    // Vendor rows — use active dosage's vendors if available, else top_vendors
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
       var best = 0, bestCount = -1;
       dosages.forEach(function(d, i) {
         var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
@@ -670,7 +599,7 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, kitNames));
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
     card.appendChild(vendorList);
 
     // Footer
@@ -1388,7 +1317,7 @@
     state.applied = copyDraft(state.draft);
     ['In Stock Only', 'Kits Only', 'Blends Only', 'Likes Only'].forEach(function (t) { state.activeFilters.delete(t); });
     if (state.applied.toggles.instock) state.activeFilters.add('In Stock Only');
-    if (state.applied.toggles.kits) { state.activeFilters.add('Kits Only'); state.activeDosages = {}; }
+    if (state.applied.toggles.kits) state.activeFilters.add('Kits Only');
     if (state.applied.toggles.blends) state.activeFilters.add('Blends Only');
     if (state.applied.toggles.likes) state.activeFilters.add('Likes Only');
     Array.from(UI.categories || []).forEach(function (c) { state.activeFilters.delete(c.name); });
@@ -1533,8 +1462,6 @@
         } else if (title === 'Kits only') {
           state.barFilters.kits = !state.barFilters.kits;
           btn.classList.toggle('is-active', state.barFilters.kits);
-          // Clear stored dosage selections so cards auto-select the kit dosage.
-          if (state.barFilters.kits) state.activeDosages = {};
         }
         renderProductGrid(filteredProducts());
       });
