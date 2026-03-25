@@ -249,21 +249,10 @@
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      // Show products that are confirmed kit products.
-      // If /prices data is already cached for a product, use that (same source as detail view).
-      // Otherwise fall back to summary-data signals so the grid isn't empty on first activation.
+      // By the time this runs, prefetchAllPrices() has already populated state.priceCache.
+      // Filter using the same /prices data the detail-view kit button uses.
       list = list.filter(function (p) {
-        // Definitive: cached /prices data (same data as detail view) — most accurate.
-        if (state.priceCache[p.id]) {
-          return kitVendorsFromPrices(state.priceCache[p.id]).length > 0;
-        }
-        // Summary fallback: vendor product_name / product fields in /products data.
-        var allVendors = [];
-        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
-        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })) return true;
-        // Last fallback: server-supplied 'kit' tag (set by PHP auto-tagger or admin).
-        return (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
+        return state.priceCache[p.id] && kitVendorsFromPrices(state.priceCache[p.id]).length > 0;
       });
     }
     if (state.applied && state.applied.toggles.blends) {
@@ -318,6 +307,19 @@
     return fetch((REST || API + '/api') + '/products/' + productId + '/prices')
       .then(function(r) { return r.json(); })
       .then(function(prices) { state.priceCache[productId] = prices; return prices; });
+  }
+
+  // Fetch /prices for every product not yet cached, show a loading message while waiting,
+  // then call `done()`. Used when the kits filter is activated so filteredProducts() has
+  // real data to work with instead of falling back to tags.
+  function prefetchAllPrices(done) {
+    var grid = document.getElementById('pa-product-grid');
+    var uncached = state.allProducts.filter(function(p) { return !state.priceCache[p.id]; });
+    if (uncached.length === 0) { done(); return; }
+    if (grid) grid.innerHTML = '<p class="pa-loading">Finding kit vendors\u2026</p>';
+    Promise.all(uncached.map(function(p) {
+      return fetchPrices(p.id).catch(function() { state.priceCache[p.id] = []; });
+    })).then(done);
   }
 
   // Given a raw /prices array (same format as detail view), return only kit vendors
@@ -1387,9 +1389,13 @@
     state.applied.suppliers.forEach(function (s) { state.activeFilters.add(s); });
     state.applied.priceRanges.forEach(function (p) { state.activeFilters.add(p); });
     renderActiveFilters();
-    renderProductGrid(filteredProducts());
-    showProductGrid();
     closeModal(false);
+    if (state.applied.toggles.kits) {
+      prefetchAllPrices(function() { renderProductGrid(filteredProducts()); showProductGrid(); });
+    } else {
+      renderProductGrid(filteredProducts());
+      showProductGrid();
+    }
   }
 
   function clearDraft() {
@@ -1522,6 +1528,10 @@
         } else if (title === 'Kits only') {
           state.barFilters.kits = !state.barFilters.kits;
           btn.classList.toggle('is-active', state.barFilters.kits);
+          if (state.barFilters.kits) {
+            prefetchAllPrices(function() { renderProductGrid(filteredProducts()); });
+            return;
+          }
         }
         renderProductGrid(filteredProducts());
       });
