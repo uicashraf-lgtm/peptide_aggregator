@@ -212,7 +212,7 @@
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
     try {
-      const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
+      const res = await fetch((REST || API + '/api') + '/products');
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
       // Debug: log any products that have non-empty tags so kit filter issues are visible.
