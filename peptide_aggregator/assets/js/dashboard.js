@@ -309,8 +309,11 @@
 
   // When the kits filter is active, restrict a vendor list to kit products only
   // (matches product_name the same way the detail-view "Kits" button does).
-  function kitFilterVendors(vendors) {
+  // dosage is optional. If the dosage label itself contains "kit", all its vendors are kit
+  // vendors regardless of product_name, so skip the name filter in that case.
+  function kitFilterVendors(vendors, dosage) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
+    if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
     return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
   }
 
@@ -534,7 +537,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -594,7 +597,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -608,7 +611,7 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage));
     card.appendChild(vendorList);
 
     // Footer
