@@ -201,14 +201,21 @@
         if (p.min_price != null && (grp.min_price == null || p.min_price < grp.min_price)) grp.min_price = p.min_price;
       }
     });
-    // Sort dosage pills by numeric value
+    // Sort dosage pills: numeric labels first (ascending), non-numeric (e.g. "Kit") at end.
     order.forEach(function (k) {
       map[k].dosages.sort(function (a, b) {
-        return parseFloat(a.label) - parseFloat(b.label);
+        var na = parseFloat(a.label), nb = parseFloat(b.label);
+        var aNum = !isNaN(na), bNum = !isNaN(nb);
+        if (aNum && bNum) return na - nb;
+        if (aNum) return -1;
+        if (bNum) return 1;
+        return 0;
       });
-      // Use first dosage variant's vendors as default
-      if (map[k].dosages.length > 0) {
-        var first = map[k].dosages[0];
+      // Use first numeric dosage variant's vendors as the card default so that
+      // non-numeric variants like "Kit" don't overwrite the base product data.
+      var firstNumeric = map[k].dosages.find(function(d) { return !isNaN(parseFloat(d.label)); });
+      var first = firstNumeric || map[k].dosages[0];
+      if (first) {
         map[k].id = first.id;
         map[k].top_vendors = first.top_vendors;
         map[k].min_price = first.min_price;
