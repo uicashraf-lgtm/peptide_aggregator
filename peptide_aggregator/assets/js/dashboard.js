@@ -123,8 +123,17 @@
   var DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)$/i;
 
   function parseDosage(name) {
-    var m = name.match(DOSAGE_RE);
-    if (m) return { base: name.slice(0, name.length - m[0].length).trim(), dosage: m[1].replace(/\s+/g, '').toLowerCase().replace(/(\d)([a-z])/, '$1 $2') };
+    // Strip trailing "Kit" first so "BPC-157 Kit" and "BPC-157 5mg Kit"
+    // group under the same base product as their non-kit dosage siblings.
+    var kitSuffix = /\s+Kit$/i.test(name);
+    var stripped = kitSuffix ? name.replace(/\s+Kit$/i, '').trim() : name;
+    var m = stripped.match(DOSAGE_RE);
+    if (m) {
+      var base = stripped.slice(0, stripped.length - m[0].length).trim();
+      var dosage = m[1].replace(/\s+/g, '').toLowerCase().replace(/(\d)([a-z])/, '$1 $2');
+      return { base: base, dosage: kitSuffix ? dosage + ' Kit' : dosage };
+    }
+    if (kitSuffix) return { base: stripped, dosage: 'Kit' };
     return { base: name, dosage: null };
   }
 
