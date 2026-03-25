@@ -307,16 +307,42 @@
     });
   }
 
-  // When the kits filter is active, restrict a vendor list to kit products only.
-  // Checks product_name first (detail-view field), then falls back to product (front-page field).
-  // If no individual vendor is identifiable as a kit, returns all vendors so the card
-  // doesn't show "No prices scraped yet" for a product that is kit-tagged via dosage label.
-  function kitFilterVendors(vendors) {
+  // When the kits filter is active, restrict a vendor list to kit vendors only.
+  // dosageLabel: optional label of the currently-shown dosage — if the dosage itself
+  // is a kit dosage (label contains 'kit') all its vendors are kit vendors and are shown as-is.
+  // Otherwise checks vendor product_name / product fields. Falls back to showing all
+  // vendors so kit-tagged products never show "No prices scraped yet".
+  function kitFilterVendors(vendors, dosageLabel) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
+    // If the whole dosage is a kit, every vendor in it is a kit vendor.
+    if (dosageLabel && dosageLabel.toLowerCase().includes('kit')) return vendors || [];
     var kitVendors = (vendors || []).filter(function(v) {
       return (v.product_name || v.product || '').toLowerCase().includes('kit');
     });
     return kitVendors.length > 0 ? kitVendors : (vendors || []);
+  }
+
+  // When the kits filter is active, return the index of the best dosage to show:
+  // prefers dosages whose vendors are kit products, then dosages labeled 'kit',
+  // then the dosage with the most vendors (default).
+  function kitBestDosageIdx(dosages) {
+    var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
+    if (kitsActive) {
+      for (var i = 0; i < dosages.length; i++) {
+        if ((dosages[i].top_vendors || []).some(function(v) {
+          return (v.product_name || v.product || '').toLowerCase().includes('kit');
+        })) return i;
+      }
+      for (var j = 0; j < dosages.length; j++) {
+        if ((dosages[j].label || '').toLowerCase().includes('kit')) return j;
+      }
+    }
+    var best = 0, bestCount = -1;
+    dosages.forEach(function(d, i) {
+      var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
+      if (cnt > bestCount) { bestCount = cnt; best = i; }
+    });
+    return best;
   }
 
   function vendorInitials(name) {
@@ -489,14 +515,7 @@
       rightBtn.type = 'button'; rightBtn.title = 'Scroll right';
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
-      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-        var best = 0, bestCount = -1;
-        dosages.forEach(function(d, i) {
-          var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
-          if (cnt > bestCount) { bestCount = cnt; best = i; }
-        });
-        return best;
-      })();
+      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : kitBestDosageIdx(dosages);
       if (activeIdx >= dosages.length) activeIdx = 0;
 
       dosages.forEach(function (d, idx) {
@@ -523,7 +542,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d.label));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -583,7 +602,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage ? curDosage.label : ''));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -592,19 +611,12 @@
     }
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors
-    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-      var best = 0, bestCount = -1;
-      dosages.forEach(function(d, i) {
-        var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
-        if (cnt > bestCount) { bestCount = cnt; best = i; }
-      });
-      return best;
-    })();
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : kitBestDosageIdx(dosages);
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage ? activeDosage.label : ''));
     card.appendChild(vendorList);
 
     // Footer
