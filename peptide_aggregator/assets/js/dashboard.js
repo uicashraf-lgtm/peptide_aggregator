@@ -200,9 +200,13 @@
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
     try {
-      const res = await fetch((REST || API + '/api') + '/products');
+      const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
+      // Debug: log any products that have non-empty tags so kit filter issues are visible.
+      var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
+      if (tagged.length) console.log('[PA] products with tags:', tagged.map(function(p) { return p.name + ': ' + JSON.stringify(p.tags); }));
+      else console.log('[PA] no products have tags in this response');
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
