@@ -233,9 +233,11 @@
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(function (p) {
-        return (p.tags || []).some(function (t) {
-          var tl = t.toLowerCase();
-          return tl === 'kit' || tl === 'kits';
+        // Primary: tag set by admin or auto-tagged server-side.
+        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
+        // Fallback: available_dosages label contains 'kit' (e.g. the API surfaces "Kit" as a dosage option).
+        return (p.available_dosages || []).some(function (d) {
+          return (d.label || d || '').toString().toLowerCase().includes('kit');
         });
       });
     }
