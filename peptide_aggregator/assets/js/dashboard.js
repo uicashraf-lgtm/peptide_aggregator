@@ -88,6 +88,7 @@
     applied: null,
 
     allProducts: [],
+    priceCache: {}, // productId -> raw /prices array; used by front-page kit filter
     barFilters: { coupon: false, favourites: false, usOnly: false, kits: false },
     priceMode: 'total', // 'total' or 'mgml'
     favourites: new Set(JSON.parse(localStorage.getItem('pa_favs') || '[]')),
@@ -265,13 +266,10 @@
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      // Use /prices data (same source as detail view kit button) — checks product_name/product field.
-      list = list.filter(function(p) {
-        var prices = state.priceCache[p.id];
-        if (!prices) return false;
-        return prices.some(function(v) {
-          return (v.product_name || v.product || '').toLowerCase().includes('kit');
-        });
+      // By the time this runs, prefetchAllPrices() has already populated state.priceCache.
+      // Filter using the same /prices data the detail-view kit button uses.
+      list = list.filter(function (p) {
+        return state.priceCache[p.id] && kitVendorsFromPrices(state.priceCache[p.id]).length > 0;
       });
     }
     if (state.applied && state.applied.toggles.blends) {
@@ -319,10 +317,45 @@
     });
   }
 
-  // When the kits filter is active, product cards still show all their vendors.
-  // The kit detection is done at the product level via priceCache (see filteredProducts).
-  function kitFilterVendors(vendors) {
-    return vendors || [];
+  // Fetch /prices for a product and cache the result.
+  // Returns a promise that resolves to the raw price array.
+  function fetchPrices(productId) {
+    if (state.priceCache[productId]) return Promise.resolve(state.priceCache[productId]);
+    return fetch((REST || API + '/api') + '/products/' + productId + '/prices')
+      .then(function(r) { return r.json(); })
+      .then(function(prices) { state.priceCache[productId] = prices; return prices; });
+  }
+
+  // Fetch /prices for every product not yet cached, show a loading message while waiting,
+  // then call `done()`. Used when the kits filter is activated so filteredProducts() has
+  // real data to work with instead of falling back to tags.
+  function prefetchAllPrices(done) {
+    var grid = document.getElementById('pa-product-grid');
+    var uncached = state.allProducts.filter(function(p) { return !state.priceCache[p.id]; });
+    if (uncached.length === 0) { done(); return; }
+    if (grid) grid.innerHTML = '<p class="pa-loading">Finding kit vendors\u2026</p>';
+    Promise.all(uncached.map(function(p) {
+      return fetchPrices(p.id).catch(function() { state.priceCache[p.id] = []; });
+    })).then(done);
+  }
+
+  // Given a raw /prices array (same format as detail view), return only kit vendors
+  // sorted by price — identical logic to the detail-view "Kits" button.
+  function kitVendorsFromPrices(prices) {
+    return (Array.isArray(prices) ? prices : [])
+      .filter(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })
+      .map(function(v) {
+        return {
+          vendor: v.vendor, price: v.effective_price, previous_price: v.previous_price,
+          product_name: v.product_name || v.product,
+          link: v.link, logo_url: v.logo_url, coupon_code: v.coupon_code,
+          in_stock: v.in_stock, country: v.country,
+          amount_mg: v.amount_mg, amount_unit: v.amount_unit, price_per_mg: v.price_per_mg
+        };
+      })
+      .sort(function(a, b) {
+        return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
+      });
   }
 
   function vendorInitials(name) {
@@ -495,14 +528,7 @@
       rightBtn.type = 'button'; rightBtn.title = 'Scroll right';
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
-      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-        var best = 0, bestCount = -1;
-        dosages.forEach(function(d, i) {
-          var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
-          if (cnt > bestCount) { bestCount = cnt; best = i; }
-        });
-        return best;
-      })();
+      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : kitBestDosageIdx(dosages);
       if (activeIdx >= dosages.length) activeIdx = 0;
 
       dosages.forEach(function (d, idx) {
@@ -528,8 +554,22 @@
             pill.insertBefore(star, pill.firstChild);
           }
           p._activeId = d.id;
-          var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
+          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+            // Same as detail view: use /prices data and filter to kit vendors only.
+            if (state.priceCache[p.id]) {
+              renderVendorRows(vendorList, kitVendorsFromPrices(state.priceCache[p.id]));
+            } else {
+              vendorList.innerHTML = '<p class="pa-pcard-empty" style="opacity:.6">Loading\u2026</p>';
+              fetchPrices(p.id).then(function(prices) {
+                renderVendorRows(vendorList, kitVendorsFromPrices(prices));
+              }).catch(function() {
+                renderVendorRows(vendorList, d.top_vendors || []);
+              });
+            }
+          } else {
+            var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
+            renderVendorRows(vendorList, filteredByForm);
+          }
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -589,7 +629,20 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
+          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+            if (state.priceCache[p.id]) {
+              renderVendorRows(vendorList, kitVendorsFromPrices(state.priceCache[p.id]));
+            } else {
+              vendorList.innerHTML = '<p class="pa-pcard-empty" style="opacity:.6">Loading\u2026</p>';
+              fetchPrices(p.id).then(function(prices) {
+                renderVendorRows(vendorList, kitVendorsFromPrices(prices));
+              }).catch(function() {
+                renderVendorRows(vendorList, curVendors);
+              });
+            }
+          } else {
+            renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
+          }
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -610,7 +663,22 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
+
+    if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+      // Fetch the same /prices data the detail view uses and apply identical kit filtering.
+      if (state.priceCache[p.id]) {
+        renderVendorRows(vendorList, kitVendorsFromPrices(state.priceCache[p.id]));
+      } else {
+        vendorList.innerHTML = '<p class="pa-pcard-empty" style="opacity:.6">Loading\u2026</p>';
+        fetchPrices(p.id).then(function(prices) {
+          renderVendorRows(vendorList, kitVendorsFromPrices(prices));
+        }).catch(function() {
+          renderVendorRows(vendorList, defaultVendors);
+        });
+      }
+    } else {
+      renderVendorRows(vendorList, defaultVendors);
+    }
     card.appendChild(vendorList);
 
     // Footer
@@ -1338,16 +1406,12 @@
     state.applied.suppliers.forEach(function (s) { state.activeFilters.add(s); });
     state.applied.priceRanges.forEach(function (p) { state.activeFilters.add(p); });
     renderActiveFilters();
+    closeModal(false);
     if (state.applied.toggles.kits) {
-      prefetchAllPrices(function() {
-        renderProductGrid(filteredProducts());
-        showProductGrid();
-        closeModal(false);
-      });
+      prefetchAllPrices(function() { renderProductGrid(filteredProducts()); showProductGrid(); });
     } else {
       renderProductGrid(filteredProducts());
       showProductGrid();
-      closeModal(false);
     }
   }
 
@@ -1483,10 +1547,8 @@
           btn.classList.toggle('is-active', state.barFilters.kits);
           if (state.barFilters.kits) {
             prefetchAllPrices(function() { renderProductGrid(filteredProducts()); });
-          } else {
-            renderProductGrid(filteredProducts());
+            return;
           }
-          return;
         }
         renderProductGrid(filteredProducts());
       });
