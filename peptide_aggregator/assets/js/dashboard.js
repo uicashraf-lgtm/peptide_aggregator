@@ -157,10 +157,10 @@
           // Use vendor+kit-type as the key so a vendor can appear once as kit
           // and once as non-kit (needed for the kits filter to work correctly).
           (d.vendors || []).forEach(function(v) {
-            var vIsKit = (v.product_name || '').toLowerCase().includes('kit');
+            var vIsKit = (v.product_name || v.product || '').toLowerCase().includes('kit');
             if (!existing.vendors.some(function(ev) {
               return ev.vendor === v.vendor &&
-                (ev.product_name || '').toLowerCase().includes('kit') === vIsKit;
+                (ev.product_name || ev.product || '').toLowerCase().includes('kit') === vIsKit;
             })) {
               existing.vendors.push(v);
             }
@@ -181,7 +181,7 @@
           var vIsKit = (v.product_name || '').toLowerCase().includes('kit');
           if (!(grp.top_vendors || []).some(function(ev) {
             return ev.vendor === v.vendor &&
-              (ev.product_name || '').toLowerCase().includes('kit') === vIsKit;
+              (ev.product_name || ev.product || '').toLowerCase().includes('kit') === vIsKit;
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(v);
@@ -253,7 +253,7 @@
         var allVendors = [];
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
         (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        if (allVendors.some(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })) return true;
         // Fallback: admin/server tag.
         if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
         // Last resort: available_dosages label.
@@ -317,7 +317,7 @@
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
     if ((dosageLabel || '').toLowerCase().includes('kit')) return vendors || [];
     var vendorsArr = vendors || [];
-    var kitVendors = vendorsArr.filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    var kitVendors = vendorsArr.filter(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); });
     return kitVendors.length > 0 ? kitVendors : vendorsArr;
   }
 
