@@ -132,6 +132,35 @@ class PA_Rest {
             unset($product);
         }
 
+        // Auto-tag products as 'kit' when any vendor listing has 'kit' in its product name.
+        // Admin tag overrides (applied above) take precedence; this only fills in the gap
+        // for products that have no override but whose vendors sell kit formulations.
+        if (is_array($products)) {
+            foreach ($products as &$product) {
+                if (in_array('kit', array_map('strtolower', (array) ($product['tags'] ?? [])), true)) {
+                    continue; // already tagged
+                }
+                $has_kit = false;
+                foreach ((array) ($product['top_vendors'] ?? []) as $v) {
+                    $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                    if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                }
+                if (!$has_kit) {
+                    foreach ((array) ($product['available_dosages'] ?? []) as $d) {
+                        foreach ((array) ($d['vendors'] ?? []) as $v) {
+                            $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                            if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
+                        }
+                    }
+                }
+                if ($has_kit) {
+                    $product['tags']   = (array) ($product['tags'] ?? []);
+                    $product['tags'][] = 'kit';
+                }
+            }
+            unset($product);
+        }
+
         // Apply affiliate templates to all vendor links (top_vendors and available_dosages).
         $affiliate_map = $this->get_affiliate_map();
         if (!empty($affiliate_map) && is_array($products)) {
