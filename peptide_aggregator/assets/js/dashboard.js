@@ -237,9 +237,14 @@
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(function (p) {
-        // Primary: tag set by admin or auto-tagged server-side.
+        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
+        var allVendors = [];
+        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
+        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
+        if (allVendors.some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        // Fallback: admin/server tag.
         if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
-        // Fallback: available_dosages label contains 'kit' (e.g. the API surfaces "Kit" as a dosage option).
+        // Last resort: available_dosages label.
         return (p.available_dosages || []).some(function (d) {
           return (d.label || d || '').toString().toLowerCase().includes('kit');
         });
@@ -288,6 +293,13 @@
       const card = buildProductCard(p);
       grid.appendChild(card);
     });
+  }
+
+  // When the kits filter is active, restrict a vendor list to kit products only
+  // (matches product_name the same way the detail-view "Kits" button does).
+  function kitFilterVendors(vendors) {
+    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
+    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
   }
 
   function vendorInitials(name) {
@@ -494,7 +506,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, filteredByForm);
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -554,7 +566,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -575,7 +587,7 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, defaultVendors);
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
     card.appendChild(vendorList);
 
     // Footer
