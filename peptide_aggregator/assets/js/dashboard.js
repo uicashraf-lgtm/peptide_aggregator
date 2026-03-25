@@ -639,7 +639,7 @@
     if (pricesEl) pricesEl.innerHTML = '';
     state.detailProductName = productName;
     state.detailStockFilter = 'all';
-    state.detailTypeFilter = (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) ? 'kit' : 'all';
+    state.detailTypeFilter = 'all';
     state.detailFormulationFilter = 'all';
     state.detailProductTags = [];
     state.detailSortDir = 'asc';
