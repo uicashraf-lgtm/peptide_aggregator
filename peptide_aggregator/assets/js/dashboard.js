@@ -123,17 +123,8 @@
   var DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)$/i;
 
   function parseDosage(name) {
-    // Strip trailing "Kit" first so "BPC-157 Kit" and "BPC-157 5mg Kit"
-    // group under the same base product as their non-kit dosage siblings.
-    var kitSuffix = /\s+Kit$/i.test(name);
-    var stripped = kitSuffix ? name.replace(/\s+Kit$/i, '').trim() : name;
-    var m = stripped.match(DOSAGE_RE);
-    if (m) {
-      var base = stripped.slice(0, stripped.length - m[0].length).trim();
-      var dosage = m[1].replace(/\s+/g, '').toLowerCase().replace(/(\d)([a-z])/, '$1 $2');
-      return { base: base, dosage: kitSuffix ? dosage + ' Kit' : dosage };
-    }
-    if (kitSuffix) return { base: stripped, dosage: 'Kit' };
+    var m = name.match(DOSAGE_RE);
+    if (m) return { base: name.slice(0, name.length - m[0].length).trim(), dosage: m[1].replace(/\s+/g, '').toLowerCase().replace(/(\d)([a-z])/, '$1 $2') };
     return { base: name, dosage: null };
   }
 
@@ -201,21 +192,14 @@
         if (p.min_price != null && (grp.min_price == null || p.min_price < grp.min_price)) grp.min_price = p.min_price;
       }
     });
-    // Sort dosage pills: numeric labels first (ascending), non-numeric (e.g. "Kit") at end.
+    // Sort dosage pills by numeric value
     order.forEach(function (k) {
       map[k].dosages.sort(function (a, b) {
-        var na = parseFloat(a.label), nb = parseFloat(b.label);
-        var aNum = !isNaN(na), bNum = !isNaN(nb);
-        if (aNum && bNum) return na - nb;
-        if (aNum) return -1;
-        if (bNum) return 1;
-        return 0;
+        return parseFloat(a.label) - parseFloat(b.label);
       });
-      // Use first numeric dosage variant's vendors as the card default so that
-      // non-numeric variants like "Kit" don't overwrite the base product data.
-      var firstNumeric = map[k].dosages.find(function(d) { return !isNaN(parseFloat(d.label)); });
-      var first = firstNumeric || map[k].dosages[0];
-      if (first) {
+      // Use first dosage variant's vendors as default
+      if (map[k].dosages.length > 0) {
+        var first = map[k].dosages[0];
         map[k].id = first.id;
         map[k].top_vendors = first.top_vendors;
         map[k].min_price = first.min_price;
@@ -228,15 +212,8 @@
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
     try {
-      // Use products inlined into the page by PHP (zero extra request).
-      // Fall back to a fetch only if the inline data is absent.
-      let raw;
-      if (UI.initial_products && Array.isArray(UI.initial_products) && UI.initial_products.length) {
-        raw = UI.initial_products;
-      } else {
-        const res = await fetch((REST || API + '/api') + '/products');
-        raw = await res.json();
-      }
+      const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
+      const raw = await res.json();
       state.allProducts = groupByDosage(raw);
       // Debug: log any products that have non-empty tags so kit filter issues are visible.
       var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });

@@ -290,11 +290,6 @@ class PA_Shortcodes {
         window.PA_UI.rest_base = <?php echo json_encode(rest_url('pa/v1')); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
         window.PA_UI.dose_labels = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
-        window.PA_UI.initial_products = <?php
-            $inline_req  = new WP_REST_Request('GET', '/pa/v1/products');
-            $inline_resp = rest_do_request($inline_req);
-            echo wp_json_encode($inline_resp->get_data() ?: []);
-        ?>;
         </script>
         <div class="pa-shell">
                 <section class="pa-search-panel">

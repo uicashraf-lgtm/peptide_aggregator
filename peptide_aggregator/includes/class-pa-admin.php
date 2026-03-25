@@ -841,7 +841,7 @@ class PA_Admin {
             <!-- ── Products list (JS-rendered) ─────────────────────────────── -->
             <h2>Products <span style="font-size:13px;font-weight:normal;color:#666">(click a row to edit)</span></h2>
             <table class="widefat striped">
-                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Dosage</th><th>In Stock</th><th>Status</th><th>Visible</th><th>Kit</th><th>Actions</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Dosage</th><th>In Stock</th><th>Status</th><th>Visible</th><th>Actions</th></tr></thead>
                 <tbody id="pa-products-tbody"></tbody>
             </table>
             <div id="pa-pagination" class="tablenav bottom" style="margin-top:8px"></div>
@@ -962,11 +962,6 @@ class PA_Admin {
                             ? '<span class="pa-vis-toggle" data-pid="'+pid+'" data-vis="1" style="color:green;cursor:pointer;font-weight:bold" title="Click to hide">&#9679; On</span>'
                             : '<span class="pa-vis-toggle" data-pid="'+pid+'" data-vis="0" style="color:#999;cursor:pointer;font-weight:bold" title="Click to show">&#9675; Off</span>';
 
-                        var isKit = (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit'; });
-                        var kitHtml = isKit
-                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-kit="1" data-name="'+esc(p.name || '')+'" style="color:green;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9679; Kit</span>'
-                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-kit="0" data-name="'+esc(p.name || '')+'" style="color:#999;cursor:pointer;font-weight:bold" title="Click to tag as kit">&#9675; &ndash;</span>';
-
                         html += '<tr class="pa-product-row" data-pid="'+pid+'">'
                             + '<td>'+esc(String(pid))+'</td>'
                             + '<td><strong>'+esc(p.name || '')+'</strong>'+(p.original_name && p.original_name !== p.name ? '<br><small style="color:#888;font-weight:normal">'+esc(p.original_name)+'</small>' : '')+'</td>'
@@ -976,7 +971,6 @@ class PA_Admin {
                             + '<td>'+stockHtml+'</td>'
                             + '<td onclick="event.stopPropagation()">'+statusHtml+'</td>'
                             + '<td onclick="event.stopPropagation()">'+visHtml+'</td>'
-                            + '<td onclick="event.stopPropagation()">'+kitHtml+'</td>'
                             + '<td onclick="event.stopPropagation()">'
                             +   '<button type="button" class="button button-small pa-prod-edit-btn" data-pid="'+pid+'">Edit</button> '
                             +   '<button type="button" class="button button-small pa-prod-delete-btn" data-pid="'+pid+'" style="color:#b32d2e;border-color:#b32d2e">Delete</button>'
@@ -1112,55 +1106,6 @@ class PA_Admin {
                             span.style.opacity = '1';
                         };
                         xhr.send(JSON.stringify({is_visible: nextVis}));
-                    });
-                });
-                // Kit toggle
-                document.querySelectorAll('.pa-kit-toggle').forEach(function(el) {
-                    el.addEventListener('click', function() {
-                        var pid = this.dataset.pid;
-                        var name = this.dataset.name;
-                        var curKit = this.dataset.kit === '1';
-                        var nextKit = !curKit;
-                        var span = this;
-                        span.style.opacity = '0.5';
-                        // Build new tags list: find product, toggle 'kit'
-                        var prod = null;
-                        for (var i = 0; i < PA_PRODUCTS.length; i++) {
-                            if (String(PA_PRODUCTS[i].id) === String(pid)) { prod = PA_PRODUCTS[i]; break; }
-                        }
-                        var tags = prod ? (prod.tags || []).slice() : [];
-                        if (nextKit) {
-                            if (tags.indexOf('kit') === -1) tags.push('kit');
-                        } else {
-                            tags = tags.filter(function(t) { return t.toLowerCase() !== 'kit'; });
-                        }
-                        var xhr = new XMLHttpRequest();
-                        xhr.open('POST', ajaxurl);
-                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                        xhr.onload = function() {
-                            try {
-                                var r = JSON.parse(xhr.responseText);
-                                if (r.success) {
-                                    span.dataset.kit = nextKit ? '1' : '0';
-                                    if (nextKit) {
-                                        span.innerHTML = '&#9679; Kit';
-                                        span.style.color = 'green';
-                                        span.title = 'Click to remove kit tag';
-                                    } else {
-                                        span.innerHTML = '&#9675; &ndash;';
-                                        span.style.color = '#999';
-                                        span.title = 'Click to tag as kit';
-                                    }
-                                    if (prod) prod.tags = tags;
-                                    PA_TAG_OVERRIDES[String(pid)] = tags.slice();
-                                } else { alert('Failed to update kit tag'); }
-                            } catch(e) { alert('Error updating kit tag'); }
-                            span.style.opacity = '1';
-                        };
-                        xhr.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
-                            + '&product_name=' + encodeURIComponent(name)
-                            + '&product_id=' + encodeURIComponent(String(pid))
-                            + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
                     });
                 });
                 // Pagination
