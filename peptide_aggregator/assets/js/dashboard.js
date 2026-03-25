@@ -307,13 +307,10 @@
     });
   }
 
-  // When the kits filter is active, restrict a vendor list to kit vendors only.
-  // dosageLabel: the label of the dosage these vendors belong to (e.g. "2mg Kit").
-  // - If the dosage label itself contains "kit", all vendors on it are kit vendors → pass through.
-  // - Otherwise filter by vendor product_name (same signal the detail-view "Kits" button uses).
-  function kitFilterVendors(vendors, dosageLabel) {
+  // When the kits filter is active, restrict a vendor list to kit products only
+  // (matches product_name the same way the detail-view "Kits" button does).
+  function kitFilterVendors(vendors) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
-    if ((dosageLabel || '').toLowerCase().includes('kit')) return vendors || [];
     return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
   }
 
@@ -488,13 +485,6 @@
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
       var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-        // When kits filter is on, prefer the first kit dosage (label contains "kit").
-        var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-        if (kitsOn) {
-          for (var ki = 0; ki < dosages.length; ki++) {
-            if ((dosages[ki].label || '').toLowerCase().includes('kit')) return ki;
-          }
-        }
         var best = 0, bestCount = -1;
         dosages.forEach(function(d, i) {
           var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
@@ -528,7 +518,7 @@
           }
           p._activeId = d.id;
           var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d.label));
+          renderVendorRows(vendorList, kitFilterVendors(filteredByForm));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -588,7 +578,7 @@
           }
           var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
           var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage && curDosage.label));
+          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; })));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -598,12 +588,6 @@
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors
     var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : (function() {
-      var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-      if (kitsOn) {
-        for (var ki = 0; ki < dosages.length; ki++) {
-          if ((dosages[ki].label || '').toLowerCase().includes('kit')) return ki;
-        }
-      }
       var best = 0, bestCount = -1;
       dosages.forEach(function(d, i) {
         var cnt = (d.top_vendors ? d.top_vendors.length : 0) || (d.vendor_count || 0);
@@ -615,7 +599,7 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage && activeDosage.label));
+    renderVendorRows(vendorList, kitFilterVendors(defaultVendors));
     card.appendChild(vendorList);
 
     // Footer
