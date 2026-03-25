@@ -253,7 +253,7 @@
         var allVendors = [];
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
         (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        if (allVendors.some(function(v) { return (v.product_name || v.product || '').toLowerCase().includes('kit'); })) return true;
         // Fallback: admin/server tag.
         if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
         // Last resort: available_dosages label.
@@ -307,11 +307,16 @@
     });
   }
 
-  // When the kits filter is active, restrict a vendor list to kit products only
-  // (matches product_name the same way the detail-view "Kits" button does).
+  // When the kits filter is active, restrict a vendor list to kit products only.
+  // Checks product_name first (detail-view field), then falls back to product (front-page field).
+  // If no individual vendor is identifiable as a kit, returns all vendors so the card
+  // doesn't show "No prices scraped yet" for a product that is kit-tagged via dosage label.
   function kitFilterVendors(vendors) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
-    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    var kitVendors = (vendors || []).filter(function(v) {
+      return (v.product_name || v.product || '').toLowerCase().includes('kit');
+    });
+    return kitVendors.length > 0 ? kitVendors : (vendors || []);
   }
 
   function vendorInitials(name) {
