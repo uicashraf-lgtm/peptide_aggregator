@@ -227,13 +227,15 @@ class PA_Rest {
             set_transient('pa_products_cache', $products, 60);
         } // end cache miss block
 
-        // Inject 'kit' tag for admin-designated kit products — always applied fresh
-        // so it reflects the current pa_kit_product_ids option regardless of cache age.
-        $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
-        if (!empty($kit_ids) && is_array($products)) {
+        // Inject 'kit' tag for admin-designated kit products — always applied fresh.
+        // Matches by product name (pa_kit_product_names) because the admin uses
+        // /api/admin/products and the frontend uses /api/products — different endpoints
+        // with different numeric IDs. Name is the common key between the two.
+        $kit_names = array_map('strtolower', (array) get_option('pa_kit_product_names', array()));
+        if (!empty($kit_names) && is_array($products)) {
             foreach ($products as &$product) {
-                $pid = (int) ($product['id'] ?? 0);
-                if ($pid > 0 && in_array($pid, $kit_ids, true)) {
+                $pname = strtolower(trim($product['name'] ?? ''));
+                if ($pname !== '' && in_array($pname, $kit_names, true)) {
                     $existing = array_map('strtolower', (array) ($product['tags'] ?? []));
                     if (!in_array('kit', $existing, true)) {
                         $product['tags']   = (array) ($product['tags'] ?? []);
@@ -252,24 +254,47 @@ class PA_Rest {
     }
 
     public function debug_kits() {
-        $kit_ids  = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
-        $result   = $this->api->request('GET', '/api/products');
-        $matched  = array();
-        $all_ids  = array();
-        if ($result['ok'] && is_array($result['data'])) {
-            foreach ($result['data'] as $p) {
+        $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+
+        // Fetch admin products to inspect the kit listings.
+        $admin_result = $this->api->request('GET', '/api/admin/products', null, true);
+        $admin_kits   = array();
+        if ($admin_result['ok'] && is_array($admin_result['data'])) {
+            foreach ($admin_result['data'] as $p) {
                 $pid = (int) ($p['id'] ?? 0);
-                $all_ids[] = $pid;
-                if ($pid > 0 && in_array($pid, $kit_ids, true)) {
-                    $matched[] = array('id' => $pid, 'name' => $p['name'] ?? '', 'tags' => $p['tags'] ?? array());
+                if (in_array($pid, $kit_ids, true)) {
+                    $admin_kits[] = array(
+                        'id'            => $pid,
+                        'name'          => $p['name'] ?? '',
+                        'original_name' => $p['original_name'] ?? '',
+                        'dosages'       => $p['dosages'] ?? array(),
+                        'vendor'        => $p['vendor'] ?? ($p['vendor_name'] ?? ''),
+                        'category'      => $p['category'] ?? '',
+                        'slug'          => $p['slug'] ?? ($p['public_id'] ?? ''),
+                        '_all_keys'     => array_keys((array) $p),
+                    );
                 }
             }
         }
+
+        // Fetch public products to see what IDs / fields are available.
+        $pub_result = $this->api->request('GET', '/api/products');
+        $pub_sample = array();
+        if ($pub_result['ok'] && is_array($pub_result['data'])) {
+            foreach (array_slice($pub_result['data'], 0, 3) as $p) {
+                $pub_sample[] = array(
+                    'id'        => $p['id'] ?? '',
+                    'name'      => $p['name'] ?? '',
+                    '_all_keys' => array_keys((array) $p),
+                );
+            }
+        }
+
         return rest_ensure_response(array(
             'pa_kit_product_ids' => $kit_ids,
-            'matched_products'   => $matched,
-            'total_products'     => count($all_ids),
-            'note'               => empty($kit_ids) ? 'pa_kit_product_ids is EMPTY — no kits are designated in admin' : count($matched) . ' of ' . count($kit_ids) . ' kit IDs matched products in the API',
+            'admin_kit_products' => $admin_kits,
+            'public_sample'      => $pub_sample,
+            'note'               => 'Compare admin_kit_products fields with public_sample fields to find the common key',
         ));
     }
 
