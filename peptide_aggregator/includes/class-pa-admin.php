@@ -718,6 +718,15 @@ class PA_Admin {
         $vendors_resp = $this->admin_get('/api/admin/vendors');
         $vendors = $vendors_resp['ok'] && is_array($vendors_resp['data']) ? $vendors_resp['data'] : array();
 
+        // Kit filter — applied server-side so JS complexity is avoided entirely.
+        $kit_ids     = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+        $kit_active  = !empty($_GET['kit']);
+        if ($kit_active && !empty($kit_ids)) {
+            $products = array_values(array_filter($products, function($p) use ($kit_ids) {
+                return in_array((int) ($p['id'] ?? 0), $kit_ids, true);
+            }));
+        }
+
         // All data passed to JS for client-side filtering/pagination
         ?>
         <div class="wrap">
@@ -836,9 +845,10 @@ class PA_Admin {
                         <option value="<?php echo esc_attr($v['id']); ?>"><?php echo esc_html($v['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <label style="display:flex;align-items:center;gap:4px;font-weight:600;cursor:pointer">
-                    <input type="checkbox" id="pa-kit-checkbox" style="margin:0" /> Kits Only
-                </label>
+                <a href="<?php echo esc_url($kit_active ? remove_query_arg('kit') : add_query_arg('kit', '1')); ?>"
+                   class="button<?php echo $kit_active ? ' button-primary' : ''; ?>">
+                    <?php echo $kit_active ? 'Kits Only ✓' : 'Kits Only'; ?>
+                </a>
                 <button type="button" class="button" id="pa-filter-btn">Filter</button>
                 <button type="button" class="button" id="pa-clear-btn" style="display:none">Clear</button>
                 <span id="pa-product-count" style="color:#666;font-size:13px"></span>
@@ -853,11 +863,13 @@ class PA_Admin {
             <div id="pa-pagination" class="tablenav bottom" style="margin-top:8px"></div>
         </div>
 
-        <p id="pa-kit-debug" style="color:#c00;font-weight:bold">
-            Kit IDs (PHP): <?php echo esc_html(implode(', ', array_map('intval', (array) get_option('pa_kit_product_ids', array()))) ?: '(empty)'); ?>
-        </p>
+        <?php if ($kit_active) : ?>
+        <div class="notice notice-info" style="margin:0 0 12px;padding:8px 12px;display:flex;align-items:center;gap:12px">
+            <strong>Showing kits only</strong>
+            <a href="<?php echo esc_url(remove_query_arg('kit')); ?>" class="button button-small">Show All Products</a>
+        </div>
+        <?php endif; ?>
         <script>
-        console.log('[PA] admin script v0.2.71 loading');
         (function(){
             var PA_PRODUCTS = <?php echo wp_json_encode(array_values($products)); ?>;
             var PA_VENDORS = <?php echo wp_json_encode(array_values($vendors)); ?>;
@@ -868,13 +880,12 @@ class PA_Admin {
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
-            var PA_KIT_IDS = <?php echo wp_json_encode(array_map('intval', (array) get_option('pa_kit_product_ids', array()))); ?>;
+            var PA_KIT_IDS = <?php echo wp_json_encode($kit_ids); ?>;
             var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
             var PER_PAGE = 25;
             var currentPage = 1;
             var currentSearch = '';
             var currentVendor = 0;
-            var currentKitFilter = false;
             var currentDoseLabelProductName = '';
             var currentDoseLabels = {};
             // Must match the DOSAGE_RE in dashboard.js so admin keys align with frontend keys
@@ -921,11 +932,6 @@ class PA_Admin {
                         return (p.vendor_ids || []).map(Number).indexOf(currentVendor) !== -1;
                     });
                 }
-                if (currentKitFilter) {
-                    list = list.filter(function(p) {
-                        return PA_KIT_IDS.indexOf(Number(p.id)) !== -1;
-                    });
-                }
                 return list;
             }
 
@@ -941,12 +947,12 @@ class PA_Admin {
                 document.getElementById('pa-product-count').textContent = totalItems + ' product(s)';
 
                 // Clear button visibility
-                document.getElementById('pa-clear-btn').style.display = (currentSearch || currentVendor || currentKitFilter) ? '' : 'none';
+                document.getElementById('pa-clear-btn').style.display = (currentSearch || currentVendor) ? '' : 'none';
 
                 // Tbody
                 var tbody = document.getElementById('pa-products-tbody');
                 if (!paged.length) {
-                    tbody.innerHTML = '<tr><td colspan="10">' + ((currentSearch || currentVendor || currentKitFilter) ? 'No products match your filter.' : 'No products yet.') + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10">' + ((currentSearch || currentVendor) ? 'No products match your filter.' : 'No products yet.') + '</td></tr>';
                 } else {
                     var html = '';
                     paged.forEach(function(p) {
@@ -1161,7 +1167,6 @@ class PA_Admin {
                                         span.title = 'Click to mark as kit';
                                         PA_KIT_IDS = PA_KIT_IDS.filter(function(id) { return id !== Number(pid); });
                                     }
-                                    if (currentKitFilter) renderTable();
                                 } else { alert('Failed to update kit status'); }
                             } catch(e) { alert('Error updating kit status'); }
                             span.style.opacity = '1';
@@ -1191,10 +1196,8 @@ class PA_Admin {
             document.getElementById('pa-clear-btn').addEventListener('click', function() {
                 document.getElementById('pa-search-input').value = '';
                 document.getElementById('pa-vendor-filter').value = '0';
-                document.getElementById('pa-kit-checkbox').checked = false;
                 currentSearch = '';
                 currentVendor = 0;
-                currentKitFilter = false;
                 currentPage = 1;
                 renderTable();
             });
