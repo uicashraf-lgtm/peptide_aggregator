@@ -988,9 +988,10 @@ class PA_Admin {
                             : '<span class="pa-vis-toggle" data-pid="'+pid+'" data-vis="0" style="color:#999;cursor:pointer;font-weight:bold" title="Click to show">&#9675; Off</span>';
 
                         var isKit = PA_KIT_IDS.indexOf(Number(pid)) !== -1;
+                        var pname = p.name || '';
                         var kitHtml = isKit
-                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
-                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
+                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
+                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
 
                         html += '<tr class="pa-product-row" data-pid="'+pid+'">'
                             + '<td>'+esc(String(pid))+'</td>'
@@ -1143,6 +1144,7 @@ class PA_Admin {
                 document.querySelectorAll('.pa-kit-toggle').forEach(function(el) {
                     el.addEventListener('click', function() {
                         var pid = this.dataset.pid;
+                        var pname = this.dataset.name || '';
                         var curKit = this.dataset.kit === '1';
                         var nextKit = !curKit;
                         var span = this;
@@ -1173,7 +1175,7 @@ class PA_Admin {
                             span.style.opacity = '1';
                         };
                         xhr.onerror = function() { span.style.opacity = '1'; alert('Network error'); };
-                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
+                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&product_name=' + encodeURIComponent(pname) + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
                     });
                 });
                 // Pagination
@@ -1739,20 +1741,30 @@ class PA_Admin {
         }
         check_ajax_referer('pa_toggle_kit_product', '_wpnonce');
         $pid    = absint($_POST['product_id'] ?? 0);
+        $pname  = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
         $is_kit = !empty($_POST['is_kit']) && $_POST['is_kit'] !== 'false';
         if (!$pid) {
             wp_send_json_error('Invalid product ID');
             return;
         }
+        // Update ID list (kept for admin display).
         $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
         if ($is_kit) {
-            if (!in_array($pid, $kit_ids, true)) {
-                $kit_ids[] = $pid;
-            }
+            if (!in_array($pid, $kit_ids, true)) { $kit_ids[] = $pid; }
         } else {
             $kit_ids = array_values(array_filter($kit_ids, function($id) use ($pid) { return $id !== $pid; }));
         }
         update_option('pa_kit_product_ids', $kit_ids, false);
+        // Update name list (used by REST endpoint to match public API products).
+        if ($pname !== '') {
+            $kit_names = (array) get_option('pa_kit_product_names', array());
+            if ($is_kit) {
+                if (!in_array($pname, $kit_names, true)) { $kit_names[] = $pname; }
+            } else {
+                $kit_names = array_values(array_filter($kit_names, function($n) use ($pname) { return $n !== $pname; }));
+            }
+            update_option('pa_kit_product_names', $kit_names, false);
+        }
         delete_transient('pa_products_cache');
         wp_send_json_success(array('is_kit' => $is_kit, 'product_id' => $pid));
     }

@@ -227,13 +227,15 @@ class PA_Rest {
             set_transient('pa_products_cache', $products, 60);
         } // end cache miss block
 
-        // Inject 'kit' tag for admin-designated kit products — always applied fresh
-        // so it reflects the current pa_kit_product_ids option regardless of cache age.
-        $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
-        if (!empty($kit_ids) && is_array($products)) {
+        // Inject 'kit' tag for admin-designated kit products — always applied fresh.
+        // Matches by product name (pa_kit_product_names) because the admin uses
+        // /api/admin/products and the frontend uses /api/products — different endpoints
+        // with different numeric IDs. Name is the common key between the two.
+        $kit_names = array_map('strtolower', (array) get_option('pa_kit_product_names', array()));
+        if (!empty($kit_names) && is_array($products)) {
             foreach ($products as &$product) {
-                $pid = (int) ($product['id'] ?? 0);
-                if ($pid > 0 && in_array($pid, $kit_ids, true)) {
+                $pname = strtolower(trim($product['name'] ?? ''));
+                if ($pname !== '' && in_array($pname, $kit_names, true)) {
                     $existing = array_map('strtolower', (array) ($product['tags'] ?? []));
                     if (!in_array('kit', $existing, true)) {
                         $product['tags']   = (array) ($product['tags'] ?? []);
@@ -252,24 +254,29 @@ class PA_Rest {
     }
 
     public function debug_kits() {
-        $kit_ids  = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
-        $result   = $this->api->request('GET', '/api/products');
-        $matched  = array();
-        $all_ids  = array();
+        $kit_ids   = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+        $kit_names = (array) get_option('pa_kit_product_names', array());
+        $kit_names_lc = array_map('strtolower', $kit_names);
+        $result    = $this->api->request('GET', '/api/products');
+        $matched   = array();
+        $all_names = array();
         if ($result['ok'] && is_array($result['data'])) {
             foreach ($result['data'] as $p) {
-                $pid = (int) ($p['id'] ?? 0);
-                $all_ids[] = $pid;
-                if ($pid > 0 && in_array($pid, $kit_ids, true)) {
-                    $matched[] = array('id' => $pid, 'name' => $p['name'] ?? '', 'tags' => $p['tags'] ?? array());
+                $pname = strtolower(trim($p['name'] ?? ''));
+                $all_names[] = $p['name'] ?? '';
+                if ($pname !== '' && in_array($pname, $kit_names_lc, true)) {
+                    $matched[] = array('id' => $p['id'] ?? null, 'name' => $p['name'] ?? '', 'tags' => $p['tags'] ?? array());
                 }
             }
         }
         return rest_ensure_response(array(
-            'pa_kit_product_ids' => $kit_ids,
-            'matched_products'   => $matched,
-            'total_products'     => count($all_ids),
-            'note'               => empty($kit_ids) ? 'pa_kit_product_ids is EMPTY — no kits are designated in admin' : count($matched) . ' of ' . count($kit_ids) . ' kit IDs matched products in the API',
+            'pa_kit_product_ids'   => $kit_ids,
+            'pa_kit_product_names' => $kit_names,
+            'matched_products'     => $matched,
+            'total_products'       => count($all_names),
+            'note'                 => empty($kit_names)
+                ? 'pa_kit_product_names is EMPTY — re-toggle your kit products in admin to populate it'
+                : count($matched) . ' of ' . count($kit_names) . ' kit names matched',
         ));
     }
 
