@@ -149,8 +149,9 @@ class PA_Rest {
         // Admin tag overrides applied above always take precedence.
         if (is_array($products)) {
             foreach ($products as &$product) {
-                if (in_array('kit', array_map('strtolower', (array) ($product['tags'] ?? [])), true)) {
-                    continue; // already tagged
+                $existing_tags = array_map('strtolower', (array) ($product['tags'] ?? []));
+                if (in_array('kit', $existing_tags, true)) {
+                    continue; // already admin-tagged as kit — do not overwrite
                 }
                 $has_kit = false;
                 // Check available_dosages labels first — most reliable field in /products response.
@@ -175,7 +176,7 @@ class PA_Rest {
                 }
                 if ($has_kit) {
                     $product['tags']   = (array) ($product['tags'] ?? []);
-                    $product['tags'][] = 'kit';
+                    $product['tags'][] = 'kit_auto';
                 }
             }
             unset($product);
