@@ -133,7 +133,11 @@
     var order = [];
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
-      var key = pd.base.toLowerCase();
+      // Kit products get a separate grouping key so they never merge with
+      // non-kit products that share the same base name (e.g. "Retatrutide").
+      var pIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })
+                   || /\bkits?\b/i.test(p.category || '');
+      var key = pd.base.toLowerCase() + (pIsKit ? '__kit' : '');
       // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
       // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
       // so their vendors are identified by product_name only.
@@ -145,6 +149,7 @@
         map[key] = {
           id: p.id, name: pd.base, category: p.category,
           description: p.description, dosages: [],
+          _is_kit_product: pIsKit,
           top_vendors: (p.top_vendors || []).map(stampVendor),
           min_price: p.min_price,
           vendor_count: p.vendor_count,
@@ -255,14 +260,10 @@
     if (state.barFilters.favourites || (state.applied && state.applied.toggles.likes)) {
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
-    // Kit products: category contains "kit/kits", or tagged 'kit'/'kits'.
-    // When filter is OFF they are hidden from the normal grid.
-    // When filter is ON only kit products are shown.
-    var kitRe = /\bkits?\b/i;
-    function isKitProduct(p) {
-      if (kitRe.test(p.category || '')) return true;
-      return (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
-    }
+    // Kit products are identified by the _is_kit_product flag set in groupByDosage,
+    // which gives kit products their own grouping key so they never merge with
+    // non-kit products sharing the same base name.
+    function isKitProduct(p) { return p._is_kit_product === true; }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(isKitProduct);
     } else {
