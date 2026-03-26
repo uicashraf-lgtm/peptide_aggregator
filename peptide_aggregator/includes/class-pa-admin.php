@@ -836,8 +836,10 @@ class PA_Admin {
                         <option value="<?php echo esc_attr($v['id']); ?>"><?php echo esc_html($v['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
+                <label style="display:flex;align-items:center;gap:4px;font-weight:600;cursor:pointer">
+                    <input type="checkbox" id="pa-kit-checkbox" style="margin:0" /> Kits Only
+                </label>
                 <button type="button" class="button" id="pa-filter-btn">Filter</button>
-                <button type="button" class="button" id="pa-kit-filter-btn" title="Show only products tagged as kits">Kits Only</button>
                 <button type="button" class="button" id="pa-clear-btn" style="display:none">Clear</button>
                 <span id="pa-product-count" style="color:#666;font-size:13px"></span>
             </div>
@@ -1178,27 +1180,17 @@ class PA_Admin {
             document.getElementById('pa-filter-btn').addEventListener('click', function() {
                 currentSearch = document.getElementById('pa-search-input').value.trim();
                 currentVendor = parseInt(document.getElementById('pa-vendor-filter').value) || 0;
-                currentPage = 1;
-                renderTable();
-            });
-            document.getElementById('pa-kit-filter-btn').addEventListener('click', function() {
-                currentKitFilter = !currentKitFilter;
-                this.style.background = currentKitFilter ? '#2271b1' : '';
-                this.style.color = currentKitFilter ? '#fff' : '';
-                this.style.borderColor = currentKitFilter ? '#2271b1' : '';
+                currentKitFilter = document.getElementById('pa-kit-checkbox').checked;
                 currentPage = 1;
                 renderTable();
             });
             document.getElementById('pa-clear-btn').addEventListener('click', function() {
                 document.getElementById('pa-search-input').value = '';
                 document.getElementById('pa-vendor-filter').value = '0';
+                document.getElementById('pa-kit-checkbox').checked = false;
                 currentSearch = '';
                 currentVendor = 0;
                 currentKitFilter = false;
-                var kitBtn = document.getElementById('pa-kit-filter-btn');
-                kitBtn.style.background = '';
-                kitBtn.style.color = '';
-                kitBtn.style.borderColor = '';
                 currentPage = 1;
                 renderTable();
             });
