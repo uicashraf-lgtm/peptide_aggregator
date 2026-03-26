@@ -137,7 +137,7 @@
       // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
       // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
       // so their vendors are identified by product_name only.
-      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
+      var srcIsKit = p._is_kit_product === true || (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
       function stampVendor(v) {
         return Object.assign({}, v, { _is_kit: srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
       }
@@ -149,6 +149,7 @@
           min_price: p.min_price,
           vendor_count: p.vendor_count,
           tags: p.tags || [],
+          _is_kit_product: p._is_kit_product || false,
           available_dosages: (p.available_dosages || []).map(function(d) {
             return Object.assign({}, d, { vendors: (d.vendors || []).map(stampVendor) });
           }),
@@ -156,6 +157,8 @@
         order.push(key);
       }
       var grp = map[key];
+      // Propagate kit designation — once any variant is marked as a kit, the group is a kit.
+      if (p._is_kit_product) grp._is_kit_product = true;
       // Merge tags from all variants into the group
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
       // Merge available_dosages (objects with {label, vendors})
@@ -257,6 +260,8 @@
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(function (p) {
+        // Admin-designated kit (explicit flag set by pa_kit_product_ids in REST response).
+        if (p._is_kit_product) return true;
         // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
         var allVendors = [];
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
