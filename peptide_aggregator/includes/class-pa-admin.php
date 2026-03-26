@@ -16,6 +16,7 @@ class PA_Admin {
         add_action('wp_ajax_pa_delete_vendor', array($this, 'ajax_delete_vendor'));
         add_action('wp_ajax_pa_save_dose_labels', array($this, 'ajax_save_dose_labels'));
         add_action('wp_ajax_pa_save_product_tags', array($this, 'ajax_save_product_tags'));
+        add_action('wp_ajax_pa_toggle_kit_product', array($this, 'ajax_toggle_kit_product'));
     }
 
     public function register_menu() {
@@ -844,7 +845,7 @@ class PA_Admin {
             <!-- ── Products list (JS-rendered) ─────────────────────────────── -->
             <h2>Products <span style="font-size:13px;font-weight:normal;color:#666">(click a row to edit)</span></h2>
             <table class="widefat striped">
-                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Dosage</th><th>In Stock</th><th>Status</th><th>Visible</th><th>Actions</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Dosage</th><th>In Stock</th><th>Status</th><th>Visible</th><th>Kit</th><th>Actions</th></tr></thead>
                 <tbody id="pa-products-tbody"></tbody>
             </table>
             <div id="pa-pagination" class="tablenav bottom" style="margin-top:8px"></div>
@@ -861,22 +862,8 @@ class PA_Admin {
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
-            // Product IDs explicitly tagged as kit — only numeric keys from the
-            // overrides option, never base-name keys.
-            var PA_KIT_IDS = <?php
-                $kit_ids = array();
-                foreach ($tag_overrides as $key => $tags_val) {
-                    if (is_numeric($key) && is_array($tags_val)) {
-                        $lc = array_map('strtolower', $tags_val);
-                        if (in_array('kit', $lc, true) || in_array('kits', $lc, true)) {
-                            $kit_ids[] = (int) $key;
-                        }
-                    }
-                }
-                echo wp_json_encode(array_values($kit_ids));
-            ?>;
-            console.log('[PA] PA_KIT_IDS on load:', PA_KIT_IDS);
-            console.log('[PA] PA_TAG_OVERRIDES on load:', PA_TAG_OVERRIDES);
+            var PA_KIT_IDS = <?php echo wp_json_encode(array_map('intval', (array) get_option('pa_kit_product_ids', array()))); ?>;
+            var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
             var PER_PAGE = 25;
             var currentPage = 1;
             var currentSearch = '';
@@ -953,7 +940,7 @@ class PA_Admin {
                 // Tbody
                 var tbody = document.getElementById('pa-products-tbody');
                 if (!paged.length) {
-                    tbody.innerHTML = '<tr><td colspan="9">' + ((currentSearch || currentVendor || currentKitFilter) ? 'No products match your filter.' : 'No products yet.') + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10">' + ((currentSearch || currentVendor || currentKitFilter) ? 'No products match your filter.' : 'No products yet.') + '</td></tr>';
                 } else {
                     var html = '';
                     paged.forEach(function(p) {
@@ -987,6 +974,11 @@ class PA_Admin {
                             ? '<span class="pa-vis-toggle" data-pid="'+pid+'" data-vis="1" style="color:green;cursor:pointer;font-weight:bold" title="Click to hide">&#9679; On</span>'
                             : '<span class="pa-vis-toggle" data-pid="'+pid+'" data-vis="0" style="color:#999;cursor:pointer;font-weight:bold" title="Click to show">&#9675; Off</span>';
 
+                        var isKit = PA_KIT_IDS.indexOf(Number(pid)) !== -1;
+                        var kitHtml = isKit
+                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
+                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
+
                         html += '<tr class="pa-product-row" data-pid="'+pid+'">'
                             + '<td>'+esc(String(pid))+'</td>'
                             + '<td><strong>'+esc(p.name || '')+'</strong>'+(p.original_name && p.original_name !== p.name ? '<br><small style="color:#888;font-weight:normal">'+esc(p.original_name)+'</small>' : '')+'</td>'
@@ -996,6 +988,7 @@ class PA_Admin {
                             + '<td>'+stockHtml+'</td>'
                             + '<td onclick="event.stopPropagation()">'+statusHtml+'</td>'
                             + '<td onclick="event.stopPropagation()">'+visHtml+'</td>'
+                            + '<td onclick="event.stopPropagation()">'+kitHtml+'</td>'
                             + '<td onclick="event.stopPropagation()">'
                             +   '<button type="button" class="button button-small pa-prod-edit-btn" data-pid="'+pid+'">Edit</button> '
                             +   '<button type="button" class="button button-small pa-prod-delete-btn" data-pid="'+pid+'" style="color:#b32d2e;border-color:#b32d2e">Delete</button>'
@@ -1131,6 +1124,43 @@ class PA_Admin {
                             span.style.opacity = '1';
                         };
                         xhr.send(JSON.stringify({is_visible: nextVis}));
+                    });
+                });
+                // Kit toggle
+                document.querySelectorAll('.pa-kit-toggle').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        var pid = this.dataset.pid;
+                        var curKit = this.dataset.kit === '1';
+                        var nextKit = !curKit;
+                        var span = this;
+                        span.style.opacity = '0.5';
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('POST', ajaxurl);
+                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                        xhr.onload = function() {
+                            try {
+                                var r = JSON.parse(xhr.responseText);
+                                if (r.success) {
+                                    span.dataset.kit = nextKit ? '1' : '0';
+                                    if (nextKit) {
+                                        span.innerHTML = '&#9670; Kit';
+                                        span.style.color = '#7b2fff';
+                                        span.style.fontWeight = 'bold';
+                                        span.title = 'Click to remove kit tag';
+                                        if (PA_KIT_IDS.indexOf(Number(pid)) === -1) PA_KIT_IDS.push(Number(pid));
+                                    } else {
+                                        span.innerHTML = '&#9671;';
+                                        span.style.color = '#999';
+                                        span.style.fontWeight = '';
+                                        span.title = 'Click to mark as kit';
+                                        PA_KIT_IDS = PA_KIT_IDS.filter(function(id) { return id !== Number(pid); });
+                                    }
+                                } else { alert('Failed to update kit status'); }
+                            } catch(e) { alert('Error updating kit status'); }
+                            span.style.opacity = '1';
+                        };
+                        xhr.onerror = function() { span.style.opacity = '1'; alert('Network error'); };
+                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
                     });
                 });
                 // Pagination
@@ -1701,6 +1731,30 @@ class PA_Admin {
         update_option('pa_product_tag_overrides', $overrides, false);
         delete_transient('pa_products_cache');
         wp_send_json_success(array('tags' => $tags));
+    }
+
+    public function ajax_toggle_kit_product() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_toggle_kit_product', '_wpnonce');
+        $pid    = absint($_POST['product_id'] ?? 0);
+        $is_kit = !empty($_POST['is_kit']) && $_POST['is_kit'] !== 'false';
+        if (!$pid) {
+            wp_send_json_error('Invalid product ID');
+            return;
+        }
+        $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+        if ($is_kit) {
+            if (!in_array($pid, $kit_ids, true)) {
+                $kit_ids[] = $pid;
+            }
+        } else {
+            $kit_ids = array_values(array_filter($kit_ids, function($id) use ($pid) { return $id !== $pid; }));
+        }
+        update_option('pa_kit_product_ids', $kit_ids, false);
+        delete_transient('pa_products_cache');
+        wp_send_json_success(array('is_kit' => $is_kit, 'product_id' => $pid));
     }
 
     public function render_monitoring_page() {
