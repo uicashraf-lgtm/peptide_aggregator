@@ -148,43 +148,51 @@
       var grp = map[key];
       // Merge tags from all variants into the group
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
+      // Determine if source product is a kit (by tag) so we can stamp vendors
+      var srcIsKit = (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
       // Merge available_dosages (objects with {label, vendors})
       (p.available_dosages || []).forEach(function(d) {
         var lbl = (d.label || d).toLowerCase();
         var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase() === lbl; });
         if (existing) {
           // Merge vendors from duplicate dosage, skip vendors already present.
-          // Use vendor+kit-type as the key so a vendor can appear once as kit
+          // Use vendor+_is_kit as the key so a vendor can appear once as kit
           // and once as non-kit (needed for the kits filter to work correctly).
           (d.vendors || []).forEach(function(v) {
-            var vIsKit = (v.product_name || '').toLowerCase().includes('kit');
+            var stamped = Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
             if (!existing.vendors.some(function(ev) {
-              return ev.vendor === v.vendor &&
-                (ev.product_name || '').toLowerCase().includes('kit') === vIsKit;
+              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
             })) {
-              existing.vendors.push(v);
+              existing.vendors.push(stamped);
             }
           });
           // Re-sort by price
           existing.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
         } else {
-          grp.available_dosages.push(d);
+          var dCopy = Object.assign({}, d, {
+            vendors: (d.vendors || []).map(function(v) {
+              return Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
+            })
+          });
+          grp.available_dosages.push(dCopy);
         }
       });
       if (pd.dosage) {
-        grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: p.top_vendors, min_price: p.min_price, vendor_count: p.vendor_count });
+        var stampedVendors = (p.top_vendors || []).map(function(v) {
+          return Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
+        });
+        grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: stampedVendors, min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
-        // Use vendor+kit-type as the key so a vendor can appear once as kit
+        // Use vendor+_is_kit as the key so a vendor can appear once as kit
         // and once as non-kit (needed for the kits filter to work correctly).
         (p.top_vendors || []).forEach(function(v) {
-          var vIsKit = (v.product_name || '').toLowerCase().includes('kit');
+          var stamped = Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
           if (!(grp.top_vendors || []).some(function(ev) {
-            return ev.vendor === v.vendor &&
-              (ev.product_name || '').toLowerCase().includes('kit') === vIsKit;
+            return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
           })) {
             grp.top_vendors = grp.top_vendors || [];
-            grp.top_vendors.push(v);
+            grp.top_vendors.push(stamped);
           }
         });
         if (grp.top_vendors) grp.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
@@ -309,19 +317,22 @@
 
   // When the kits filter is active, restrict a vendor list to kit vendors only.
   // If the dosage label contains "kit", all its vendors are implicitly kit vendors.
-  // Otherwise filter by vendor product_name containing "kit". No fallback — products
-  // that have no kit-identifiable vendor entries show "No prices scraped yet" rather
-  // than leaking non-kit vendors through.
+  // Otherwise filter by _is_kit flag (stamped in groupByDosage from source product's kit tag),
+  // falling back to product_name containing "kit" for legacy entries without the flag.
   function kitFilterVendors(vendors, dosage) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    return (vendors || []).filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    return (vendors || []).filter(function(v) {
+      return v._is_kit === true || (v._is_kit === undefined && (v.product_name || '').toLowerCase().includes('kit'));
+    });
   }
 
-  // Returns true if a dosage entry is a kit dosage (label or any vendor product_name contains "kit").
+  // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).
   function isKitDosage(d) {
     if ((d.label || '').toLowerCase().includes('kit')) return true;
-    return (d.top_vendors || []).some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    return (d.top_vendors || []).some(function(v) {
+      return v._is_kit === true || (v._is_kit === undefined && (v.product_name || '').toLowerCase().includes('kit'));
+    });
   }
 
   // When the kits filter is active, pick the first kit dosage index; otherwise pick the dosage
