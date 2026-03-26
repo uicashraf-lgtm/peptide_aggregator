@@ -734,7 +734,7 @@ class PA_Admin {
 
             <?php if ($kit_active) : ?>
             <div class="notice notice-info inline" style="padding:8px 12px;display:flex;align-items:center;gap:12px">
-                <strong>Showing kits only &mdash; <?php echo count($products); ?> product(s) found (IDs: <?php echo implode(', ', $kit_ids) ?: 'none'; ?>)</strong>
+                <strong>Showing kits only &mdash; <?php echo count($products); ?> product(s)</strong>
                 <a href="<?php echo esc_url(remove_query_arg('kit')); ?>" class="button button-small">Show All Products</a>
             </div>
             <?php endif; ?>
