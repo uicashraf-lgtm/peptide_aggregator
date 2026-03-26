@@ -707,7 +707,9 @@ class PA_Admin {
             if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
                 $product['tags'] = $tag_overrides[$pid];
             } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
-                $product['tags'] = $tag_overrides[$base];
+                if (preg_match($dosage_re_admin, $product['name'] ?? '')) {
+                    $product['tags'] = $tag_overrides[$base];
+                }
             }
         }
         unset($product);

@@ -135,7 +135,13 @@ class PA_Rest {
                 if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
                     $product['tags'] = $tag_overrides[$pid];
                 } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
-                    $product['tags'] = $tag_overrides[$base];
+                    // Only inherit the base-name override for dosage variants
+                    // (e.g. "BPC-157 10mg"). Products whose name has no dosage
+                    // suffix are separate products (e.g. non-kit "Retatrutide"
+                    // alongside kit "Retatrutide") and must not inherit the tag.
+                    if (preg_match($dosage_re, $product['name'] ?? '')) {
+                        $product['tags'] = $tag_overrides[$base];
+                    }
                 }
             }
             unset($product);
