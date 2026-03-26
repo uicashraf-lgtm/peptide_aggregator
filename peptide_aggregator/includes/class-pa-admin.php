@@ -853,7 +853,11 @@ class PA_Admin {
             <div id="pa-pagination" class="tablenav bottom" style="margin-top:8px"></div>
         </div>
 
+        <p id="pa-kit-debug" style="color:#c00;font-weight:bold">
+            Kit IDs (PHP): <?php echo esc_html(implode(', ', array_map('intval', (array) get_option('pa_kit_product_ids', array()))) ?: '(empty)'); ?>
+        </p>
         <script>
+        console.log('[PA] admin script v0.2.71 loading');
         (function(){
             var PA_PRODUCTS = <?php echo wp_json_encode(array_values($products)); ?>;
             var PA_VENDORS = <?php echo wp_json_encode(array_values($vendors)); ?>;
