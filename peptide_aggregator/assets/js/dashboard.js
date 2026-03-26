@@ -1511,6 +1511,11 @@
         } else if (title === 'Kits only') {
           state.barFilters.kits = !state.barFilters.kits;
           btn.classList.toggle('is-active', state.barFilters.kits);
+          if (state.barFilters.kits) {
+            var kitProducts = state.allProducts.filter(function(p) { return p._is_kit_product; });
+            var taggedKits  = state.allProducts.filter(function(p) { return (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kit_auto'; }); });
+            console.log('[PA] Kits filter ON — allProducts:', state.allProducts.length, '| _is_kit_product:', kitProducts.map(function(p){return p.name;}), '| kit/kit_auto tag:', taggedKits.map(function(p){return p.name + ':' + JSON.stringify(p.tags);}));
+          }
         }
         renderProductGrid(filteredProducts());
       });
