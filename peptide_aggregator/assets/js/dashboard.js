@@ -137,9 +137,11 @@
       // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
       // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
       // so their vendors are identified by product_name only.
-      var srcIsKit = p._is_kit_product === true || (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
+      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
       function stampVendor(v) {
-        return Object.assign({}, v, { _is_kit: srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
+        // Preserve _is_kit injected by REST endpoint at the vendor level so only
+        // the specific vendor's entries are flagged, not all vendors on the product.
+        return Object.assign({}, v, { _is_kit: v._is_kit === true || srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
       }
       if (!map[key]) {
         map[key] = {

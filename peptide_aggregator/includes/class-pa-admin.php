@@ -989,9 +989,10 @@ class PA_Admin {
 
                         var isKit = PA_KIT_IDS.indexOf(Number(pid)) !== -1;
                         var pname = p.name || '';
+                        var porig = p.original_name || '';
                         var kitHtml = isKit
-                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
-                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
+                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-original-name="'+porig.replace(/"/g,'&quot;')+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
+                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-original-name="'+porig.replace(/"/g,'&quot;')+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
 
                         html += '<tr class="pa-product-row" data-pid="'+pid+'">'
                             + '<td>'+esc(String(pid))+'</td>'
@@ -1145,6 +1146,7 @@ class PA_Admin {
                     el.addEventListener('click', function() {
                         var pid = this.dataset.pid;
                         var pname = this.dataset.name || '';
+                        var porig = this.dataset.originalName || '';
                         var curKit = this.dataset.kit === '1';
                         var nextKit = !curKit;
                         var span = this;
@@ -1175,7 +1177,7 @@ class PA_Admin {
                             span.style.opacity = '1';
                         };
                         xhr.onerror = function() { span.style.opacity = '1'; alert('Network error'); };
-                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&product_name=' + encodeURIComponent(pname) + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
+                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&product_name=' + encodeURIComponent(pname) + '&product_original_name=' + encodeURIComponent(porig) + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
                     });
                 });
                 // Pagination
@@ -1742,6 +1744,7 @@ class PA_Admin {
         check_ajax_referer('pa_toggle_kit_product', '_wpnonce');
         $pid    = absint($_POST['product_id'] ?? 0);
         $pname  = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        $porig  = sanitize_text_field(wp_unslash($_POST['product_original_name'] ?? ''));
         $is_kit = !empty($_POST['is_kit']) && $_POST['is_kit'] !== 'false';
         if (!$pid) {
             wp_send_json_error('Invalid product ID');
@@ -1755,15 +1758,19 @@ class PA_Admin {
             $kit_ids = array_values(array_filter($kit_ids, function($id) use ($pid) { return $id !== $pid; }));
         }
         update_option('pa_kit_product_ids', $kit_ids, false);
-        // Update name list (used by REST endpoint to match public API products).
-        if ($pname !== '') {
-            $kit_names = (array) get_option('pa_kit_product_names', array());
+        // Update vendor map: {lowercase_product_name => original_name_prefix}.
+        // The original_name (e.g. "EZP-3P") is a prefix of the vendor product_name
+        // in the public API (e.g. "EZP-3P 6mg (GLP-3RT)"), uniquely identifying
+        // that vendor's kit entries without matching other vendors' products.
+        if ($pname !== '' && $porig !== '') {
+            $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
+            $key = strtolower(trim($pname));
             if ($is_kit) {
-                if (!in_array($pname, $kit_names, true)) { $kit_names[] = $pname; }
+                $kit_vendor_map[$key] = $porig;
             } else {
-                $kit_names = array_values(array_filter($kit_names, function($n) use ($pname) { return $n !== $pname; }));
+                unset($kit_vendor_map[$key]);
             }
-            update_option('pa_kit_product_names', $kit_names, false);
+            update_option('pa_kit_vendor_map', $kit_vendor_map, false);
         }
         delete_transient('pa_products_cache');
         wp_send_json_success(array('is_kit' => $is_kit, 'product_id' => $pid));
