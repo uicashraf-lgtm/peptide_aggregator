@@ -133,23 +133,19 @@
     var order = [];
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
-      // Kit products get a separate grouping key so they never merge with
-      // non-kit products that share the same base name (e.g. "Retatrutide").
-      var pIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })
-                   || /\bkits?\b/i.test(p.category || '');
-      var key = pd.base.toLowerCase() + (pIsKit ? '__kit' : '');
-      // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
-      // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
-      // so their vendors are identified by product_name only.
-      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
+      var key = pd.base.toLowerCase();
+      // srcIsKit: only true for admin-tagged 'kit'/'kits' products (not 'kit_auto').
+      // We do NOT use srcIsKit to stamp vendors — the products endpoint uses abbreviated
+      // vendor names that don't contain "kit", so stamping all vendors of a kit-tagged
+      // product as _is_kit would incorrectly mark non-kit vendors (Genpeptide etc.).
+      // Vendor-level kit detection relies on product_name containing "kit" only.
       function stampVendor(v) {
-        return Object.assign({}, v, { _is_kit: srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
+        return Object.assign({}, v, { _is_kit: (v.product_name || '').toLowerCase().includes('kit') });
       }
       if (!map[key]) {
         map[key] = {
           id: p.id, name: pd.base, category: p.category,
           description: p.description, dosages: [],
-          _is_kit_product: pIsKit,
           top_vendors: (p.top_vendors || []).map(stampVendor),
           min_price: p.min_price,
           vendor_count: p.vendor_count,
@@ -228,13 +224,10 @@
       const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
-      // Debug: log raw Retatrutide entries before grouping, and kit products after grouping.
-      var rawRet = (Array.isArray(raw) ? raw : []).filter(function(p) { return (p.name || '').toLowerCase().includes('retatrutide'); });
-      console.log('[PA] raw retatrutide entries:', rawRet.map(function(p) { return {id: p.id, name: p.name, tags: p.tags, category: p.category}; }));
-      var kitProds = state.allProducts.filter(function(p) { return p._is_kit_product === true; });
-      console.log('[PA] kit products after groupByDosage:', kitProds.map(function(p) { return {name: p.name, tags: p.tags, _is_kit_product: p._is_kit_product}; }));
-      var nonKitRet = state.allProducts.filter(function(p) { return (p.name || '').toLowerCase().includes('retatrutide') && !p._is_kit_product; });
-      console.log('[PA] non-kit retatrutide after groupByDosage:', nonKitRet.map(function(p) { return {name: p.name, tags: p.tags, _is_kit_product: p._is_kit_product}; }));
+      var kitProds = state.allProducts.filter(function(p) {
+        return (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto'; });
+      });
+      console.log('[PA] kit-tagged products:', kitProds.map(function(p) { return p.name + ' ' + JSON.stringify(p.tags); }));
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
@@ -263,14 +256,13 @@
     if (state.barFilters.favourites || (state.applied && state.applied.toggles.likes)) {
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
-    // Kit products are identified by the _is_kit_product flag set in groupByDosage,
-    // which gives kit products their own grouping key so they never merge with
-    // non-kit products sharing the same base name.
-    function isKitProduct(p) { return p._is_kit_product === true; }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      list = list.filter(isKitProduct);
-    } else {
-      list = list.filter(function(p) { return !isKitProduct(p); });
+      list = list.filter(function(p) {
+        return (p.tags || []).some(function(t) {
+          var tl = t.toLowerCase();
+          return tl === 'kit' || tl === 'kits' || tl === 'kit_auto';
+        });
+      });
     }
     if (state.applied && state.applied.toggles.blends) {
       list = list.filter(function (p) {
