@@ -134,22 +134,28 @@
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
       var key = pd.base.toLowerCase();
+      // Determine if source product is a kit (by tag) so we can stamp vendors
+      var srcIsKit = (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
+      function stampVendor(v) {
+        return Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
+      }
       if (!map[key]) {
         map[key] = {
           id: p.id, name: pd.base, category: p.category,
           description: p.description, dosages: [],
-          top_vendors: p.top_vendors, min_price: p.min_price,
+          top_vendors: (p.top_vendors || []).map(stampVendor),
+          min_price: p.min_price,
           vendor_count: p.vendor_count,
           tags: p.tags || [],
-          available_dosages: p.available_dosages || [],
+          available_dosages: (p.available_dosages || []).map(function(d) {
+            return Object.assign({}, d, { vendors: (d.vendors || []).map(stampVendor) });
+          }),
         };
         order.push(key);
       }
       var grp = map[key];
       // Merge tags from all variants into the group
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
-      // Determine if source product is a kit (by tag) so we can stamp vendors
-      var srcIsKit = (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
       // Merge available_dosages (objects with {label, vendors})
       (p.available_dosages || []).forEach(function(d) {
         var lbl = (d.label || d).toLowerCase();
@@ -159,7 +165,7 @@
           // Use vendor+_is_kit as the key so a vendor can appear once as kit
           // and once as non-kit (needed for the kits filter to work correctly).
           (d.vendors || []).forEach(function(v) {
-            var stamped = Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
+            var stamped = stampVendor(v);
             if (!existing.vendors.some(function(ev) {
               return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
             })) {
@@ -169,25 +175,17 @@
           // Re-sort by price
           existing.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
         } else {
-          var dCopy = Object.assign({}, d, {
-            vendors: (d.vendors || []).map(function(v) {
-              return Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
-            })
-          });
-          grp.available_dosages.push(dCopy);
+          grp.available_dosages.push(Object.assign({}, d, { vendors: (d.vendors || []).map(stampVendor) }));
         }
       });
       if (pd.dosage) {
-        var stampedVendors = (p.top_vendors || []).map(function(v) {
-          return Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
-        });
-        grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: stampedVendors, min_price: p.min_price, vendor_count: p.vendor_count });
+        grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
         // Use vendor+_is_kit as the key so a vendor can appear once as kit
         // and once as non-kit (needed for the kits filter to work correctly).
         (p.top_vendors || []).forEach(function(v) {
-          var stamped = Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
+          var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
             return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
           })) {
@@ -261,7 +259,7 @@
         var allVendors = [];
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
         (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        if (allVendors.some(function(v) { return v._is_kit === true || (v.product_name || '').toLowerCase().includes('kit'); })) return true;
         // Fallback: admin/server tag.
         if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
         // Last resort: available_dosages label.
