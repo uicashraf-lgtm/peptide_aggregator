@@ -147,6 +147,22 @@ class PA_Rest {
             unset($product);
         }
 
+        // Inject 'kit' tag for products admin-designated as kits via pa_kit_product_ids.
+        $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+        if (!empty($kit_ids) && is_array($products)) {
+            foreach ($products as &$product) {
+                $pid = (int) ($product['id'] ?? 0);
+                if ($pid > 0 && in_array($pid, $kit_ids, true)) {
+                    $existing = array_map('strtolower', (array) ($product['tags'] ?? []));
+                    if (!in_array('kit', $existing, true)) {
+                        $product['tags']   = (array) ($product['tags'] ?? []);
+                        $product['tags'][] = 'kit';
+                    }
+                }
+            }
+            unset($product);
+        }
+
         // Auto-tag products as 'kit' when the API signals kit availability.
         // Checks (in order of reliability for the /products endpoint):
         //   1. available_dosages label contains 'kit' (e.g. "Kit", "5mg Kit")
