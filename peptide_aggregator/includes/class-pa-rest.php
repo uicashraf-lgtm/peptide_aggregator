@@ -155,6 +155,35 @@ class PA_Rest {
             unset($product);
         }
 
+        // Kit vendor map: stamp specific vendor entries with _is_kit so the JS
+        // can filter to just the kit vendor on the product card without relying
+        // on abbreviated product_name strings that don't contain "kit".
+        $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
+        if (!empty($kit_vendor_map) && is_array($products)) {
+            $kvm_dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+            foreach ($products as &$product) {
+                $base = strtolower(trim(preg_replace($kvm_dosage_re, '', $product['name'] ?? '')));
+                if (!array_key_exists($base, $kit_vendor_map)) continue;
+                $kit_vendors = (array) $kit_vendor_map[$base];
+                foreach ((array) ($product['top_vendors'] ?? []) as &$v) {
+                    if (in_array($v['vendor'] ?? '', $kit_vendors, true)) {
+                        $v['_is_kit'] = true;
+                    }
+                }
+                unset($v);
+                foreach ((array) ($product['available_dosages'] ?? []) as &$d) {
+                    foreach ((array) ($d['vendors'] ?? []) as &$v) {
+                        if (in_array($v['vendor'] ?? '', $kit_vendors, true)) {
+                            $v['_is_kit'] = true;
+                        }
+                    }
+                    unset($v);
+                }
+                unset($d);
+            }
+            unset($product);
+        }
+
         // Auto-tag products as 'kit' when the API signals kit availability.
         // Checks (in order of reliability for the /products endpoint):
         //   1. available_dosages label contains 'kit' (e.g. "Kit", "5mg Kit")

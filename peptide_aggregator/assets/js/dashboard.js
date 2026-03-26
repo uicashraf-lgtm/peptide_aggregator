@@ -135,12 +135,11 @@
       var pd = parseDosage(p.name);
       var key = pd.base.toLowerCase();
       // srcIsKit: only true for admin-tagged 'kit'/'kits' products (not 'kit_auto').
-      // We do NOT use srcIsKit to stamp vendors — the products endpoint uses abbreviated
-      // vendor names that don't contain "kit", so stamping all vendors of a kit-tagged
-      // product as _is_kit would incorrectly mark non-kit vendors (Genpeptide etc.).
-      // Vendor-level kit detection relies on product_name containing "kit" only.
+      // _is_kit may be pre-stamped by the PHP kit vendor map (pa_kit_vendor_map),
+      // which records the specific vendor name saved when the admin tagged a product
+      // as kit. Preserve that flag; also detect via product_name for prices-endpoint data.
       function stampVendor(v) {
-        return Object.assign({}, v, { _is_kit: (v.product_name || '').toLowerCase().includes('kit') });
+        return Object.assign({}, v, { _is_kit: v._is_kit === true || (v.product_name || '').toLowerCase().includes('kit') });
       }
       if (!map[key]) {
         map[key] = {
@@ -309,16 +308,28 @@
     });
   }
 
-  // When the kits filter is active, kit products are shown exclusively (they only contain kit
-  // vendors by definition), so no vendor-level filtering is needed — just deduplicate by
-  // vendor name to prevent double entries from groupByDosage merges.
-  function kitFilterVendors(vendors, dosage) {
+  // Deduplicate vendors by name (keep first = lowest price).
+  function deduplicateVendors(vendors) {
     var seen = {};
     return (vendors || []).filter(function(v) {
       if (seen[v.vendor]) return false;
       seen[v.vendor] = true;
       return true;
     });
+  }
+
+  // When the kits filter is active, restrict to vendors flagged _is_kit (stamped by the
+  // PHP kit vendor map) or whose product_name contains "kit" (prices endpoint).
+  // Falls back to all vendors if no kit vendors are identifiable.
+  function kitFilterVendors(vendors, dosage) {
+    var deduped = deduplicateVendors(vendors);
+    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) {
+      return deduped;
+    }
+    var kitOnly = deduped.filter(function(v) {
+      return v._is_kit === true || (v.product_name || '').toLowerCase().includes('kit');
+    });
+    return kitOnly.length > 0 ? kitOnly : deduped;
   }
 
   // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).

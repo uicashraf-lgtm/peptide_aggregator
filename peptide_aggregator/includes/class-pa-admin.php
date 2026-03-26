@@ -1437,9 +1437,16 @@ class PA_Admin {
                             xhrTags.onerror = function() {
                                 showNotice('error', 'Tag override save failed: network error');
                             };
+                            // Find original_name (vendor label) for this product so the
+                            // PHP can map kit tags to specific vendor names.
+                            var kitOriginalName = '';
+                            for (var koi = 0; koi < PA_PRODUCTS.length; koi++) {
+                                if (PA_PRODUCTS[koi].id == productId) { kitOriginalName = PA_PRODUCTS[koi].original_name || ''; break; }
+                            }
                             xhrTags.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
                                 + '&product_name=' + encodeURIComponent(name)
                                 + '&product_id=' + encodeURIComponent(String(productId))
+                                + '&original_name=' + encodeURIComponent(kitOriginalName)
                                 + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
                             PA_TAG_OVERRIDES[String(productId)] = tags.slice();
                             reloadProducts(function() {
@@ -1656,6 +1663,36 @@ class PA_Admin {
             $overrides[$product_id] = $tags;
         }
         update_option('pa_product_tag_overrides', $overrides, false);
+
+        // Kit vendor map: when tagging a product as kit, store which vendor name
+        // (original_name from the admin) is the kit vendor for that product base name.
+        // The REST endpoint uses this to stamp only that specific vendor with _is_kit.
+        $original_name = sanitize_text_field(wp_unslash($_POST['original_name'] ?? ''));
+        $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
+        $has_kit_tag = !empty(array_filter($tags, function ($t) {
+            $tl = strtolower($t);
+            return $tl === 'kit' || $tl === 'kits';
+        }));
+        if ($has_kit_tag && $original_name !== '') {
+            $existing = (array) ($kit_vendor_map[$base_name] ?? []);
+            if (!in_array($original_name, $existing, true)) {
+                $existing[] = $original_name;
+            }
+            $kit_vendor_map[$base_name] = $existing;
+        } elseif (!$has_kit_tag) {
+            // Kit tag removed — clear this vendor from the map entry.
+            if ($original_name !== '' && isset($kit_vendor_map[$base_name])) {
+                $kit_vendor_map[$base_name] = array_values(array_filter(
+                    (array) $kit_vendor_map[$base_name],
+                    function ($v) use ($original_name) { return $v !== $original_name; }
+                ));
+                if (empty($kit_vendor_map[$base_name])) {
+                    unset($kit_vendor_map[$base_name]);
+                }
+            }
+        }
+        update_option('pa_kit_vendor_map', $kit_vendor_map, false);
+
         delete_transient('pa_products_cache');
         wp_send_json_success(array('tags' => $tags));
     }
