@@ -1189,7 +1189,6 @@ class PA_Admin {
             document.getElementById('pa-filter-btn').addEventListener('click', function() {
                 currentSearch = document.getElementById('pa-search-input').value.trim();
                 currentVendor = parseInt(document.getElementById('pa-vendor-filter').value) || 0;
-                currentKitFilter = document.getElementById('pa-kit-checkbox').checked;
                 currentPage = 1;
                 renderTable();
             });
