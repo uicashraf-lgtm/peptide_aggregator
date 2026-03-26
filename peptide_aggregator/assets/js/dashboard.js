@@ -331,16 +331,22 @@
       });
     }
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    return (vendors || []).filter(function(v) {
+    // Primary: product_name contains "kit" (same logic as the detail view Kits button,
+    // works when the prices endpoint returns full names like "EZP-3P 6mg – (10 vials/Kit)").
+    var byName = (vendors || []).filter(function(v) {
       return (v.product_name || '').toLowerCase().includes('kit');
     });
+    if (byName.length > 0) return byName;
+    // Fallback: _is_kit flag set from admin-tagged source product (products endpoint uses
+    // abbreviated names that may not contain "kit", so fall back to the flag).
+    return (vendors || []).filter(function(v) { return v._is_kit === true; });
   }
 
   // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).
   function isKitDosage(d) {
     if ((d.label || '').toLowerCase().includes('kit')) return true;
     return (d.top_vendors || []).some(function(v) {
-      return (v.product_name || '').toLowerCase().includes('kit');
+      return (v.product_name || '').toLowerCase().includes('kit') || v._is_kit === true;
     });
   }
 
