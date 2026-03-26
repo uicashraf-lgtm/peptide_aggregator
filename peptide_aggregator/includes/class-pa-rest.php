@@ -113,41 +113,117 @@ class PA_Rest {
     public function get_products() {
         $cached = get_transient('pa_products_cache');
         if ($cached !== false) {
-            $response = rest_ensure_response($cached);
-            $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
-            $response->header('Pragma', 'no-cache');
-            return $response;
-        }
+            $products = $cached;
+        } else {
+            $result = $this->api->request('GET', '/api/products');
+            if (!$result['ok']) {
+                return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
+            }
+            $products = $result['data'];
 
-        $result = $this->api->request('GET', '/api/products');
-        if (!$result['ok']) {
-            return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
-        }
-        $products = $result['data'];
-
-        // Apply tag overrides.
-        $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
-        if (!empty($tag_overrides) && is_array($products)) {
-            $dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
-            foreach ($products as &$product) {
-                $pid  = (string) ($product['id'] ?? '');
-                $base = strtolower(trim(preg_replace($dosage_re, '', $product['name'] ?? '')));
-                if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
-                    $product['tags'] = $tag_overrides[$pid];
-                } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
-                    // Only inherit the base-name override for dosage variants
-                    // (e.g. "BPC-157 10mg"). Products whose name has no dosage
-                    // suffix are separate products (e.g. non-kit "Retatrutide"
-                    // alongside kit "Retatrutide") and must not inherit the tag.
-                    if (preg_match($dosage_re, $product['name'] ?? '')) {
-                        $product['tags'] = $tag_overrides[$base];
+            // Apply tag overrides.
+            $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
+            if (!empty($tag_overrides) && is_array($products)) {
+                $dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+                foreach ($products as &$product) {
+                    $pid  = (string) ($product['id'] ?? '');
+                    $base = strtolower(trim(preg_replace($dosage_re, '', $product['name'] ?? '')));
+                    if ($pid !== '' && array_key_exists($pid, $tag_overrides)) {
+                        $product['tags'] = $tag_overrides[$pid];
+                    } elseif ($base !== '' && array_key_exists($base, $tag_overrides)) {
+                        // Only inherit the base-name override for dosage variants
+                        // (e.g. "BPC-157 10mg"). Products whose name has no dosage
+                        // suffix are separate products (e.g. non-kit "Retatrutide"
+                        // alongside kit "Retatrutide") and must not inherit the tag.
+                        if (preg_match($dosage_re, $product['name'] ?? '')) {
+                            $product['tags'] = $tag_overrides[$base];
+                        }
                     }
                 }
+                unset($product);
             }
-            unset($product);
-        }
 
-        // Inject 'kit' tag for products admin-designated as kits via pa_kit_product_ids.
+            // Auto-tag products as 'kit' when the API signals kit availability.
+            // Checks (in order of reliability for the /products endpoint):
+            //   1. available_dosages label contains 'kit' (e.g. "Kit", "5mg Kit")
+            //   2. top_vendors product_name contains 'kit' (present when the field is populated)
+            //   3. available_dosages vendor product_name contains 'kit'
+            // Admin tag overrides applied above always take precedence.
+            if (is_array($products)) {
+                foreach ($products as &$product) {
+                    $existing_tags = array_map('strtolower', (array) ($product['tags'] ?? []));
+                    if (in_array('kit', $existing_tags, true) || in_array('kit_auto', $existing_tags, true)) {
+                        continue; // already tagged — do not overwrite
+                    }
+                    $has_kit = false;
+                    // Check available_dosages labels first — most reliable field in /products response.
+                    foreach ((array) ($product['available_dosages'] ?? []) as $d) {
+                        $lbl = strtolower(is_array($d) ? ($d['label'] ?? '') : (string) $d);
+                        if ($lbl !== '' && strpos($lbl, 'kit') !== false) { $has_kit = true; break; }
+                    }
+                    // Fall back to vendor product_name fields.
+                    if (!$has_kit) {
+                        foreach ((array) ($product['top_vendors'] ?? []) as $v) {
+                            $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                            if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                        }
+                    }
+                    if (!$has_kit) {
+                        foreach ((array) ($product['available_dosages'] ?? []) as $d) {
+                            foreach ((array) ($d['vendors'] ?? []) as $v) {
+                                $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
+                                if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
+                            }
+                        }
+                    }
+                    if ($has_kit) {
+                        $product['tags']   = (array) ($product['tags'] ?? []);
+                        $product['tags'][] = 'kit_auto';
+                    }
+                }
+                unset($product);
+            }
+
+            // Apply affiliate templates to all vendor links (top_vendors and available_dosages).
+            $affiliate_map = $this->get_affiliate_map();
+            if (!empty($affiliate_map) && is_array($products)) {
+                foreach ($products as &$product) {
+                    // Top-level vendor list
+                    if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
+                        foreach ($product['top_vendors'] as &$vendor) {
+                            $key = strtolower(trim($vendor['vendor'] ?? ''));
+                            $tpl = $affiliate_map[$key] ?? '';
+                            if ($tpl !== '' && !empty($vendor['link'])) {
+                                $vendor['link'] = $this->apply_affiliate($vendor['link'], $tpl);
+                            }
+                        }
+                        unset($vendor);
+                    }
+                    // Per-dosage vendor lists (used by the card view)
+                    if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
+                        foreach ($product['available_dosages'] as &$dosage) {
+                            if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
+                                foreach ($dosage['vendors'] as &$vendor) {
+                                    $key = strtolower(trim($vendor['vendor'] ?? ''));
+                                    $tpl = $affiliate_map[$key] ?? '';
+                                    if ($tpl !== '' && !empty($vendor['link'])) {
+                                        $vendor['link'] = $this->apply_affiliate($vendor['link'], $tpl);
+                                    }
+                                }
+                                unset($vendor);
+                            }
+                        }
+                        unset($dosage);
+                    }
+                }
+                unset($product);
+            }
+
+            set_transient('pa_products_cache', $products, 60);
+        } // end cache miss block
+
+        // Inject 'kit' tag for admin-designated kit products — always applied fresh
+        // so it reflects the current pa_kit_product_ids option regardless of cache age.
         $kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
         if (!empty($kit_ids) && is_array($products)) {
             foreach ($products as &$product) {
@@ -162,84 +238,6 @@ class PA_Rest {
             }
             unset($product);
         }
-
-        // Auto-tag products as 'kit' when the API signals kit availability.
-        // Checks (in order of reliability for the /products endpoint):
-        //   1. available_dosages label contains 'kit' (e.g. "Kit", "5mg Kit")
-        //   2. top_vendors product_name contains 'kit' (present when the field is populated)
-        //   3. available_dosages vendor product_name contains 'kit'
-        // Admin tag overrides applied above always take precedence.
-        if (is_array($products)) {
-            foreach ($products as &$product) {
-                $existing_tags = array_map('strtolower', (array) ($product['tags'] ?? []));
-                if (in_array('kit', $existing_tags, true)) {
-                    continue; // already admin-tagged as kit — do not overwrite
-                }
-                $has_kit = false;
-                // Check available_dosages labels first — most reliable field in /products response.
-                foreach ((array) ($product['available_dosages'] ?? []) as $d) {
-                    $lbl = strtolower(is_array($d) ? ($d['label'] ?? '') : (string) $d);
-                    if ($lbl !== '' && strpos($lbl, 'kit') !== false) { $has_kit = true; break; }
-                }
-                // Fall back to vendor product_name fields.
-                if (!$has_kit) {
-                    foreach ((array) ($product['top_vendors'] ?? []) as $v) {
-                        $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                        if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
-                    }
-                }
-                if (!$has_kit) {
-                    foreach ((array) ($product['available_dosages'] ?? []) as $d) {
-                        foreach ((array) ($d['vendors'] ?? []) as $v) {
-                            $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                            if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
-                        }
-                    }
-                }
-                if ($has_kit) {
-                    $product['tags']   = (array) ($product['tags'] ?? []);
-                    $product['tags'][] = 'kit_auto';
-                }
-            }
-            unset($product);
-        }
-
-        // Apply affiliate templates to all vendor links (top_vendors and available_dosages).
-        $affiliate_map = $this->get_affiliate_map();
-        if (!empty($affiliate_map) && is_array($products)) {
-            foreach ($products as &$product) {
-                // Top-level vendor list
-                if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
-                    foreach ($product['top_vendors'] as &$vendor) {
-                        $key = strtolower(trim($vendor['vendor'] ?? ''));
-                        $tpl = $affiliate_map[$key] ?? '';
-                        if ($tpl !== '' && !empty($vendor['link'])) {
-                            $vendor['link'] = $this->apply_affiliate($vendor['link'], $tpl);
-                        }
-                    }
-                    unset($vendor);
-                }
-                // Per-dosage vendor lists (used by the card view)
-                if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
-                    foreach ($product['available_dosages'] as &$dosage) {
-                        if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
-                            foreach ($dosage['vendors'] as &$vendor) {
-                                $key = strtolower(trim($vendor['vendor'] ?? ''));
-                                $tpl = $affiliate_map[$key] ?? '';
-                                if ($tpl !== '' && !empty($vendor['link'])) {
-                                    $vendor['link'] = $this->apply_affiliate($vendor['link'], $tpl);
-                                }
-                            }
-                            unset($vendor);
-                        }
-                    }
-                    unset($dosage);
-                }
-            }
-            unset($product);
-        }
-
-        set_transient('pa_products_cache', $products, 60);
 
         $response = rest_ensure_response($products);
         $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
