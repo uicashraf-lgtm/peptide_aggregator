@@ -139,47 +139,10 @@ class PA_Rest {
                     // (e.g. "BPC-157 10mg"). Products whose name has no dosage
                     // suffix are separate products (e.g. non-kit "Retatrutide"
                     // alongside kit "Retatrutide") and must not inherit the tag.
-                    // Also never propagate kit/kits via base-name — kit identity
-                    // must only come from an ID-specific override so that dosage
-                    // variants from other vendors are not incorrectly kit-tagged.
-                    $base_tags = $tag_overrides[$base];
-                    $base_has_kit = !empty(array_filter((array) $base_tags, function($t) {
-                        $tl = strtolower($t);
-                        return $tl === 'kit' || $tl === 'kits';
-                    }));
-                    if (!$base_has_kit && preg_match($dosage_re, $product['name'] ?? '')) {
-                        $product['tags'] = $base_tags;
+                    if (preg_match($dosage_re, $product['name'] ?? '')) {
+                        $product['tags'] = $tag_overrides[$base];
                     }
                 }
-            }
-            unset($product);
-        }
-
-        // Kit vendor map: stamp specific vendor entries with _is_kit so the JS
-        // can filter to just the kit vendor on the product card without relying
-        // on abbreviated product_name strings that don't contain "kit".
-        $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
-        if (!empty($kit_vendor_map) && is_array($products)) {
-            $kvm_dosage_re = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
-            foreach ($products as &$product) {
-                $base = strtolower(trim(preg_replace($kvm_dosage_re, '', $product['name'] ?? '')));
-                if (!array_key_exists($base, $kit_vendor_map)) continue;
-                $kit_vendors = (array) $kit_vendor_map[$base];
-                foreach ((array) ($product['top_vendors'] ?? []) as &$v) {
-                    if (in_array($v['vendor'] ?? '', $kit_vendors, true)) {
-                        $v['_is_kit'] = true;
-                    }
-                }
-                unset($v);
-                foreach ((array) ($product['available_dosages'] ?? []) as &$d) {
-                    foreach ((array) ($d['vendors'] ?? []) as &$v) {
-                        if (in_array($v['vendor'] ?? '', $kit_vendors, true)) {
-                            $v['_is_kit'] = true;
-                        }
-                    }
-                    unset($v);
-                }
-                unset($d);
             }
             unset($product);
         }
