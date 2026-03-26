@@ -732,6 +732,13 @@ class PA_Admin {
         <div class="wrap">
             <h1>Products</h1>
 
+            <?php if ($kit_active) : ?>
+            <div class="notice notice-info inline" style="padding:8px 12px;display:flex;align-items:center;gap:12px">
+                <strong>Showing kits only &mdash; <?php echo count($products); ?> product(s) found (IDs: <?php echo implode(', ', $kit_ids) ?: 'none'; ?>)</strong>
+                <a href="<?php echo esc_url(remove_query_arg('kit')); ?>" class="button button-small">Show All Products</a>
+            </div>
+            <?php endif; ?>
+
             <style>
             #pa-product-form-wrap{background:#fff;border:1px solid #c3c4c7;border-radius:4px;padding:20px 24px;margin-bottom:20px}
             #pa-product-form-wrap h2{margin-top:0}
@@ -863,12 +870,6 @@ class PA_Admin {
             <div id="pa-pagination" class="tablenav bottom" style="margin-top:8px"></div>
         </div>
 
-        <?php if ($kit_active) : ?>
-        <div class="notice notice-info" style="margin:0 0 12px;padding:8px 12px;display:flex;align-items:center;gap:12px">
-            <strong>Showing kits only — <?php echo count($products); ?> product(s) found (IDs: <?php echo implode(', ', $kit_ids); ?>)</strong>
-            <a href="<?php echo esc_url(remove_query_arg('kit')); ?>" class="button button-small">Show All Products</a>
-        </div>
-        <?php endif; ?>
         <script>
         (function(){
             var PA_PRODUCTS = <?php echo wp_json_encode(array_values($products)); ?>;
