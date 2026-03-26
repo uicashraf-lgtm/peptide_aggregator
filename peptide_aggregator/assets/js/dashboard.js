@@ -134,10 +134,12 @@
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
       var key = pd.base.toLowerCase();
-      // Determine if source product is a kit (by tag) so we can stamp vendors
-      var srcIsKit = (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
+      // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
+      // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
+      // so their vendors are identified by product_name only.
+      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
       function stampVendor(v) {
-        return Object.assign({}, v, { _is_kit: srcIsKit || !!(v._is_kit) || (v.product_name || '').toLowerCase().includes('kit') });
+        return Object.assign({}, v, { _is_kit: srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
       }
       if (!map[key]) {
         map[key] = {
@@ -269,8 +271,8 @@
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
         (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
         if (allVendors.some(function(v) { return v._is_kit === true || (v.product_name || '').toLowerCase().includes('kit'); })) return true;
-        // Fallback: admin/server tag.
-        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })) return true;
+        // Fallback: admin/server tag ('kit', 'kits', or PHP auto-detected 'kit_auto').
+        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto'; })) return true;
         // Last resort: available_dosages label.
         return (p.available_dosages || []).some(function (d) {
           return (d.label || d || '').toString().toLowerCase().includes('kit');
