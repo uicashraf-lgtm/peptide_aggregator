@@ -228,10 +228,13 @@
       const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
-      // Debug: log any products that have non-empty tags so kit filter issues are visible.
-      var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
-      if (tagged.length) console.log('[PA] products with tags:', tagged.map(function(p) { return p.name + ': ' + JSON.stringify(p.tags); }));
-      else console.log('[PA] no products have tags in this response');
+      // Debug: log raw Retatrutide entries before grouping, and kit products after grouping.
+      var rawRet = (Array.isArray(raw) ? raw : []).filter(function(p) { return (p.name || '').toLowerCase().includes('retatrutide'); });
+      console.log('[PA] raw retatrutide entries:', rawRet.map(function(p) { return {id: p.id, name: p.name, tags: p.tags, category: p.category}; }));
+      var kitProds = state.allProducts.filter(function(p) { return p._is_kit_product === true; });
+      console.log('[PA] kit products after groupByDosage:', kitProds.map(function(p) { return {name: p.name, tags: p.tags, _is_kit_product: p._is_kit_product}; }));
+      var nonKitRet = state.allProducts.filter(function(p) { return (p.name || '').toLowerCase().includes('retatrutide') && !p._is_kit_product; });
+      console.log('[PA] non-kit retatrutide after groupByDosage:', nonKitRet.map(function(p) { return {name: p.name, tags: p.tags, _is_kit_product: p._is_kit_product}; }));
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
