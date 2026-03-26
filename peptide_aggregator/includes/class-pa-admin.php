@@ -1667,14 +1667,16 @@ class PA_Admin {
         $tags = array_values(array_map('sanitize_text_field', $tags));
 
         $overrides = (array) get_option('pa_product_tag_overrides', array());
-        // Key by normalised base name so the override applies to every dosage
-        // variant (e.g. "BPC-157 5mg", "BPC-157 10mg") in one shot.
-        $overrides[$base_name] = $tags;
-        // Also key by product ID (string) so the admin UI can look it up directly
-        // without needing to re-normalise the name.
+        // Key by product ID only so tags apply to exactly this product and not
+        // every dosage variant sharing the same base name.
         $product_id = sanitize_text_field(wp_unslash($_POST['product_id'] ?? ''));
         if ($product_id !== '') {
             $overrides[$product_id] = $tags;
+            // Remove any stale base-name key so the ID key takes sole authority.
+            unset($overrides[$base_name]);
+        } else {
+            // Fallback for products that genuinely have no ID yet.
+            $overrides[$base_name] = $tags;
         }
         update_option('pa_product_tag_overrides', $overrides, false);
         delete_transient('pa_products_cache');
