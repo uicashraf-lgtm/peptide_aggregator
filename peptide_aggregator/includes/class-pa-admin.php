@@ -836,6 +836,7 @@ class PA_Admin {
                     <?php endforeach; ?>
                 </select>
                 <button type="button" class="button" id="pa-filter-btn">Filter</button>
+                <button type="button" class="button" id="pa-kit-filter-btn" title="Show only products tagged as kits">Kits Only</button>
                 <button type="button" class="button" id="pa-clear-btn" style="display:none">Clear</button>
                 <span id="pa-product-count" style="color:#666;font-size:13px"></span>
             </div>
@@ -864,6 +865,7 @@ class PA_Admin {
             var currentPage = 1;
             var currentSearch = '';
             var currentVendor = 0;
+            var currentKitFilter = false;
             var currentDoseLabelProductName = '';
             var currentDoseLabels = {};
             // Must match the DOSAGE_RE in dashboard.js so admin keys align with frontend keys
@@ -910,6 +912,12 @@ class PA_Admin {
                         return (p.vendor_ids || []).map(Number).indexOf(currentVendor) !== -1;
                     });
                 }
+                if (currentKitFilter) {
+                    list = list.filter(function(p) {
+                        var tags = (p.tags || []).map(function(t) { return t.toLowerCase(); });
+                        return tags.indexOf('kit') !== -1 || tags.indexOf('kits') !== -1 || tags.indexOf('kit_auto') !== -1;
+                    });
+                }
                 return list;
             }
 
@@ -925,12 +933,12 @@ class PA_Admin {
                 document.getElementById('pa-product-count').textContent = totalItems + ' product(s)';
 
                 // Clear button visibility
-                document.getElementById('pa-clear-btn').style.display = (currentSearch || currentVendor) ? '' : 'none';
+                document.getElementById('pa-clear-btn').style.display = (currentSearch || currentVendor || currentKitFilter) ? '' : 'none';
 
                 // Tbody
                 var tbody = document.getElementById('pa-products-tbody');
                 if (!paged.length) {
-                    tbody.innerHTML = '<tr><td colspan="9">' + ((currentSearch || currentVendor) ? 'No products match your filter.' : 'No products yet.') + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9">' + ((currentSearch || currentVendor || currentKitFilter) ? 'No products match your filter.' : 'No products yet.') + '</td></tr>';
                 } else {
                     var html = '';
                     paged.forEach(function(p) {
@@ -1127,11 +1135,24 @@ class PA_Admin {
                 currentPage = 1;
                 renderTable();
             });
+            document.getElementById('pa-kit-filter-btn').addEventListener('click', function() {
+                currentKitFilter = !currentKitFilter;
+                this.style.background = currentKitFilter ? '#2271b1' : '';
+                this.style.color = currentKitFilter ? '#fff' : '';
+                this.style.borderColor = currentKitFilter ? '#2271b1' : '';
+                currentPage = 1;
+                renderTable();
+            });
             document.getElementById('pa-clear-btn').addEventListener('click', function() {
                 document.getElementById('pa-search-input').value = '';
                 document.getElementById('pa-vendor-filter').value = '0';
                 currentSearch = '';
                 currentVendor = 0;
+                currentKitFilter = false;
+                var kitBtn = document.getElementById('pa-kit-filter-btn');
+                kitBtn.style.background = '';
+                kitBtn.style.color = '';
+                kitBtn.style.borderColor = '';
                 currentPage = 1;
                 renderTable();
             });
