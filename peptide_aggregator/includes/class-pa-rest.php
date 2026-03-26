@@ -234,6 +234,7 @@ class PA_Rest {
                         $product['tags']   = (array) ($product['tags'] ?? []);
                         $product['tags'][] = 'kit';
                     }
+                    $product['_is_kit_product'] = true;
                 }
             }
             unset($product);
