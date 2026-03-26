@@ -914,8 +914,11 @@ class PA_Admin {
                 }
                 if (currentKitFilter) {
                     list = list.filter(function(p) {
-                        var tags = (p.tags || []).map(function(t) { return t.toLowerCase(); });
-                        return tags.indexOf('kit') !== -1 || tags.indexOf('kits') !== -1 || tags.indexOf('kit_auto') !== -1;
+                        var pid = String(p.id);
+                        var overrideTags = PA_TAG_OVERRIDES.hasOwnProperty(pid) ? PA_TAG_OVERRIDES[pid] : null;
+                        if (!overrideTags) return false;
+                        var tags = overrideTags.map(function(t) { return t.toLowerCase(); });
+                        return tags.indexOf('kit') !== -1 || tags.indexOf('kits') !== -1;
                     });
                 }
                 return list;
