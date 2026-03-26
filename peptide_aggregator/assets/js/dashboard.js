@@ -255,12 +255,12 @@
     if (state.barFilters.favourites || (state.applied && state.applied.toggles.likes)) {
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
-    // Kit products: name contains the word "kit/kits", or tagged 'kit'/'kits'.
+    // Kit products: category contains "kit/kits", or tagged 'kit'/'kits'.
     // When filter is OFF they are hidden from the normal grid.
     // When filter is ON only kit products are shown.
     var kitRe = /\bkits?\b/i;
     function isKitProduct(p) {
-      if (kitRe.test(p.name || '')) return true;
+      if (kitRe.test(p.category || '')) return true;
       return (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
