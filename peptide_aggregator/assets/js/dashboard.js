@@ -874,10 +874,15 @@
       btn.addEventListener('click', function() { state.detailStockFilter = mode; renderDetailVendors(vendors); });
       barCenter.appendChild(btn);
     });
+    // Only show Vials/Kits type buttons if the loaded prices actually contain that type.
+    var hasKitVendor = (vendors || []).some(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+    var hasVialVendor = (vendors || []).some(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
     var typeSep = el('span', 'pa-dpbar-sep');
     barCenter.appendChild(typeSep);
     [['all', 'All'], ['vial', 'Vials'], ['kit', 'Kits']].forEach(function(pair) {
       var mode = pair[0], label = pair[1];
+      if (mode === 'kit' && !hasKitVendor) return;
+      if (mode === 'vial' && !hasVialVendor) return;
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === mode ? ' is-active' : ''), label);
       btn.type = 'button';
       btn.addEventListener('click', (function(m) { return function() { state.detailTypeFilter = m; renderDetailDosageGrid(); }; })(mode));
