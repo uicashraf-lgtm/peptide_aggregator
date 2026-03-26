@@ -139,8 +139,16 @@ class PA_Rest {
                     // (e.g. "BPC-157 10mg"). Products whose name has no dosage
                     // suffix are separate products (e.g. non-kit "Retatrutide"
                     // alongside kit "Retatrutide") and must not inherit the tag.
-                    if (preg_match($dosage_re, $product['name'] ?? '')) {
-                        $product['tags'] = $tag_overrides[$base];
+                    // Also never propagate kit/kits via base-name — kit identity
+                    // must only come from an ID-specific override so that dosage
+                    // variants from other vendors are not incorrectly kit-tagged.
+                    $base_tags = $tag_overrides[$base];
+                    $base_has_kit = !empty(array_filter((array) $base_tags, function($t) {
+                        $tl = strtolower($t);
+                        return $tl === 'kit' || $tl === 'kits';
+                    }));
+                    if (!$base_has_kit && preg_match($dosage_re, $product['name'] ?? '')) {
+                        $product['tags'] = $base_tags;
                     }
                 }
             }
