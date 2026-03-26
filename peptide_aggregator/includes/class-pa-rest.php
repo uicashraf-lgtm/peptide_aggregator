@@ -227,21 +227,45 @@ class PA_Rest {
             set_transient('pa_products_cache', $products, 60);
         } // end cache miss block
 
-        // Inject 'kit' tag for admin-designated kit products — always applied fresh.
-        // Matches by product name (pa_kit_product_names) because the admin uses
-        // /api/admin/products and the frontend uses /api/products — different endpoints
-        // with different numeric IDs. Name is the common key between the two.
-        $kit_names = array_map('strtolower', (array) get_option('pa_kit_product_names', array()));
-        if (!empty($kit_names) && is_array($products)) {
+        // Mark admin-designated kit products and their specific vendor entries fresh
+        // on every request (never cached) so admin changes apply immediately.
+        //
+        // pa_kit_vendor_map = { lowercase_product_name => original_name_prefix }
+        // e.g. { 'retatrutide' => 'EZP-3P' }
+        //
+        // The original_name prefix uniquely identifies the kit vendor's listings in
+        // the public API (e.g. "EZP-3P 6mg (GLP-3RT)" starts with "EZP-3P") while
+        // other vendors like GenPeptide ("Reta-GP ...") and Ameanopeptides ("AMP-3P ...")
+        // do not match, so they remain non-kit.
+        $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
+        if (!empty($kit_vendor_map) && is_array($products)) {
             foreach ($products as &$product) {
-                $pname = strtolower(trim($product['name'] ?? ''));
-                if ($pname !== '' && in_array($pname, $kit_names, true)) {
-                    $existing = array_map('strtolower', (array) ($product['tags'] ?? []));
-                    if (!in_array('kit', $existing, true)) {
-                        $product['tags']   = (array) ($product['tags'] ?? []);
-                        $product['tags'][] = 'kit';
+                $pname_lc = strtolower(trim($product['name'] ?? ''));
+                if (!isset($kit_vendor_map[$pname_lc])) continue;
+                $prefix = $kit_vendor_map[$pname_lc]; // e.g. "EZP-3P"
+                $product['_is_kit_product'] = true;
+                // Mark matching vendor entries in top_vendors.
+                if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
+                    foreach ($product['top_vendors'] as &$vendor) {
+                        if (strpos($vendor['product_name'] ?? '', $prefix) === 0) {
+                            $vendor['_is_kit'] = true;
+                        }
                     }
-                    $product['_is_kit_product'] = true;
+                    unset($vendor);
+                }
+                // Mark matching vendor entries in available_dosages.
+                if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
+                    foreach ($product['available_dosages'] as &$dosage) {
+                        if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
+                            foreach ($dosage['vendors'] as &$vendor) {
+                                if (strpos($vendor['product_name'] ?? '', $prefix) === 0) {
+                                    $vendor['_is_kit'] = true;
+                                }
+                            }
+                            unset($vendor);
+                        }
+                    }
+                    unset($dosage);
                 }
             }
             unset($product);
