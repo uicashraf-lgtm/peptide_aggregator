@@ -875,6 +875,8 @@ class PA_Admin {
                 }
                 echo wp_json_encode(array_values($kit_ids));
             ?>;
+            console.log('[PA] PA_KIT_IDS on load:', PA_KIT_IDS);
+            console.log('[PA] PA_TAG_OVERRIDES on load:', PA_TAG_OVERRIDES);
             var PER_PAGE = 25;
             var currentPage = 1;
             var currentSearch = '';
