@@ -19,6 +19,11 @@ class PA_Rest {
             'callback'            => array($this, 'get_products'),
             'permission_callback' => '__return_true',
         ));
+        register_rest_route('pa/v1', '/debug/kits', array(
+            'methods'             => 'GET',
+            'callback'            => array($this, 'debug_kits'),
+            'permission_callback' => '__return_true',
+        ));
         register_rest_route('pa/v1', '/debug/tag-overrides', array(
             'methods'             => 'GET',
             'callback'            => array($this, 'debug_tag_overrides'),
@@ -244,6 +249,28 @@ class PA_Rest {
         $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
         $response->header('Pragma', 'no-cache');
         return $response;
+    }
+
+    public function debug_kits() {
+        $kit_ids  = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+        $result   = $this->api->request('GET', '/api/products');
+        $matched  = array();
+        $all_ids  = array();
+        if ($result['ok'] && is_array($result['data'])) {
+            foreach ($result['data'] as $p) {
+                $pid = (int) ($p['id'] ?? 0);
+                $all_ids[] = $pid;
+                if ($pid > 0 && in_array($pid, $kit_ids, true)) {
+                    $matched[] = array('id' => $pid, 'name' => $p['name'] ?? '', 'tags' => $p['tags'] ?? array());
+                }
+            }
+        }
+        return rest_ensure_response(array(
+            'pa_kit_product_ids' => $kit_ids,
+            'matched_products'   => $matched,
+            'total_products'     => count($all_ids),
+            'note'               => empty($kit_ids) ? 'pa_kit_product_ids is EMPTY — no kits are designated in admin' : count($matched) . ' of ' . count($kit_ids) . ' kit IDs matched products in the API',
+        ));
     }
 
     public function debug_tag_overrides() {
