@@ -916,6 +916,7 @@ class PA_Admin {
                     });
                 }
                 if (currentKitFilter) {
+                    console.log('[PA] filtering by kit, PA_KIT_IDS=', PA_KIT_IDS, 'first product id sample=', PA_PRODUCTS.length ? PA_PRODUCTS[0].id : 'none');
                     list = list.filter(function(p) {
                         return PA_KIT_IDS.indexOf(Number(p.id)) !== -1;
                     });
@@ -1148,6 +1149,7 @@ class PA_Admin {
                                         span.style.fontWeight = 'bold';
                                         span.title = 'Click to remove kit tag';
                                         if (PA_KIT_IDS.indexOf(Number(pid)) === -1) PA_KIT_IDS.push(Number(pid));
+                                        console.log('[PA] kit toggled ON, pid=', pid, 'Number(pid)=', Number(pid), 'PA_KIT_IDS=', PA_KIT_IDS.slice());
                                     } else {
                                         span.innerHTML = '&#9671;';
                                         span.style.color = '#999';
@@ -1186,6 +1188,7 @@ class PA_Admin {
                 this.style.color = currentKitFilter ? '#fff' : '';
                 this.style.borderColor = currentKitFilter ? '#2271b1' : '';
                 currentPage = 1;
+                console.log('[PA] Kits Only clicked, currentKitFilter=', currentKitFilter, 'PA_KIT_IDS=', PA_KIT_IDS.slice());
                 renderTable();
             });
             document.getElementById('pa-clear-btn').addEventListener('click', function() {
