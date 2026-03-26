@@ -133,11 +133,7 @@
     var order = [];
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
-      // Kit products get a separate grouping key so they never merge with
-      // non-kit products that share the same base name (e.g. "Retatrutide").
-      var pIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; })
-                   || /\bkits?\b/i.test(p.category || '');
-      var key = pd.base.toLowerCase() + (pIsKit ? '__kit' : '');
+      var key = pd.base.toLowerCase();
       // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
       // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
       // so their vendors are identified by product_name only.
@@ -149,7 +145,6 @@
         map[key] = {
           id: p.id, name: pd.base, category: p.category,
           description: p.description, dosages: [],
-          _is_kit_product: pIsKit,
           top_vendors: (p.top_vendors || []).map(stampVendor),
           min_price: p.min_price,
           vendor_count: p.vendor_count,
@@ -228,13 +223,10 @@
       const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
-      // Debug: log raw Retatrutide entries before grouping, and kit products after grouping.
-      var rawRet = (Array.isArray(raw) ? raw : []).filter(function(p) { return (p.name || '').toLowerCase().includes('retatrutide'); });
-      console.log('[PA] raw retatrutide entries:', rawRet.map(function(p) { return {id: p.id, name: p.name, tags: p.tags, category: p.category}; }));
-      var kitProds = state.allProducts.filter(function(p) { return p._is_kit_product === true; });
-      console.log('[PA] kit products after groupByDosage:', kitProds.map(function(p) { return {name: p.name, tags: p.tags, _is_kit_product: p._is_kit_product}; }));
-      var nonKitRet = state.allProducts.filter(function(p) { return (p.name || '').toLowerCase().includes('retatrutide') && !p._is_kit_product; });
-      console.log('[PA] non-kit retatrutide after groupByDosage:', nonKitRet.map(function(p) { return {name: p.name, tags: p.tags, _is_kit_product: p._is_kit_product}; }));
+      // Debug: log any products that have non-empty tags so kit filter issues are visible.
+      var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
+      if (tagged.length) console.log('[PA] products with tags:', tagged.map(function(p) { return p.name + ': ' + JSON.stringify(p.tags); }));
+      else console.log('[PA] no products have tags in this response');
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
@@ -263,14 +255,20 @@
     if (state.barFilters.favourites || (state.applied && state.applied.toggles.likes)) {
       list = list.filter(function (p) { return state.favourites.has(p.id); });
     }
-    // Kit products are identified by the _is_kit_product flag set in groupByDosage,
-    // which gives kit products their own grouping key so they never merge with
-    // non-kit products sharing the same base name.
-    function isKitProduct(p) { return p._is_kit_product === true; }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      list = list.filter(isKitProduct);
-    } else {
-      list = list.filter(function(p) { return !isKitProduct(p); });
+      list = list.filter(function (p) {
+        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
+        var allVendors = [];
+        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
+        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
+        if (allVendors.some(function(v) { return v._is_kit === true || (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        // Fallback: admin/server tag ('kit', 'kits', or PHP auto-detected 'kit_auto').
+        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto'; })) return true;
+        // Last resort: available_dosages label.
+        return (p.available_dosages || []).some(function (d) {
+          return (d.label || d || '').toString().toLowerCase().includes('kit');
+        });
+      });
     }
     if (state.applied && state.applied.toggles.blends) {
       list = list.filter(function (p) {
@@ -317,16 +315,31 @@
     });
   }
 
-  // When the kits filter is active, kit products are shown exclusively (they only contain kit
-  // vendors by definition), so no vendor-level filtering is needed — just deduplicate by
-  // vendor name to prevent double entries from groupByDosage merges.
+  // When the kits filter is active, restrict a vendor list to kit vendors only.
+  // Uses the same principle as the detail view's Kits button: a vendor entry is
+  // a kit if its product_name contains "kit" (case-insensitive). If the dosage
+  // label itself contains "kit" all its vendors are implicitly kit vendors.
   function kitFilterVendors(vendors, dosage) {
-    var seen = {};
-    return (vendors || []).filter(function(v) {
-      if (seen[v.vendor]) return false;
-      seen[v.vendor] = true;
-      return true;
+    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) {
+      // Deduplicate by vendor name (keep first = lowest price) since the same vendor may appear
+      // with both kit and non-kit entries after groupByDosage merges same-named products.
+      var seen = {};
+      return (vendors || []).filter(function(v) {
+        if (seen[v.vendor]) return false;
+        seen[v.vendor] = true;
+        return true;
+      });
+    }
+    if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
+    // Primary: product_name contains "kit" (same logic as the detail view Kits button,
+    // works when the prices endpoint returns full names like "EZP-3P 6mg – (10 vials/Kit)").
+    var byName = (vendors || []).filter(function(v) {
+      return (v.product_name || '').toLowerCase().includes('kit');
     });
+    if (byName.length > 0) return byName;
+    // Fallback: _is_kit flag set from admin-tagged source product (products endpoint uses
+    // abbreviated names that may not contain "kit", so fall back to the flag).
+    return (vendors || []).filter(function(v) { return v._is_kit === true; });
   }
 
   // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).
