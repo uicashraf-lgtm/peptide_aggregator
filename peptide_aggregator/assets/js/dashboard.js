@@ -320,7 +320,16 @@
   // Otherwise filter by _is_kit flag (stamped in groupByDosage from source product's kit tag),
   // falling back to product_name containing "kit" for legacy entries without the flag.
   function kitFilterVendors(vendors, dosage) {
-    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) return vendors || [];
+    if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) {
+      // Deduplicate by vendor name (keep first = lowest price) since the same vendor may appear
+      // with both _is_kit:true and _is_kit:false after groupByDosage merges same-named products.
+      var seen = {};
+      return (vendors || []).filter(function(v) {
+        if (seen[v.vendor]) return false;
+        seen[v.vendor] = true;
+        return true;
+      });
+    }
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
     return (vendors || []).filter(function(v) {
       return v._is_kit === true || (v._is_kit === undefined && (v.product_name || '').toLowerCase().includes('kit'));
