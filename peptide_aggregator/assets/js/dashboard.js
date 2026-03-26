@@ -214,15 +214,6 @@
         map[k].vendor_count = first.vendor_count;
       }
     });
-    // Debug: log merged vendor _is_kit flags for diagnosis
-    order.forEach(function(k) {
-      var grp = map[k];
-      var allV = (grp.top_vendors || []);
-      (grp.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allV = allV.concat(v); }); });
-      if (allV.some(function(v) { return v._is_kit; })) {
-        console.log('[PA groupByDosage] ' + k + ' vendors:', allV.map(function(v){ return v.vendor+'(_is_kit:'+v._is_kit+')'; }));
-      }
-    });
     return order.map(function (k) { return map[k]; });
   }
 
@@ -325,13 +316,13 @@
   }
 
   // When the kits filter is active, restrict a vendor list to kit vendors only.
-  // If the dosage label contains "kit", all its vendors are implicitly kit vendors.
-  // Otherwise filter by _is_kit flag (stamped in groupByDosage from source product's kit tag),
-  // falling back to product_name containing "kit" for legacy entries without the flag.
+  // Uses the same principle as the detail view's Kits button: a vendor entry is
+  // a kit if its product_name contains "kit" (case-insensitive). If the dosage
+  // label itself contains "kit" all its vendors are implicitly kit vendors.
   function kitFilterVendors(vendors, dosage) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) {
       // Deduplicate by vendor name (keep first = lowest price) since the same vendor may appear
-      // with both _is_kit:true and _is_kit:false after groupByDosage merges same-named products.
+      // with both kit and non-kit entries after groupByDosage merges same-named products.
       var seen = {};
       return (vendors || []).filter(function(v) {
         if (seen[v.vendor]) return false;
@@ -340,18 +331,16 @@
       });
     }
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    var kept = (vendors || []).filter(function(v) {
-      return v._is_kit === true || (v._is_kit === undefined && (v.product_name || '').toLowerCase().includes('kit'));
+    return (vendors || []).filter(function(v) {
+      return (v.product_name || '').toLowerCase().includes('kit');
     });
-    console.log('[PA kitFilter] dosage:"' + (dosage && dosage.label) + '" in:', (vendors||[]).map(function(v){return v.vendor+'(kit='+v._is_kit+',name='+v.product_name+')';}), '→ kept:', kept.map(function(v){return v.vendor;}));
-    return kept;
   }
 
   // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).
   function isKitDosage(d) {
     if ((d.label || '').toLowerCase().includes('kit')) return true;
     return (d.top_vendors || []).some(function(v) {
-      return v._is_kit === true || (v._is_kit === undefined && (v.product_name || '').toLowerCase().includes('kit'));
+      return (v.product_name || '').toLowerCase().includes('kit');
     });
   }
 
@@ -488,7 +477,12 @@
     // Tag row: category badge + semantic tags from API
     var allTagItems = [];
     if (p.category) allTagItems.push({ text: p.category, isCat: true });
-    (p.tags || []).forEach(function(t) { allTagItems.push({ text: t, isCat: false }); });
+    (p.tags || []).forEach(function(t) {
+      // Skip internal/admin-only tags that should not be shown to users.
+      var tl = t.toLowerCase();
+      if (tl === 'kit_auto' || tl.includes('exclude')) return;
+      allTagItems.push({ text: t, isCat: false });
+    });
     var tagRow = el('div', 'pa-pcard-tags');
     allTagItems.forEach(function(t) {
       var badge = el('span', t.isCat ? 'pa-cat-badge' : 'pa-tag-badge');
