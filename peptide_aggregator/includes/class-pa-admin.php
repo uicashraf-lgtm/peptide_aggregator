@@ -861,6 +861,20 @@ class PA_Admin {
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
+            // Product IDs explicitly tagged as kit — only numeric keys from the
+            // overrides option, never base-name keys.
+            var PA_KIT_IDS = <?php
+                $kit_ids = array();
+                foreach ($tag_overrides as $key => $tags_val) {
+                    if (is_numeric($key) && is_array($tags_val)) {
+                        $lc = array_map('strtolower', $tags_val);
+                        if (in_array('kit', $lc, true) || in_array('kits', $lc, true)) {
+                            $kit_ids[] = (int) $key;
+                        }
+                    }
+                }
+                echo wp_json_encode(array_values($kit_ids));
+            ?>;
             var PER_PAGE = 25;
             var currentPage = 1;
             var currentSearch = '';
@@ -914,11 +928,7 @@ class PA_Admin {
                 }
                 if (currentKitFilter) {
                     list = list.filter(function(p) {
-                        var pid = String(p.id);
-                        var overrideTags = PA_TAG_OVERRIDES.hasOwnProperty(pid) ? PA_TAG_OVERRIDES[pid] : null;
-                        if (!overrideTags) return false;
-                        var tags = overrideTags.map(function(t) { return t.toLowerCase(); });
-                        return tags.indexOf('kit') !== -1 || tags.indexOf('kits') !== -1;
+                        return PA_KIT_IDS.indexOf(Number(p.id)) !== -1;
                     });
                 }
                 return list;
@@ -1466,6 +1476,11 @@ class PA_Admin {
                                 + '&product_id=' + encodeURIComponent(String(productId))
                                 + '&tags=' + encodeURIComponent(JSON.stringify(tags)));
                             PA_TAG_OVERRIDES[String(productId)] = tags.slice();
+                            // Keep PA_KIT_IDS in sync with the saved tags.
+                            var _numId = Number(productId);
+                            var _hasKit = tags.some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kits'; });
+                            PA_KIT_IDS = PA_KIT_IDS.filter(function(id) { return id !== _numId; });
+                            if (_hasKit) PA_KIT_IDS.push(_numId);
                             reloadProducts(function() {
                                 loadProduct(productId);
                                 showNotice('success', 'Product updated.');
