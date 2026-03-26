@@ -916,6 +916,7 @@ class PA_Admin {
                     });
                 }
                 if (currentKitFilter) {
+                    console.log('[PA] PA_KIT_IDS=', PA_KIT_IDS, 'sample p.id values=', list.slice(0,5).map(function(p){return p.id;}));
                     list = list.filter(function(p) {
                         return PA_KIT_IDS.indexOf(Number(p.id)) !== -1;
                     });
