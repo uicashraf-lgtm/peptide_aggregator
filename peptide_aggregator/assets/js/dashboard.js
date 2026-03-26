@@ -212,6 +212,15 @@
         map[k].vendor_count = first.vendor_count;
       }
     });
+    // Debug: log merged vendor _is_kit flags for diagnosis
+    order.forEach(function(k) {
+      var grp = map[k];
+      var allV = (grp.top_vendors || []);
+      (grp.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allV = allV.concat(v); }); });
+      if (allV.some(function(v) { return v._is_kit; })) {
+        console.log('[PA groupByDosage] ' + k + ' vendors:', allV.map(function(v){ return v.vendor+'(_is_kit:'+v._is_kit+')'; }));
+      }
+    });
     return order.map(function (k) { return map[k]; });
   }
 
@@ -329,9 +338,11 @@
       });
     }
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    return (vendors || []).filter(function(v) {
+    var kept = (vendors || []).filter(function(v) {
       return v._is_kit === true || (v._is_kit === undefined && (v.product_name || '').toLowerCase().includes('kit'));
     });
+    console.log('[PA kitFilter] dosage:"' + (dosage && dosage.label) + '" in:', (vendors||[]).map(function(v){return v.vendor+'(kit='+v._is_kit+',name='+v.product_name+')';}), '→ kept:', kept.map(function(v){return v.vendor;}));
+    return kept;
   }
 
   // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).
