@@ -703,15 +703,39 @@ class PA_Admin {
         // endpoint so admins can see — and then override — any tags that are
         // currently displayed to visitors but invisible in the admin UI.
         $public_resp = $this->api->request('GET', '/api/products');
-        $public_tags_by_id       = array();
-        $public_dosages_by_id    = array();
+        $public_tags_by_id        = array();
+        $public_dosages_by_id     = array();
+        // Also index dosages by lowercased base name (dosage suffix stripped) so
+        // we can populate available_dosages even when product IDs differ between
+        // the admin and public endpoints, or when the individual product has no
+        // dosages but a same-group variant does (mirrors groupByDosage merging).
+        $public_dosages_by_base   = array();
+        $dosage_re_pub = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
         if ($public_resp['ok'] && is_array($public_resp['data'])) {
             foreach ($public_resp['data'] as $fp) {
-                $fpid = (string) ($fp['id'] ?? '');
+                $fpid   = (string) ($fp['id'] ?? '');
+                $fpbase = strtolower(trim(preg_replace($dosage_re_pub, '', $fp['name'] ?? '')));
                 if ($fpid !== '') {
-                    $public_tags_by_id[$fpid]    = array_values((array) ($fp['tags'] ?? array()));
-                    if (!empty($fp['available_dosages'])) {
+                    $public_tags_by_id[$fpid] = array_values((array) ($fp['tags'] ?? array()));
+                }
+                if (!empty($fp['available_dosages'])) {
+                    if ($fpid !== '') {
                         $public_dosages_by_id[$fpid] = $fp['available_dosages'];
+                    }
+                    // Merge into the base-name bucket (dedup by label).
+                    if ($fpbase !== '') {
+                        if (!isset($public_dosages_by_base[$fpbase])) {
+                            $public_dosages_by_base[$fpbase] = array();
+                        }
+                        foreach ($fp['available_dosages'] as $d) {
+                            $lbl = is_array($d) ? ($d['label'] ?? '') : (string) $d;
+                            $existing_lbls = array_map(function($e) {
+                                return is_array($e) ? ($e['label'] ?? '') : (string) $e;
+                            }, $public_dosages_by_base[$fpbase]);
+                            if ($lbl !== '' && !in_array($lbl, $existing_lbls, true)) {
+                                $public_dosages_by_base[$fpbase][] = $d;
+                            }
+                        }
                     }
                 }
             }
@@ -719,20 +743,24 @@ class PA_Admin {
         // Fill in missing tags and available_dosages from the public endpoint
         // so the admin sees the same data the frontend displays.
         foreach ($products as &$product) {
-            $pid = (string) ($product['id'] ?? '');
-            if ($pid === '') continue;
-            if (empty($product['tags']) && isset($public_tags_by_id[$pid])) {
+            $pid  = (string) ($product['id'] ?? '');
+            $base = strtolower(trim(preg_replace($dosage_re_pub, '', $product['name'] ?? '')));
+            if ($pid === '' && $base === '') continue;
+            if (!empty($pid) && empty($product['tags']) && isset($public_tags_by_id[$pid])) {
                 $product['tags'] = $public_tags_by_id[$pid];
             }
-            // Always use the public endpoint's available_dosages — it contains
-            // label objects (e.g. "single", "5 pack") that the frontend and dose
-            // labels editor both rely on. The admin API either omits this field
-            // or returns a different structure.
-            if (isset($public_dosages_by_id[$pid])) {
+            // Populate available_dosages: prefer exact ID match, fall back to
+            // base-name bucket which aggregates all variants' dosage labels.
+            if (!empty($pid) && isset($public_dosages_by_id[$pid])) {
                 $product['available_dosages'] = $public_dosages_by_id[$pid];
+            } elseif ($base !== '' && isset($public_dosages_by_base[$base])) {
+                $product['available_dosages'] = $public_dosages_by_base[$base];
             }
         }
         unset($product);
+        // Pass the base-name dosage map to JS so loadProduct() can also collect
+        // dosage labels from group siblings without another network round-trip.
+        $public_dosages_by_base_js = $public_dosages_by_base;
 
         // Apply admin tag overrides — stored in WordPress so they survive scraper re-runs
         // that re-assign tags on the backend.
@@ -919,6 +947,7 @@ class PA_Admin {
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_PUBLIC_TAGS = <?php echo wp_json_encode($public_tags_by_id); ?>;
             var PA_PUBLIC_DOSAGES = <?php echo wp_json_encode($public_dosages_by_id); ?>;
+            var PA_PUBLIC_DOSAGES_BY_BASE = <?php echo wp_json_encode($public_dosages_by_base_js); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
             var PA_KIT_IDS = <?php echo wp_json_encode($kit_ids); ?>;
             var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
@@ -1507,14 +1536,31 @@ class PA_Admin {
                 // base-name key that groupByDosage() produces on the frontend.
                 currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
-                // Prefer available_dosages labels — these are the exact keys the
-                // frontend passes to getDoseLabel(), so edits here round-trip
-                // correctly. Fall back to the dosages array (mg amounts) only if
-                // available_dosages is absent.
+                // Collect available_dosages labels from ALL variants in this
+                // product's group, mirroring groupByDosage() on the frontend.
+                // The individual product may have no dosages while a sibling
+                // variant (e.g. "NAD+ Buffered 500mg") carries them all.
+                // Sources tried in order: PA_PRODUCTS group merge →
+                //   PA_PUBLIC_DOSAGES_BY_BASE (PHP-built) → p.dosages fallback.
                 var doseLabelList = [];
-                if (p.available_dosages && p.available_dosages.length) {
-                    doseLabelList = p.available_dosages.map(function(d) { return d.label || d; });
-                } else if (p.dosages && p.dosages.length) {
+                var pBaseKey = currentDoseLabelProductName;
+                // 1. Collect from all group members in PA_PRODUCTS.
+                PA_PRODUCTS.forEach(function(sp) {
+                    if (getBaseName(sp.name) !== pBaseKey) return;
+                    (sp.available_dosages || []).forEach(function(d) {
+                        var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
+                        if (lbl && doseLabelList.indexOf(lbl) === -1) doseLabelList.push(lbl);
+                    });
+                });
+                // 2. If still empty, fall back to the PHP-built base-name bucket.
+                if (!doseLabelList.length && PA_PUBLIC_DOSAGES_BY_BASE.hasOwnProperty(pBaseKey)) {
+                    PA_PUBLIC_DOSAGES_BY_BASE[pBaseKey].forEach(function(d) {
+                        var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
+                        if (lbl && doseLabelList.indexOf(lbl) === -1) doseLabelList.push(lbl);
+                    });
+                }
+                // 3. Last resort: raw dosage amounts from the admin API.
+                if (!doseLabelList.length && p.dosages && p.dosages.length) {
                     doseLabelList = p.dosages;
                 }
                 renderDoseLabelsSection(doseLabelList);
