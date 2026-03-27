@@ -64,13 +64,18 @@
   };
   function catColor(cat) { return CAT_COLORS[cat] || '#2a3f5a'; }
 
-  // Return the custom display label for a dose, or the original if none is set
+  // Return the custom display label for a dose, or the original if none is set.
+  // Returns null when the dose has been hidden via the admin Dose Labels editor.
   function getDoseLabel(productName, originalLabel) {
     var key = (productName || '').toLowerCase().trim();
     var labelMap = (UI.dose_labels && UI.dose_labels[key]) || {};
     // Normalize: lowercase + strip whitespace so "5 mg" and "5mg" both match
     var norm = (originalLabel || '').toLowerCase().replace(/\s+/g, '');
-    return labelMap[norm] || labelMap[originalLabel] || originalLabel;
+    var resolved = labelMap.hasOwnProperty(norm) ? labelMap[norm]
+                 : labelMap.hasOwnProperty(originalLabel) ? labelMap[originalLabel]
+                 : null;
+    if (resolved === '__exclude__') return null;
+    return resolved || originalLabel;
   }
 
   // ─── State ────────────────────────────────────────────────────────────────
@@ -557,6 +562,7 @@
       dosages.forEach(function (d, idx) {
         var isActive = idx === activeIdx;
         var displayLabel = getDoseLabel(p.name, d.label);
+        if (displayLabel === null) return; // hidden via admin dose labels
         var pillHtml = (isActive ? '<svg class="pa-pill-star" viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M6 1l1.4 2.8L11 4.3l-2.5 2.4.6 3.4L6 8.5 2.9 10.1l.6-3.4L1 4.3l3.6-.5z"/></svg>' : '') + escHtml(displayLabel);
         var pill = el('button', 'pa-dosage-pill' + (isActive ? ' is-active' : ''), pillHtml);
         pill.type = 'button';
@@ -851,6 +857,7 @@
 
       var labelSpan = el('span', 'pa-ddosage-label');
       var displayLabel = getDoseLabel(state.detailProductName, d.label);
+      if (displayLabel === null) return; // hidden via admin dose labels
       if (isActive) {
         labelSpan.innerHTML = '<svg class="pa-pill-star" viewBox="0 0 12 12" width="10" height="10" fill="currentColor" style="margin-right:3px"><path d="M6 1l1.4 2.8L11 4.3l-2.5 2.4.6 3.4L6 8.5 2.9 10.1l.6-3.4L1 4.3l3.6-.5z"/></svg>' + escHtml(displayLabel);
       } else {
