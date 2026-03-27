@@ -879,9 +879,9 @@ class PA_Admin {
                                 </select>
                             </td>
                         </tr>
-                        <tr>
+                        <tr id="pa-price-range-row" style="display:none">
                             <th></th>
-                            <td><span id="pa-all-prices" style="font-size:12px;color:#555"></span></td>
+                            <td><span id="pa-price-range" style="font-size:12px;color:#555"></span></td>
                         </tr>
                         <tr>
                             <th>Dosage</th>
@@ -1551,45 +1551,19 @@ class PA_Admin {
                     + '&labels=' + encodeURIComponent(JSON.stringify(labels)));
             });
 
-            // ── Per-dosage price list (this product only) ───────────────────
+            // ── Price range note ────────────────────────────────────────────
             function renderVendorPricesSection(p) {
-                var el = document.getElementById('pa-all-prices');
-                if (!el) return;
-
-                // Get available_dosages for this product from the public API data.
-                var pid = String(p.id || '');
-                var baseKey = getBaseName(p.name || '');
-                var rawDosages = null;
-                if (pid && PA_PUBLIC_DOSAGES.hasOwnProperty(pid)) {
-                    rawDosages = PA_PUBLIC_DOSAGES[pid];
-                } else if (p.available_dosages && p.available_dosages.length) {
-                    rawDosages = p.available_dosages;
+                var row = document.getElementById('pa-price-range-row');
+                var el  = document.getElementById('pa-price-range');
+                if (!row || !el) return;
+                var min = p.price_min, max = p.price_max;
+                if (min != null && max != null && max !== min) {
+                    el.innerHTML = 'Range across all dosages/quantities: '
+                        + '<strong>$' + Number(min).toFixed(2) + ' &ndash; $' + Number(max).toFixed(2) + '</strong>';
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
                 }
-                if (!rawDosages || !rawDosages.length) { el.textContent = ''; return; }
-
-                // Find this product's vendor name from top_vendors or vendor_ids.
-                var thisVendor = '';
-                if (p.top_vendors && p.top_vendors.length) thisVendor = (p.top_vendors[0].vendor || '').toLowerCase();
-
-                // Build label → price pairs for this vendor only.
-                var parts = [];
-                rawDosages.forEach(function(d) {
-                    var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
-                    if (!lbl) return;
-                    var vendors = (d && d.vendors) ? d.vendors : [];
-                    // Find this vendor's price in this dosage entry.
-                    var match = null;
-                    if (thisVendor) {
-                        match = vendors.find(function(v) { return (v.vendor || '').toLowerCase() === thisVendor; });
-                    }
-                    // Fall back to first vendor if we can't identify which is ours.
-                    if (!match && vendors.length) match = vendors[0];
-                    if (match && match.price != null) {
-                        parts.push(esc(lbl) + ': <strong>$' + Number(match.price).toFixed(2) + '</strong>');
-                    }
-                });
-
-                el.innerHTML = parts.length ? parts.join(' &nbsp;&middot;&nbsp; ') : '';
             }
 
             // ── Load product into form ──────────────────────────────────────
@@ -1688,7 +1662,7 @@ class PA_Admin {
                 currentDoseLabels = {};
                 document.getElementById('pa_dose_labels_list').innerHTML = '';
                 document.getElementById('pa_dose_labels_save').style.display = 'none';
-                document.getElementById('pa-all-prices').innerHTML = '';
+                document.getElementById('pa-price-range-row').style.display = 'none';
             }
 
             document.getElementById('pa-prod-cancel-btn').addEventListener('click', resetForm);
