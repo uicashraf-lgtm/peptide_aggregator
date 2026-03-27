@@ -325,26 +325,69 @@ class PA_Rest {
             }
         }
 
-        // Fetch public products and show full vendor data for the kit product names.
-        $pub_result   = $this->api->request('GET', '/api/products');
-        $kit_products = array();
+        // Fetch public products, apply injection, and show which vendors are marked _is_kit.
+        $kit_vendor_map  = (array) get_option('pa_kit_vendor_map', array());
+        $kit_exclude_map = (array) get_option('pa_kit_exclude_map', array());
+        $dosage_re_inj   = '/\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?/i';
+        $pub_result      = $this->api->request('GET', '/api/products');
+        $kit_products    = array();
         if ($pub_result['ok'] && is_array($pub_result['data'])) {
             foreach ($pub_result['data'] as $p) {
                 $pname = strtolower(trim($p['name'] ?? ''));
-                if (in_array($pname, $kit_names, true)) {
-                    $kit_products[] = array(
-                        'id'               => $p['id'] ?? '',
-                        'name'             => $p['name'] ?? '',
-                        'top_vendors'      => $p['top_vendors'] ?? array(),
-                        'available_dosages' => $p['available_dosages'] ?? array(),
+                if (!in_array($pname, $kit_names, true)) continue;
+                $prefix     = $kit_vendor_map[$pname] ?? '';
+                $exclusions = (array) ($kit_exclude_map[$pname] ?? array());
+                $summarise_vendors = function($vendors) use ($prefix, $exclusions, $dosage_re_inj) {
+                    $out = array();
+                    foreach ((array) $vendors as $v) {
+                        $pn = $v['product_name'] ?? '';
+                        $would_be_kit = false;
+                        if ($prefix !== '' && strpos($pn, $prefix) === 0) {
+                            $excluded = false;
+                            foreach ($exclusions as $excl) {
+                                if ($excl !== '' && strpos($pn, $excl) === 0) { $excluded = true; break; }
+                            }
+                            if (!$excluded) {
+                                if (preg_match($dosage_re_inj, $pn, $dm, PREG_OFFSET_CAPTURE)) {
+                                    $vp = rtrim(substr($pn, 0, (int) $dm[0][1]));
+                                } else {
+                                    $vp = $pn;
+                                }
+                                $would_be_kit = ($vp === rtrim($prefix));
+                            }
+                        }
+                        $out[] = array(
+                            'vendor'       => $v['vendor'] ?? '',
+                            'product_name' => $pn,
+                            'price'        => $v['price'] ?? null,
+                            'would_be_kit' => $would_be_kit,
+                        );
+                    }
+                    return $out;
+                };
+                $dosages_summary = array();
+                foreach ((array) ($p['available_dosages'] ?? array()) as $d) {
+                    $dosages_summary[] = array(
+                        'label'   => $d['label'] ?? '',
+                        'vendors' => $summarise_vendors($d['vendors'] ?? array()),
                     );
                 }
+                $kit_products[] = array(
+                    'id'               => $p['id'] ?? '',
+                    'name'             => $p['name'] ?? '',
+                    'kit_prefix'       => $prefix,
+                    'exclusions'       => $exclusions,
+                    'top_vendors'      => $summarise_vendors($p['top_vendors'] ?? array()),
+                    'available_dosages' => $dosages_summary,
+                );
             }
         }
 
         return rest_ensure_response(array(
-            'pa_kit_product_ids' => $kit_ids,
-            'admin_kit_products' => $admin_kits,
+            'pa_kit_product_ids'  => $kit_ids,
+            'pa_kit_vendor_map'   => $kit_vendor_map,
+            'pa_kit_exclude_map'  => $kit_exclude_map,
+            'admin_kit_products'  => $admin_kits,
             'public_kit_products' => $kit_products,
         ));
     }
