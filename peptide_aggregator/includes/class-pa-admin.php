@@ -17,6 +17,7 @@ class PA_Admin {
         add_action('wp_ajax_pa_save_dose_labels', array($this, 'ajax_save_dose_labels'));
         add_action('wp_ajax_pa_save_product_tags', array($this, 'ajax_save_product_tags'));
         add_action('wp_ajax_pa_toggle_kit_product', array($this, 'ajax_toggle_kit_product'));
+        add_action('wp_ajax_pa_save_price_tiers', array($this, 'ajax_save_price_tiers'));
     }
 
     public function register_menu() {
@@ -902,6 +903,15 @@ class PA_Admin {
                                 <button type="button" class="button button-small" id="pa_dose_labels_save" style="display:none">Save Dose Labels</button>
                             </td>
                         </tr>
+                        <tr id="pa-price-tiers-row" style="display:none">
+                            <th style="vertical-align:top;padding-top:10px">Price Tiers</th>
+                            <td>
+                                <p class="description" style="margin:0 0 8px 0">All prices scraped for this product, grouped by amount. Edit the label for each tier to control how it appears on the front end.</p>
+                                <div id="pa-price-tiers-list" style="margin-bottom:8px"></div>
+                                <button type="button" class="button button-small" id="pa-price-tiers-save">Save Price Tiers</button>
+                                <span id="pa-price-tiers-status" style="margin-left:8px;font-size:12px;color:#666"></span>
+                            </td>
+                        </tr>
                         <tr><th>In Stock</th><td><label><input type="checkbox" name="in_stock" id="pa_pf_in_stock" checked /> In Stock</label></td></tr>
                         <tr><th>Product URL</th><td><input name="product_url" id="pa_pf_url" type="url" class="regular-text" placeholder="https://vendor.com/product-page" /><p class="description">Used as the "Buy" link on the dashboard.</p></td></tr>
                     </table>
@@ -951,8 +961,10 @@ class PA_Admin {
             var PA_NONCE = '<?php echo wp_create_nonce('pa_toggle_status'); ?>';
             var PA_DELETE_NONCE = '<?php echo wp_create_nonce('pa_product_delete_action'); ?>';
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
+            var PA_PRICE_TIERS_NONCE = '<?php echo wp_create_nonce('pa_price_tiers_action'); ?>';
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
+            var PA_PRICE_TIERS = <?php echo wp_json_encode((object) get_option('pa_price_tiers', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_PUBLIC_TAGS = <?php echo wp_json_encode($public_tags_by_id); ?>;
             var PA_PUBLIC_DOSAGES = <?php echo wp_json_encode($public_dosages_by_id); ?>;
@@ -1551,6 +1563,112 @@ class PA_Admin {
                     + '&labels=' + encodeURIComponent(JSON.stringify(labels)));
             });
 
+            // ── Price tiers ─────────────────────────────────────────────────
+            var currentPriceTiersId = '';
+
+            function loadPriceTiers(pid, pname) {
+                currentPriceTiersId = String(pid);
+                var row  = document.getElementById('pa-price-tiers-row');
+                var list = document.getElementById('pa-price-tiers-list');
+                var status = document.getElementById('pa-price-tiers-status');
+                list.innerHTML = '<em style="color:#999;font-size:12px">Loading prices…</em>';
+                row.style.display = '';
+                status.textContent = '';
+
+                // Existing saved tiers for this product (if any)
+                var saved = (PA_PRICE_TIERS && PA_PRICE_TIERS[currentPriceTiersId]) || [];
+
+                // Fetch all listings from the detail prices endpoint
+                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products/' + encodeURIComponent(pid) + '/prices')
+                    .then(function(r) { return r.json(); })
+                    .then(function(allPrices) {
+                        // Group by amount_mg + amount_unit (same logic as detail view)
+                        var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
+                        var dosageMap = {}, dosageOrder = [];
+                        allPrices.forEach(function(v) {
+                            var lbl = null;
+                            if (v.amount_mg != null && v.amount_unit) {
+                                var amt = v.amount_mg === Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+                                lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
+                            }
+                            if (!lbl) {
+                                var m = (v.product || '').match(DOSAGE_RE);
+                                if (m) lbl = m[1] + ' ' + m[2].toLowerCase();
+                            }
+                            if (!lbl) lbl = 'default';
+                            if (!dosageMap[lbl]) { dosageMap[lbl] = []; dosageOrder.push(lbl); }
+                            dosageMap[lbl].push(v);
+                        });
+                        // Sort dosage labels numerically
+                        dosageOrder.sort(function(a, b) {
+                            return (parseFloat(a) || 0) - (parseFloat(b) || 0);
+                        });
+
+                        if (!dosageOrder.length) {
+                            list.innerHTML = '<em style="color:#999;font-size:12px">No price data found.</em>';
+                            return;
+                        }
+
+                        var html = '<table style="border-collapse:collapse;width:100%">'
+                            + '<thead><tr>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 12px 4px 0;font-weight:600">Amount</th>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 12px 4px 0;font-weight:600">Prices</th>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 0;font-weight:600">Display Label</th>'
+                            + '</tr></thead><tbody>';
+
+                        dosageOrder.forEach(function(lbl) {
+                            var vendors = dosageMap[lbl];
+                            // Find any previously saved label for this amount
+                            var savedTier = saved.find(function(t) { return t.label === lbl || t._amount === lbl; });
+                            var savedLabel = savedTier ? (savedTier.label || lbl) : lbl;
+
+                            var priceList = vendors.map(function(v) {
+                                var price = v.effective_price != null ? '$' + Number(v.effective_price).toFixed(2)
+                                          : v.price != null ? '$' + Number(v.price).toFixed(2) : '--';
+                                return esc(v.vendor || '') + '&nbsp;<strong>' + price + '</strong>';
+                            }).join('&ensp;&middot;&ensp;');
+
+                            html += '<tr style="border-top:1px solid #f0f0f0">'
+                                + '<td style="padding:6px 12px 6px 0;font-size:12px;white-space:nowrap;color:#555">' + esc(lbl) + '</td>'
+                                + '<td style="padding:6px 12px 6px 0;font-size:12px">' + priceList + '</td>'
+                                + '<td style="padding:6px 0"><input type="text" class="pa-tier-label" data-amount="' + esc(lbl) + '" value="' + esc(savedLabel) + '" style="width:140px" /></td>'
+                                + '</tr>';
+                        });
+
+                        html += '</tbody></table>';
+                        list.innerHTML = html;
+                    })
+                    .catch(function() {
+                        list.innerHTML = '<em style="color:#c00;font-size:12px">Could not load prices.</em>';
+                    });
+            }
+
+            document.getElementById('pa-price-tiers-save').addEventListener('click', function() {
+                var status = document.getElementById('pa-price-tiers-status');
+                var inputs = document.querySelectorAll('#pa-price-tiers-list .pa-tier-label');
+                var tiers = [];
+                inputs.forEach(function(inp) {
+                    var amount = inp.dataset.amount || '';
+                    var label  = inp.value.trim();
+                    if (amount) tiers.push({ label: label || amount, _amount: amount, price: null });
+                });
+                status.textContent = 'Saving…';
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', ajaxurl);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function() {
+                    try {
+                        var r = JSON.parse(xhr.responseText);
+                        status.textContent = r.success ? 'Saved.' : 'Error: ' + (r.data || 'unknown');
+                        setTimeout(function() { status.textContent = ''; }, 3000);
+                    } catch(e) { status.textContent = 'Error.'; }
+                };
+                xhr.send('action=pa_save_price_tiers'
+                    + '&_wpnonce=' + encodeURIComponent(PA_PRICE_TIERS_NONCE)
+                    + '&product_id=' + encodeURIComponent(currentPriceTiersId)
+                    + '&tiers=' + encodeURIComponent(JSON.stringify(tiers)));
+            });
+
             // ── Price range note ────────────────────────────────────────────
             function renderVendorPricesSection(p) {
                 var row = document.getElementById('pa-price-range-row');
@@ -1593,6 +1711,7 @@ class PA_Admin {
                 setVal('pa_pf_price', p.price_min);
                 setSelect('pa_pf_currency', 'USD');
                 renderVendorPricesSection(p);
+                loadPriceTiers(pid, p.name);
 
                 var dosageMg = null;
                 var dosageUnit = 'mg';
@@ -1663,6 +1782,8 @@ class PA_Admin {
                 document.getElementById('pa_dose_labels_list').innerHTML = '';
                 document.getElementById('pa_dose_labels_save').style.display = 'none';
                 document.getElementById('pa-price-range-row').style.display = 'none';
+                document.getElementById('pa-price-tiers-row').style.display = 'none';
+                document.getElementById('pa-price-tiers-list').innerHTML = '';
             }
 
             document.getElementById('pa-prod-cancel-btn').addEventListener('click', resetForm);
@@ -2401,5 +2522,38 @@ class PA_Admin {
         })();
         </script>
         <?php
+    }
+
+    public function ajax_save_price_tiers() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_price_tiers_action', '_wpnonce');
+        $product_id = sanitize_text_field(wp_unslash($_POST['product_id'] ?? ''));
+        if ($product_id === '') {
+            wp_send_json_error('Invalid product ID');
+            return;
+        }
+        $tiers_json = wp_unslash($_POST['tiers'] ?? '[]');
+        $tiers      = json_decode($tiers_json, true);
+        if (!is_array($tiers)) $tiers = array();
+        // Sanitise each tier: only allow label and price.
+        $clean = array();
+        foreach ($tiers as $t) {
+            if (!is_array($t)) continue;
+            $label = sanitize_text_field($t['label'] ?? '');
+            $price = isset($t['price']) && is_numeric($t['price']) ? (float) $t['price'] : null;
+            if ($label !== '') {
+                $clean[] = array('label' => $label, 'price' => $price);
+            }
+        }
+        $all = (array) get_option('pa_price_tiers', array());
+        if (empty($clean)) {
+            unset($all[$product_id]);
+        } else {
+            $all[$product_id] = $clean;
+        }
+        update_option('pa_price_tiers', $all, false);
+        wp_send_json_success();
     }
 }

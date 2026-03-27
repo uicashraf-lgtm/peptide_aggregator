@@ -564,9 +564,15 @@
     });
     card.appendChild(tagRow);
 
-    // Build dosage list: prefer available_dosages from API (has per-dosage vendors).
+    // Build dosage list: if admin has saved price tiers for this product use those
+    // (they have correct per-tier prices); otherwise fall back to available_dosages.
     var dosages;
-    if (p.available_dosages && p.available_dosages.length >= 1) {
+    var savedTiers = UI.price_tiers && p.id && UI.price_tiers[String(p.id)];
+    if (savedTiers && savedTiers.length) {
+      dosages = savedTiers.map(function(t) {
+        return { label: t.label || t._amount || '', id: p.id, top_vendors: p.top_vendors || [], vendor_count: (p.top_vendors || []).length, _tier_price: t.price };
+      }).filter(function(d) { return d.label; });
+    } else if (p.available_dosages && p.available_dosages.length >= 1) {
       dosages = p.available_dosages.map(function(d) {
         var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
         var vendors = (d && d.vendors && d.vendors.length > 0) ? d.vendors : p.top_vendors || [];
