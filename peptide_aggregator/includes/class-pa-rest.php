@@ -230,64 +230,37 @@ class PA_Rest {
         // Mark admin-designated kit products and their specific vendor entries fresh
         // on every request (never cached) so admin changes apply immediately.
         //
-        // pa_kit_vendor_map = { lowercase_product_name => original_name_prefix }
-        // e.g. { 'retatrutide' => 'EZP-3P' }
+        // pa_kit_vendor_map  = { lowercase_product_name => original_name_prefix }
+        // pa_kit_exclude_map = { lowercase_product_name => [ sibling original_names ] }
         //
-        // When multiple public products share the same name (e.g. a kit "Retatrutide"
-        // and a non-kit "Retatrutide"), we must only inject _is_kit into the actual
-        // kit product. The kit product is sold exclusively by the EZP vendor, so ALL
-        // of its vendor product_names start with the prefix (e.g. "EZP-3P"). The
-        // non-kit product has vendors from multiple companies (GenPeptide, Ameanopeptides,
-        // etc.) whose product_names do NOT start with the prefix, so we skip it.
-        $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
+        // When a kit and non-kit product share the same name (e.g. both are called
+        // "Semaglutide"), we need to mark only the kit vendor entries. The kit admin
+        // product stores its original_name as the prefix (e.g. "EZP-1P"). Same-name
+        // non-kit products store their original_names as exclusions in pa_kit_exclude_map
+        // (e.g. ["EZP-1P (GLP-1SG)"]). A vendor entry is marked as kit only if its
+        // product_name starts with the prefix AND does NOT start with any exclusion.
+        $kit_vendor_map  = (array) get_option('pa_kit_vendor_map', array());
+        $kit_exclude_map = (array) get_option('pa_kit_exclude_map', array());
         if (!empty($kit_vendor_map) && is_array($products)) {
-            // First pass: collect candidate indices per kit name and identify
-            // which products are kit-only (all non-empty vendor product_names
-            // start with the prefix).
-            $name_buckets = array(); // pname_lc => [ product_index ]
-            foreach ($products as $i => $product) {
+            foreach ($products as &$product) {
                 $pname_lc = strtolower(trim($product['name'] ?? ''));
-                if (isset($kit_vendor_map[$pname_lc]) && $kit_vendor_map[$pname_lc] !== '') {
-                    $name_buckets[$pname_lc][] = $i;
-                }
-            }
-            $inject_map = array(); // product_index => prefix
-            foreach ($name_buckets as $pname_lc => $indices) {
-                $prefix    = $kit_vendor_map[$pname_lc];
-                $kit_only  = array();
-                foreach ($indices as $i) {
-                    $p         = $products[$i];
-                    $all_match = true;
-                    foreach ((array) ($p['top_vendors'] ?? []) as $v) {
-                        $pn = $v['product_name'] ?? '';
-                        if ($pn !== '' && strpos($pn, $prefix) !== 0) { $all_match = false; break; }
-                    }
-                    if ($all_match) {
-                        foreach ((array) ($p['available_dosages'] ?? []) as $d) {
-                            foreach ((array) ($d['vendors'] ?? []) as $v) {
-                                $pn = $v['product_name'] ?? '';
-                                if ($pn !== '' && strpos($pn, $prefix) !== 0) { $all_match = false; break 2; }
-                            }
-                        }
-                    }
-                    if ($all_match) {
-                        $kit_only[] = $i;
-                    }
-                }
-                // Prefer kit-only products; fall back to all if none qualify.
-                foreach ((!empty($kit_only) ? $kit_only : $indices) as $i) {
-                    $inject_map[$i] = $prefix;
-                }
-            }
-            // Second pass: inject kit markers into the selected products.
-            foreach ($products as $i => &$product) {
-                if (!isset($inject_map[$i])) continue;
-                $prefix = $inject_map[$i];
+                if (!isset($kit_vendor_map[$pname_lc]) || $kit_vendor_map[$pname_lc] === '') continue;
+                $prefix      = $kit_vendor_map[$pname_lc];
+                $exclusions  = (array) ($kit_exclude_map[$pname_lc] ?? array());
                 $product['_is_kit_product'] = true;
+                // Returns true when a vendor product_name is the kit entry:
+                // starts with the prefix and does NOT start with any sibling exclusion.
+                $is_kit_vendor = function($pn) use ($prefix, $exclusions) {
+                    if (strpos($pn, $prefix) !== 0) return false;
+                    foreach ($exclusions as $excl) {
+                        if ($excl !== '' && strpos($pn, $excl) === 0) return false;
+                    }
+                    return true;
+                };
                 // Mark matching vendor entries in top_vendors.
                 if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
                     foreach ($product['top_vendors'] as &$vendor) {
-                        if (strpos($vendor['product_name'] ?? '', $prefix) === 0) {
+                        if ($is_kit_vendor($vendor['product_name'] ?? '')) {
                             $vendor['_is_kit'] = true;
                         }
                     }
@@ -298,7 +271,7 @@ class PA_Rest {
                     foreach ($product['available_dosages'] as &$dosage) {
                         if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
                             foreach ($dosage['vendors'] as &$vendor) {
-                                if (strpos($vendor['product_name'] ?? '', $prefix) === 0) {
+                                if ($is_kit_vendor($vendor['product_name'] ?? '')) {
                                     $vendor['_is_kit'] = true;
                                 }
                             }
