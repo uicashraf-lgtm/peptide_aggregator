@@ -241,6 +241,33 @@
           avail.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
         }
       });
+      // Backfill vendors from purchase-size dosage entries ("single", "5 pack", etc.) into
+      // matching mg-amount entries using each vendor's amount_mg + amount_unit fields.
+      // This ensures vendors that only appear under hidden purchase-size tabs (e.g. "single")
+      // are still visible under their corresponding mg-amount tab (e.g. "500 mg").
+      var mgStartRe = /^\d/;
+      map[k].available_dosages.forEach(function(srcDosage) {
+        // Only redistribute from non-mg labels (purchase sizes like "single", "5 pack")
+        if (mgStartRe.test((srcDosage.label || '').trim())) return;
+        (srcDosage.vendors || []).forEach(function(v) {
+          if (v.amount_mg == null || !v.amount_unit) return;
+          var amt = v.amount_mg === Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+          var mgLabel = (amt + ' ' + (v.amount_unit || 'mg')).toLowerCase().replace(/\s+/g, '');
+          var destDosage = map[k].available_dosages.find(function(ad) {
+            return mgStartRe.test((ad.label || '').trim()) &&
+                   (ad.label || '').toLowerCase().replace(/\s+/g, '') === mgLabel;
+          });
+          if (destDosage && !destDosage.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+            destDosage.vendors.push(v);
+          }
+        });
+      });
+      // Re-sort mg-amount entries' vendors by price after backfill
+      map[k].available_dosages.forEach(function(d) {
+        if (mgStartRe.test((d.label || '').trim())) {
+          d.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+        }
+      });
     });
     return order.map(function (k) { return map[k]; });
   }
