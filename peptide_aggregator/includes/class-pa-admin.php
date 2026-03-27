@@ -1430,6 +1430,7 @@ class PA_Admin {
                     // Try normalized key first so existing labels pre-populate correctly.
                     var normKey = (dose || '').toLowerCase().replace(/\s+/g, '');
                     var customLabel = currentDoseLabels[normKey] || currentDoseLabels[dose] || '';
+                    var isHidden = customLabel === '__exclude__';
                     var row = document.createElement('div');
                     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
                     var origSpan = document.createElement('span');
@@ -1442,12 +1443,27 @@ class PA_Admin {
                     input.type = 'text';
                     input.className = 'regular-text';
                     input.placeholder = 'Custom label (leave blank to use original)';
-                    input.value = customLabel;
+                    input.value = isHidden ? '' : customLabel;
                     input.setAttribute('data-dose', dose);
                     input.style.width = '220px';
+                    input.disabled = isHidden;
+                    // Hide checkbox
+                    var hideLabel = document.createElement('label');
+                    hideLabel.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;color:#b32d2e;cursor:pointer;white-space:nowrap';
+                    var hideCheck = document.createElement('input');
+                    hideCheck.type = 'checkbox';
+                    hideCheck.setAttribute('data-dose-hide', dose);
+                    hideCheck.checked = isHidden;
+                    hideCheck.addEventListener('change', function() {
+                        input.disabled = hideCheck.checked;
+                        if (hideCheck.checked) input.value = '';
+                    });
+                    hideLabel.appendChild(hideCheck);
+                    hideLabel.appendChild(document.createTextNode('Hide'));
                     row.appendChild(origSpan);
                     row.appendChild(arrow);
                     row.appendChild(input);
+                    row.appendChild(hideLabel);
                     section.appendChild(row);
                 });
                 saveBtn.style.display = '';
@@ -1460,8 +1476,14 @@ class PA_Admin {
                     var dose = inp.getAttribute('data-dose');
                     // Normalize key: lowercase + no spaces so "5 mg" and "5mg" both resolve
                     var normDose = dose.toLowerCase().replace(/\s+/g, '');
-                    var val = inp.value.trim();
-                    if (val) labels[normDose] = val;
+                    // Check if the matching hide checkbox is checked
+                    var hideChk = document.querySelector('#pa_dose_labels_list input[data-dose-hide="' + dose.replace(/"/g, '\\"') + '"]');
+                    if (hideChk && hideChk.checked) {
+                        labels[normDose] = '__exclude__';
+                    } else {
+                        var val = inp.value.trim();
+                        if (val) labels[normDose] = val;
+                    }
                 });
                 var btn = document.getElementById('pa_dose_labels_save');
                 btn.disabled = true;
