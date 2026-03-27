@@ -990,9 +990,16 @@ class PA_Admin {
                         var isKit = PA_KIT_IDS.indexOf(Number(pid)) !== -1;
                         var pname = p.name || '';
                         var porig = p.original_name || '';
+                        // Collect original_names of all other products with the same name.
+                        // These are the non-kit variants whose vendor listings must be excluded
+                        // from the kit filter even though they share the same prefix.
+                        var siblingOriginals = PA_PRODUCTS
+                            .filter(function(sp) { return sp.id !== p.id && (sp.name || '').toLowerCase() === pname.toLowerCase() && sp.original_name; })
+                            .map(function(sp) { return sp.original_name; });
+                        var siblingAttr = JSON.stringify(siblingOriginals).replace(/"/g,'&quot;');
                         var kitHtml = isKit
-                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-original-name="'+porig.replace(/"/g,'&quot;')+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
-                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-original-name="'+porig.replace(/"/g,'&quot;')+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
+                            ? '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-original-name="'+porig.replace(/"/g,'&quot;')+'" data-sibling-originals="'+siblingAttr+'" data-kit="1" style="color:#7b2fff;cursor:pointer;font-weight:bold" title="Click to remove kit tag">&#9670; Kit</span>'
+                            : '<span class="pa-kit-toggle" data-pid="'+pid+'" data-name="'+pname.replace(/"/g,'&quot;')+'" data-original-name="'+porig.replace(/"/g,'&quot;')+'" data-sibling-originals="'+siblingAttr+'" data-kit="0" style="color:#999;cursor:pointer" title="Click to mark as kit">&#9671;</span>';
 
                         html += '<tr class="pa-product-row" data-pid="'+pid+'">'
                             + '<td>'+esc(String(pid))+'</td>'
@@ -1177,7 +1184,8 @@ class PA_Admin {
                             span.style.opacity = '1';
                         };
                         xhr.onerror = function() { span.style.opacity = '1'; alert('Network error'); };
-                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&product_name=' + encodeURIComponent(pname) + '&product_original_name=' + encodeURIComponent(porig) + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
+                        var siblings = JSON.parse(this.dataset.siblingOriginals || '[]');
+                        xhr.send('action=pa_toggle_kit_product&product_id=' + pid + '&product_name=' + encodeURIComponent(pname) + '&product_original_name=' + encodeURIComponent(porig) + '&sibling_original_names=' + encodeURIComponent(JSON.stringify(siblings)) + '&is_kit=' + (nextKit ? '1' : '0') + '&_wpnonce=' + PA_KIT_NONCE);
                     });
                 });
                 // Pagination
@@ -1760,17 +1768,33 @@ class PA_Admin {
         update_option('pa_kit_product_ids', $kit_ids, false);
         // Update vendor map: {lowercase_product_name => original_name_prefix}.
         // The original_name (e.g. "EZP-3P") is a prefix of the vendor product_name
-        // in the public API (e.g. "EZP-3P 6mg (GLP-3RT)"), uniquely identifying
-        // that vendor's kit entries without matching other vendors' products.
+        // in the public API, identifying that vendor's kit entries.
+        // Also store sibling original_names as exclusions so non-kit variants that
+        // share the same prefix are not incorrectly marked as kit vendors.
+        $key = strtolower(trim($pname));
         if ($pname !== '' && $porig !== '') {
             $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
-            $key = strtolower(trim($pname));
             if ($is_kit) {
                 $kit_vendor_map[$key] = $porig;
             } else {
                 unset($kit_vendor_map[$key]);
             }
             update_option('pa_kit_vendor_map', $kit_vendor_map, false);
+        }
+        // Store sibling original_names to exclude from kit vendor matching.
+        // e.g. for kit "EZP-1P" (Semaglutide), sibling "EZP-1P (GLP-1SG)" must
+        // not be matched even though it shares the same "EZP-1P" prefix.
+        $raw_siblings    = sanitize_text_field(wp_unslash($_POST['sibling_original_names'] ?? '[]'));
+        $sibling_decoded = json_decode($raw_siblings, true);
+        $siblings        = is_array($sibling_decoded) ? array_values(array_filter(array_map('sanitize_text_field', $sibling_decoded))) : array();
+        if ($key !== '') {
+            $exclude_map = (array) get_option('pa_kit_exclude_map', array());
+            if ($is_kit && !empty($siblings)) {
+                $exclude_map[$key] = $siblings;
+            } else {
+                unset($exclude_map[$key]);
+            }
+            update_option('pa_kit_exclude_map', $exclude_map, false);
         }
         delete_transient('pa_products_cache');
         wp_send_json_success(array('is_kit' => $is_kit, 'product_id' => $pid));
