@@ -577,12 +577,13 @@
     }
     // When mg-amount labels (e.g. "500 mg") exist, suppress purchase-size labels
     // ("single", "5 pack", "10 pack", etc.) — show only raw mg amounts by default.
-    // Exception: keep non-mg dosages that are kit dosages so the kit filter still works.
-    var hasMgLabels = dosages.some(function(d) { return /^\d/.test((d.label || '').trim()); });
+    // Skip suppression entirely for kit products so the kit filter is unaffected.
+    var isKitProduct = p._is_kit_product || (p.tags || []).some(function(t) {
+      var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto';
+    });
+    var hasMgLabels = !isKitProduct && dosages.some(function(d) { return /^\d/.test((d.label || '').trim()); });
     if (hasMgLabels) {
-      dosages = dosages.filter(function(d) {
-        return /^\d/.test((d.label || '').trim()) || isKitDosage(d);
-      });
+      dosages = dosages.filter(function(d) { return /^\d/.test((d.label || '').trim()); });
     }
     // Remove dosages hidden via admin dose labels (__exclude__ sentinel) so that
     // the active-index logic and vendor list always start on a visible dosage.
