@@ -240,6 +240,7 @@ class PA_Rest {
         // conventions. The exclusion map adds an extra layer for edge cases.
         $kit_vendor_map  = (array) get_option('pa_kit_vendor_map', array());
         $kit_exclude_map = (array) get_option('pa_kit_exclude_map', array());
+        $kit_ids         = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
         if (!empty($kit_vendor_map) && is_array($products)) {
             foreach ($products as &$product) {
                 $pname_lc = strtolower(trim($product['name'] ?? ''));
@@ -247,6 +248,11 @@ class PA_Rest {
                 $prefix     = $kit_vendor_map[$pname_lc];
                 $exclusions = (array) ($kit_exclude_map[$pname_lc] ?? array());
                 $product['_is_kit_product'] = true;
+                // Only mark individual vendor entries as kit for the designated kit product.
+                // Non-kit siblings with the same name must not have their vendor entries
+                // flagged — otherwise both EZP kit and non-kit entries get _is_kit:true,
+                // and the cheaper non-kit price is shown first in the kit filter.
+                if (!in_array((int) ($product['id'] ?? 0), $kit_ids, true)) continue;
                 // Returns true when a vendor product_name is the kit entry.
                 // Two complementary checks:
                 //   1. Explicit exclusion: does NOT start with any sibling original_name.
