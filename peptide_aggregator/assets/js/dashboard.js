@@ -575,6 +575,12 @@
     } else {
       dosages = p.dosages || [];
     }
+    // When mg-amount labels (e.g. "500 mg") exist, suppress purchase-size labels
+    // ("single", "5 pack", "10 pack", etc.) — show only raw mg amounts by default.
+    var hasMgLabels = dosages.some(function(d) { return /^\d/.test((d.label || '').trim()); });
+    if (hasMgLabels) {
+      dosages = dosages.filter(function(d) { return /^\d/.test((d.label || '').trim()); });
+    }
     // Remove dosages hidden via admin dose labels (__exclude__ sentinel) so that
     // the active-index logic and vendor list always start on a visible dosage.
     dosages = dosages.filter(function(d) { return getDoseLabel(p.name, d.label) !== null; });
