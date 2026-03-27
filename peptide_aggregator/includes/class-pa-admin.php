@@ -810,6 +810,7 @@ class PA_Admin {
                                     <?php endforeach; ?>
                                 </datalist>
                                 <input type="hidden" name="tags" id="pa_pf_tags_hidden" value="" />
+                                <div id="pa_pf_group_tags_note" style="margin-top:6px"></div>
                             </td>
                         </tr>
                         <tr><th>Description</th><td><textarea name="description" id="pa_pf_desc" rows="3" class="large-text"></textarea></td></tr>
@@ -1292,6 +1293,86 @@ class PA_Admin {
                 if (e.key === 'Enter') { e.preventDefault(); addTag(); }
             });
 
+            // ── Group tag note ──────────────────────────────────────────────
+            // The frontend groups dosage variants and merges their tags into one
+            // product card. If "NAD+ Buffered" shows tags on the frontend, those
+            // tags might actually belong to "NAD+ Buffered 500mg" — a different
+            // product in the admin list. This note surfaces that so admins can
+            // find and fix the right variant, or clear the whole group at once.
+            var DOSAGE_RE_ADMIN = /\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i;
+            function getBaseName(name) {
+                return (name || '').replace(DOSAGE_RE_ADMIN, '').trim().toLowerCase();
+            }
+            function renderGroupTagsNote(p) {
+                var noteEl = document.getElementById('pa_pf_group_tags_note');
+                noteEl.innerHTML = '';
+                var pBase = getBaseName(p.name);
+                // Collect variants in the same group that have visible tags.
+                var variants = [];
+                PA_PRODUCTS.forEach(function(sp) {
+                    if (sp.id == p.id) return;
+                    if (getBaseName(sp.name) !== pBase) return;
+                    var visibleTags = (sp.tags || []).filter(function(t) {
+                        var tl = t.toLowerCase();
+                        return tl !== 'kit_auto' && !tl.includes('exclude');
+                    });
+                    if (visibleTags.length) variants.push({ id: sp.id, name: sp.name, tags: visibleTags });
+                });
+                if (!variants.length) return;
+
+                var wrap = document.createElement('div');
+                wrap.style.cssText = 'background:#fff8e1;border:1px solid #ffe082;border-radius:3px;padding:8px 10px;font-size:12px';
+
+                var msg = document.createElement('p');
+                msg.style.cssText = 'margin:0 0 4px;color:#7a5800;font-weight:600';
+                msg.textContent = '\u26a0 The frontend merges tags from all dosage variants. These variants also have tags that appear on the "' + p.name + '" card:';
+                wrap.appendChild(msg);
+
+                variants.forEach(function(v) {
+                    var row = document.createElement('p');
+                    row.style.cssText = 'margin:2px 0;color:#555';
+                    row.innerHTML = '<strong>' + esc(v.name) + '</strong>: ' + v.tags.map(function(t) { return '<em>' + esc(t) + '</em>'; }).join(', ');
+                    wrap.appendChild(row);
+                });
+
+                var clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.className = 'button button-small';
+                clearBtn.style.cssText = 'margin-top:6px;color:#b32d2e;border-color:#b32d2e';
+                clearBtn.textContent = 'Clear tags for all variants in this group';
+                clearBtn.addEventListener('click', function() {
+                    if (!confirm('Clear tags for all variants of "' + p.name + '"? This will save an empty tag override for each variant listed above.')) return;
+                    clearBtn.disabled = true;
+                    clearBtn.textContent = 'Clearing\u2026';
+                    var remaining = variants.length;
+                    variants.forEach(function(v) {
+                        var xhrC = new XMLHttpRequest();
+                        xhrC.open('POST', ajaxurl);
+                        xhrC.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                        xhrC.onload = function() {
+                            try {
+                                var r = JSON.parse(xhrC.responseText);
+                                if (r.success) PA_TAG_OVERRIDES[String(v.id)] = [];
+                            } catch(e) {}
+                            remaining--;
+                            if (remaining === 0) {
+                                reloadProducts(function() {
+                                    loadProduct(p.id);
+                                    showNotice('success', 'Group tags cleared.');
+                                });
+                            }
+                        };
+                        xhrC.onerror = function() { remaining--; };
+                        xhrC.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
+                            + '&product_name=' + encodeURIComponent(v.name)
+                            + '&product_id=' + encodeURIComponent(String(v.id))
+                            + '&tags=' + encodeURIComponent('[]'));
+                    });
+                });
+                wrap.appendChild(clearBtn);
+                noteEl.appendChild(wrap);
+            }
+
             // ── Dose label management ───────────────────────────────────────
             function renderDoseLabelsSection(dosages) {
                 var section = document.getElementById('pa_dose_labels_list');
@@ -1392,6 +1473,7 @@ class PA_Admin {
                 setVal('pa_pf_name', p.name);
                 setVal('pa_pf_category', p.category);
                 renderTags(p.tags || []);
+                renderGroupTagsNote(p);
                 setVal('pa_pf_desc', p.description);
                 setVal('pa_pf_price', p.price_min);
                 setSelect('pa_pf_currency', 'USD');
@@ -1439,6 +1521,7 @@ class PA_Admin {
                 document.getElementById('pa-product-form').reset();
                 document.getElementById('pa_pf_in_stock').checked = true;
                 renderTags([]);
+                document.getElementById('pa_pf_group_tags_note').innerHTML = '';
                 document.getElementById('pa_pf_tag_input').value = '';
                 currentDoseLabelProductName = '';
                 currentDoseLabels = {};
