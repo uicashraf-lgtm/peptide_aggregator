@@ -703,21 +703,29 @@ class PA_Admin {
         // endpoint so admins can see — and then override — any tags that are
         // currently displayed to visitors but invisible in the admin UI.
         $public_resp = $this->api->request('GET', '/api/products');
-        $public_tags_by_id = array();
+        $public_tags_by_id       = array();
+        $public_dosages_by_id    = array();
         if ($public_resp['ok'] && is_array($public_resp['data'])) {
             foreach ($public_resp['data'] as $fp) {
                 $fpid = (string) ($fp['id'] ?? '');
                 if ($fpid !== '') {
-                    $public_tags_by_id[$fpid] = array_values((array) ($fp['tags'] ?? array()));
+                    $public_tags_by_id[$fpid]    = array_values((array) ($fp['tags'] ?? array()));
+                    if (!empty($fp['available_dosages'])) {
+                        $public_dosages_by_id[$fpid] = $fp['available_dosages'];
+                    }
                 }
             }
         }
-        // Fill in missing tags from the public endpoint so the admin sees the
-        // same tags the frontend displays before any override has been saved.
+        // Fill in missing tags and available_dosages from the public endpoint
+        // so the admin sees the same data the frontend displays.
         foreach ($products as &$product) {
             $pid = (string) ($product['id'] ?? '');
-            if ($pid !== '' && empty($product['tags']) && isset($public_tags_by_id[$pid])) {
+            if ($pid === '') continue;
+            if (empty($product['tags']) && isset($public_tags_by_id[$pid])) {
                 $product['tags'] = $public_tags_by_id[$pid];
+            }
+            if (empty($product['available_dosages']) && isset($public_dosages_by_id[$pid])) {
+                $product['available_dosages'] = $public_dosages_by_id[$pid];
             }
         }
         unset($product);
@@ -906,6 +914,7 @@ class PA_Admin {
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_PUBLIC_TAGS = <?php echo wp_json_encode($public_tags_by_id); ?>;
+            var PA_PUBLIC_DOSAGES = <?php echo wp_json_encode($public_dosages_by_id); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
             var PA_KIT_IDS = <?php echo wp_json_encode($kit_ids); ?>;
             var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
@@ -1698,6 +1707,9 @@ class PA_Admin {
                                     p.tags = PA_TAG_OVERRIDES[pid].slice();
                                 } else if ((!p.tags || !p.tags.length) && PA_PUBLIC_TAGS.hasOwnProperty(pid)) {
                                     p.tags = PA_PUBLIC_TAGS[pid].slice();
+                                }
+                                if ((!p.available_dosages || !p.available_dosages.length) && PA_PUBLIC_DOSAGES.hasOwnProperty(pid)) {
+                                    p.available_dosages = PA_PUBLIC_DOSAGES[pid];
                                 }
                             });
                             PA_PRODUCTS = data;
