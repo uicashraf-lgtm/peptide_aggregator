@@ -239,6 +239,10 @@ class PA_Rest {
         // of its vendor product_names start with the prefix (e.g. "EZP-3P"). The
         // non-kit product has vendors from multiple companies (GenPeptide, Ameanopeptides,
         // etc.) whose product_names do NOT start with the prefix, so we skip it.
+        //
+        // Non-kit EZP variants share the same prefix but include a parenthetical
+        // variant code right after it, e.g. "EZP-1P (GLP-1SG) 5mg" vs kit "EZP-1P 5mg".
+        // We exclude vendors whose product_name has " (" immediately after the prefix.
         $kit_vendor_map = (array) get_option('pa_kit_vendor_map', array());
         if (!empty($kit_vendor_map) && is_array($products)) {
             // First pass: collect candidate indices per kit name and identify
@@ -282,12 +286,17 @@ class PA_Rest {
             // Second pass: inject kit markers into the selected products.
             foreach ($products as $i => &$product) {
                 if (!isset($inject_map[$i])) continue;
-                $prefix = $inject_map[$i];
+                $prefix     = $inject_map[$i];
+                $prefix_len = strlen($prefix);
                 $product['_is_kit_product'] = true;
                 // Mark matching vendor entries in top_vendors.
                 if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
                     foreach ($product['top_vendors'] as &$vendor) {
-                        if (strpos($vendor['product_name'] ?? '', $prefix) === 0) {
+                        $pn = $vendor['product_name'] ?? '';
+                        // Match prefix but NOT non-kit variants like "EZP-1P (GLP-1SG) ...".
+                        // Non-kit variants have a parenthetical right after the prefix (" (CODE)");
+                        // kit entries have a dosage or nothing after the prefix (" 5mg", " Kit").
+                        if (strpos($pn, $prefix) === 0 && substr($pn, $prefix_len, 2) !== ' (') {
                             $vendor['_is_kit'] = true;
                         }
                     }
@@ -298,7 +307,8 @@ class PA_Rest {
                     foreach ($product['available_dosages'] as &$dosage) {
                         if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
                             foreach ($dosage['vendors'] as &$vendor) {
-                                if (strpos($vendor['product_name'] ?? '', $prefix) === 0) {
+                                $pn = $vendor['product_name'] ?? '';
+                                if (strpos($pn, $prefix) === 0 && substr($pn, $prefix_len, 2) !== ' (') {
                                     $vendor['_is_kit'] = true;
                                 }
                             }
