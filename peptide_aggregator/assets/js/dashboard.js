@@ -223,6 +223,24 @@
         map[k].min_price = first.min_price;
         map[k].vendor_count = first.vendor_count;
       }
+      // Merge top_vendors from dosage-variant products into matching available_dosages entries.
+      // A vendor whose product name ends with "500mg" (contributing to grp.dosages) should also
+      // appear under the "500 mg" available_dosages tab, even if that tab came from a different
+      // product's available_dosages list that didn't include that vendor.
+      map[k].dosages.forEach(function(dos) {
+        var normDos = (dos.label || '').toLowerCase().replace(/\s+/g, '');
+        var avail = map[k].available_dosages.find(function(ad) {
+          return (ad.label || '').toLowerCase().replace(/\s+/g, '') === normDos;
+        });
+        if (avail) {
+          (dos.top_vendors || []).forEach(function(v) {
+            if (!avail.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+              avail.vendors.push(v);
+            }
+          });
+          avail.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+        }
+      });
     });
     return order.map(function (k) { return map[k]; });
   }
@@ -530,6 +548,9 @@
     } else {
       dosages = p.dosages || [];
     }
+    // Remove dosages hidden via admin dose labels (__exclude__ sentinel) so that
+    // the active-index logic and vendor list always start on a visible dosage.
+    dosages = dosages.filter(function(d) { return getDoseLabel(p.name, d.label) !== null; });
     const vendorList = el('div', 'pa-pcard-vendors');
 
     function renderVendorRows(vList, vendors) {
@@ -824,8 +845,10 @@
     if (sec) sec.style.display = '';
     grid.innerHTML = '';
 
-    // Only show dosages that have at least one vendor matching the active type + formulation filters.
+    // Only show dosages that have at least one vendor matching the active type + formulation filters,
+    // and that are not hidden via admin dose labels (__exclude__ sentinel).
     var visibleDosages = dosages.filter(function(d) {
+      if (getDoseLabel(state.detailProductName, d.label) === null) return false;
       return (d.vendors || []).some(function(v) {
         var name = (v.product_name || '').toLowerCase();
         if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
