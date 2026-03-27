@@ -879,9 +879,9 @@ class PA_Admin {
                                 </select>
                             </td>
                         </tr>
-                        <tr id="pa-vendor-prices-row" style="display:none">
-                            <th style="vertical-align:top;padding-top:10px">All Prices</th>
-                            <td><div id="pa-vendor-prices"></div></td>
+                        <tr>
+                            <th></th>
+                            <td><span id="pa-all-prices" style="font-size:12px;color:#555"></span></td>
                         </tr>
                         <tr>
                             <th>Dosage</th>
@@ -1551,60 +1551,45 @@ class PA_Admin {
                     + '&labels=' + encodeURIComponent(JSON.stringify(labels)));
             });
 
-            // ── Vendor price breakdown ──────────────────────────────────────
+            // ── Per-dosage price list (this product only) ───────────────────
             function renderVendorPricesSection(p) {
-                var row = document.getElementById('pa-vendor-prices-row');
-                var wrap = document.getElementById('pa-vendor-prices');
-                if (!row || !wrap) return;
+                var el = document.getElementById('pa-all-prices');
+                if (!el) return;
 
-                // Resolve available_dosages with full vendor data.
-                // PA_PRODUCTS[].available_dosages may be absent if the admin API product
-                // has no matching ID in the public API. Use PA_PUBLIC_DOSAGES (keyed by
-                // product ID) or PA_PUBLIC_DOSAGES_BY_BASE as authoritative sources.
+                // Get available_dosages for this product from the public API data.
                 var pid = String(p.id || '');
                 var baseKey = getBaseName(p.name || '');
                 var rawDosages = null;
                 if (pid && PA_PUBLIC_DOSAGES.hasOwnProperty(pid)) {
                     rawDosages = PA_PUBLIC_DOSAGES[pid];
-                } else if (baseKey && PA_PUBLIC_DOSAGES_BY_BASE.hasOwnProperty(baseKey)) {
-                    rawDosages = PA_PUBLIC_DOSAGES_BY_BASE[baseKey];
                 } else if (p.available_dosages && p.available_dosages.length) {
                     rawDosages = p.available_dosages;
                 }
+                if (!rawDosages || !rawDosages.length) { el.textContent = ''; return; }
 
-                var buckets = [];
-                if (rawDosages && rawDosages.length) {
-                    rawDosages.forEach(function(d) {
-                        var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
-                        var vendors = (d && d.vendors) ? d.vendors : [];
-                        if (lbl || vendors.length) buckets.push({ label: lbl || '(default)', vendors: vendors });
-                    });
-                }
-                if (!buckets.length && p.top_vendors && p.top_vendors.length) {
-                    buckets.push({ label: '', vendors: p.top_vendors });
-                }
+                // Find this product's vendor name from top_vendors or vendor_ids.
+                var thisVendor = '';
+                if (p.top_vendors && p.top_vendors.length) thisVendor = (p.top_vendors[0].vendor || '').toLowerCase();
 
-                if (!buckets.length) { row.style.display = 'none'; return; }
-
-                var html = '<table style="border-collapse:collapse;font-size:12px;width:100%">';
-                buckets.forEach(function(b) {
-                    html += '<tr><td style="font-weight:600;padding:4px 12px 4px 0;white-space:nowrap;vertical-align:top;color:#555">'
-                          + esc(b.label) + '</td><td style="padding:4px 0">';
-                    if (!b.vendors.length) {
-                        html += '<em style="color:#999">No vendors</em>';
-                    } else {
-                        b.vendors.forEach(function(v, i) {
-                            var price = v.price != null ? '$' + Number(v.price).toFixed(2) : '--';
-                            html += (i > 0 ? '&ensp;&middot;&ensp;' : '')
-                                  + '<span style="color:#333">' + esc(v.vendor || '') + '</span>'
-                                  + ' <span style="color:#2271b1;font-weight:600">' + price + '</span>';
-                        });
+                // Build label → price pairs for this vendor only.
+                var parts = [];
+                rawDosages.forEach(function(d) {
+                    var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
+                    if (!lbl) return;
+                    var vendors = (d && d.vendors) ? d.vendors : [];
+                    // Find this vendor's price in this dosage entry.
+                    var match = null;
+                    if (thisVendor) {
+                        match = vendors.find(function(v) { return (v.vendor || '').toLowerCase() === thisVendor; });
                     }
-                    html += '</td></tr>';
+                    // Fall back to first vendor if we can't identify which is ours.
+                    if (!match && vendors.length) match = vendors[0];
+                    if (match && match.price != null) {
+                        parts.push(esc(lbl) + ': <strong>$' + Number(match.price).toFixed(2) + '</strong>');
+                    }
                 });
-                html += '</table>';
-                wrap.innerHTML = html;
-                row.style.display = '';
+
+                el.innerHTML = parts.length ? parts.join(' &nbsp;&middot;&nbsp; ') : '';
             }
 
             // ── Load product into form ──────────────────────────────────────
@@ -1703,7 +1688,7 @@ class PA_Admin {
                 currentDoseLabels = {};
                 document.getElementById('pa_dose_labels_list').innerHTML = '';
                 document.getElementById('pa_dose_labels_save').style.display = 'none';
-                document.getElementById('pa-vendor-prices-row').style.display = 'none';
+                document.getElementById('pa-all-prices').innerHTML = '';
             }
 
             document.getElementById('pa-prod-cancel-btn').addEventListener('click', resetForm);
