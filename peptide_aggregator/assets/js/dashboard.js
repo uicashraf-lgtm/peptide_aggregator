@@ -564,7 +564,7 @@
     });
     card.appendChild(tagRow);
 
-    // Build dosage list: prefer available_dosages from API (has per-dosage vendors).
+    // Build dosage list from available_dosages.
     var dosages;
     if (p.available_dosages && p.available_dosages.length >= 1) {
       dosages = p.available_dosages.map(function(d) {

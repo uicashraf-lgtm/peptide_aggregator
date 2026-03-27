@@ -879,9 +879,9 @@ class PA_Admin {
                                 </select>
                             </td>
                         </tr>
-                        <tr>
+                        <tr id="pa-price-range-row" style="display:none">
                             <th></th>
-                            <td><span id="pa-all-prices" style="font-size:12px;color:#555"></span></td>
+                            <td><span id="pa-price-range" style="font-size:12px;color:#555"></span></td>
                         </tr>
                         <tr>
                             <th>Dosage</th>
@@ -901,6 +901,10 @@ class PA_Admin {
                                 <div id="pa_dose_labels_list" style="margin-bottom:8px"></div>
                                 <button type="button" class="button button-small" id="pa_dose_labels_save" style="display:none">Save Dose Labels</button>
                             </td>
+                        </tr>
+                        <tr id="pa-scraped-prices-row" style="display:none">
+                            <th style="vertical-align:top;padding-top:10px">Scraped Prices</th>
+                            <td><div id="pa-scraped-prices-list"></div></td>
                         </tr>
                         <tr><th>In Stock</th><td><label><input type="checkbox" name="in_stock" id="pa_pf_in_stock" checked /> In Stock</label></td></tr>
                         <tr><th>Product URL</th><td><input name="product_url" id="pa_pf_url" type="url" class="regular-text" placeholder="https://vendor.com/product-page" /><p class="description">Used as the "Buy" link on the dashboard.</p></td></tr>
@@ -1551,45 +1555,77 @@ class PA_Admin {
                     + '&labels=' + encodeURIComponent(JSON.stringify(labels)));
             });
 
-            // ── Per-dosage price list (this product only) ───────────────────
+            // ── Scraped prices (read-only, grouped by dose) ─────────────────
+            function loadScrapedPrices(pid) {
+                var row  = document.getElementById('pa-scraped-prices-row');
+                var list = document.getElementById('pa-scraped-prices-list');
+                list.innerHTML = '<em style="color:#999;font-size:12px">Loading…</em>';
+                row.style.display = '';
+
+                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products/' + encodeURIComponent(pid) + '/prices')
+                    .then(function(r) { return r.json(); })
+                    .then(function(allPrices) {
+                        var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
+                        var dosageMap = {}, dosageOrder = [];
+                        allPrices.forEach(function(v) {
+                            var lbl = null;
+                            if (v.amount_mg != null && v.amount_unit) {
+                                var amt = v.amount_mg === Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+                                lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
+                            }
+                            if (!lbl) {
+                                var m = (v.product || '').match(DOSAGE_RE);
+                                if (m) lbl = m[1] + ' ' + m[2].toLowerCase();
+                            }
+                            if (!lbl) lbl = 'default';
+                            if (!dosageMap[lbl]) { dosageMap[lbl] = []; dosageOrder.push(lbl); }
+                            dosageMap[lbl].push(v);
+                        });
+                        dosageOrder.sort(function(a, b) { return (parseFloat(a) || 0) - (parseFloat(b) || 0); });
+
+                        if (!dosageOrder.length) {
+                            list.innerHTML = '<em style="color:#999;font-size:12px">No prices found.</em>';
+                            return;
+                        }
+
+                        var html = '<table style="border-collapse:collapse;width:100%">'
+                            + '<thead><tr>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 16px 4px 0;font-weight:600">Dose</th>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 0;font-weight:600">Vendor &amp; Price</th>'
+                            + '</tr></thead><tbody>';
+                        dosageOrder.forEach(function(lbl) {
+                            var priceList = dosageMap[lbl].map(function(v) {
+                                var price = v.effective_price != null ? '$' + Number(v.effective_price).toFixed(2)
+                                          : v.price != null ? '$' + Number(v.price).toFixed(2) : '--';
+                                return '<span style="color:#333">' + esc(v.vendor || '') + '</span>'
+                                     + '&nbsp;<strong style="color:#2271b1">' + price + '</strong>';
+                            }).join('&ensp;&middot;&ensp;');
+                            html += '<tr style="border-top:1px solid #f0f0f0">'
+                                + '<td style="padding:5px 16px 5px 0;font-size:12px;white-space:nowrap;font-weight:600;color:#444">' + esc(lbl) + '</td>'
+                                + '<td style="padding:5px 0;font-size:12px">' + priceList + '</td>'
+                                + '</tr>';
+                        });
+                        html += '</tbody></table>';
+                        list.innerHTML = html;
+                    })
+                    .catch(function() {
+                        list.innerHTML = '<em style="color:#c00;font-size:12px">Could not load prices.</em>';
+                    });
+            }
+
+            // ── Price range note ────────────────────────────────────────────
             function renderVendorPricesSection(p) {
-                var el = document.getElementById('pa-all-prices');
-                if (!el) return;
-
-                // Get available_dosages for this product from the public API data.
-                var pid = String(p.id || '');
-                var baseKey = getBaseName(p.name || '');
-                var rawDosages = null;
-                if (pid && PA_PUBLIC_DOSAGES.hasOwnProperty(pid)) {
-                    rawDosages = PA_PUBLIC_DOSAGES[pid];
-                } else if (p.available_dosages && p.available_dosages.length) {
-                    rawDosages = p.available_dosages;
+                var row = document.getElementById('pa-price-range-row');
+                var el  = document.getElementById('pa-price-range');
+                if (!row || !el) return;
+                var min = p.price_min, max = p.price_max;
+                if (min != null && max != null && max !== min) {
+                    el.innerHTML = 'Range across all dosages/quantities: '
+                        + '<strong>$' + Number(min).toFixed(2) + ' &ndash; $' + Number(max).toFixed(2) + '</strong>';
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
                 }
-                if (!rawDosages || !rawDosages.length) { el.textContent = ''; return; }
-
-                // Find this product's vendor name from top_vendors or vendor_ids.
-                var thisVendor = '';
-                if (p.top_vendors && p.top_vendors.length) thisVendor = (p.top_vendors[0].vendor || '').toLowerCase();
-
-                // Build label → price pairs for this vendor only.
-                var parts = [];
-                rawDosages.forEach(function(d) {
-                    var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
-                    if (!lbl) return;
-                    var vendors = (d && d.vendors) ? d.vendors : [];
-                    // Find this vendor's price in this dosage entry.
-                    var match = null;
-                    if (thisVendor) {
-                        match = vendors.find(function(v) { return (v.vendor || '').toLowerCase() === thisVendor; });
-                    }
-                    // Fall back to first vendor if we can't identify which is ours.
-                    if (!match && vendors.length) match = vendors[0];
-                    if (match && match.price != null) {
-                        parts.push(esc(lbl) + ': <strong>$' + Number(match.price).toFixed(2) + '</strong>');
-                    }
-                });
-
-                el.innerHTML = parts.length ? parts.join(' &nbsp;&middot;&nbsp; ') : '';
             }
 
             // ── Load product into form ──────────────────────────────────────
@@ -1619,6 +1655,7 @@ class PA_Admin {
                 setVal('pa_pf_price', p.price_min);
                 setSelect('pa_pf_currency', 'USD');
                 renderVendorPricesSection(p);
+                loadScrapedPrices(pid);
 
                 var dosageMg = null;
                 var dosageUnit = 'mg';
@@ -1688,7 +1725,9 @@ class PA_Admin {
                 currentDoseLabels = {};
                 document.getElementById('pa_dose_labels_list').innerHTML = '';
                 document.getElementById('pa_dose_labels_save').style.display = 'none';
-                document.getElementById('pa-all-prices').innerHTML = '';
+                document.getElementById('pa-price-range-row').style.display = 'none';
+                document.getElementById('pa-scraped-prices-row').style.display = 'none';
+                document.getElementById('pa-scraped-prices-list').innerHTML = '';
             }
 
             document.getElementById('pa-prod-cancel-btn').addEventListener('click', resetForm);
@@ -2428,4 +2467,5 @@ class PA_Admin {
         </script>
         <?php
     }
+
 }
