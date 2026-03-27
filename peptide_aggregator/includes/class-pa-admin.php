@@ -1557,10 +1557,24 @@ class PA_Admin {
                 var wrap = document.getElementById('pa-vendor-prices');
                 if (!row || !wrap) return;
 
-                // Collect dosage buckets from available_dosages, fall back to top_vendors
+                // Resolve available_dosages with full vendor data.
+                // PA_PRODUCTS[].available_dosages may be absent if the admin API product
+                // has no matching ID in the public API. Use PA_PUBLIC_DOSAGES (keyed by
+                // product ID) or PA_PUBLIC_DOSAGES_BY_BASE as authoritative sources.
+                var pid = String(p.id || '');
+                var baseKey = getBaseName(p.name || '');
+                var rawDosages = null;
+                if (pid && PA_PUBLIC_DOSAGES.hasOwnProperty(pid)) {
+                    rawDosages = PA_PUBLIC_DOSAGES[pid];
+                } else if (baseKey && PA_PUBLIC_DOSAGES_BY_BASE.hasOwnProperty(baseKey)) {
+                    rawDosages = PA_PUBLIC_DOSAGES_BY_BASE[baseKey];
+                } else if (p.available_dosages && p.available_dosages.length) {
+                    rawDosages = p.available_dosages;
+                }
+
                 var buckets = [];
-                if (p.available_dosages && p.available_dosages.length) {
-                    p.available_dosages.forEach(function(d) {
+                if (rawDosages && rawDosages.length) {
+                    rawDosages.forEach(function(d) {
                         var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
                         var vendors = (d && d.vendors) ? d.vendors : [];
                         if (lbl || vendors.length) buckets.push({ label: lbl || '(default)', vendors: vendors });
