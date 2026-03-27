@@ -724,7 +724,11 @@ class PA_Admin {
             if (empty($product['tags']) && isset($public_tags_by_id[$pid])) {
                 $product['tags'] = $public_tags_by_id[$pid];
             }
-            if (empty($product['available_dosages']) && isset($public_dosages_by_id[$pid])) {
+            // Always use the public endpoint's available_dosages — it contains
+            // label objects (e.g. "single", "5 pack") that the frontend and dose
+            // labels editor both rely on. The admin API either omits this field
+            // or returns a different structure.
+            if (isset($public_dosages_by_id[$pid])) {
                 $product['available_dosages'] = $public_dosages_by_id[$pid];
             }
         }
@@ -1503,13 +1507,15 @@ class PA_Admin {
                 // base-name key that groupByDosage() produces on the frontend.
                 currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
-                // Collect dosages: prefer explicit dosages array, fall back to
-                // available_dosages objects (extract label), then empty.
+                // Prefer available_dosages labels — these are the exact keys the
+                // frontend passes to getDoseLabel(), so edits here round-trip
+                // correctly. Fall back to the dosages array (mg amounts) only if
+                // available_dosages is absent.
                 var doseLabelList = [];
-                if (p.dosages && p.dosages.length) {
-                    doseLabelList = p.dosages;
-                } else if (p.available_dosages && p.available_dosages.length) {
+                if (p.available_dosages && p.available_dosages.length) {
                     doseLabelList = p.available_dosages.map(function(d) { return d.label || d; });
+                } else if (p.dosages && p.dosages.length) {
+                    doseLabelList = p.dosages;
                 }
                 renderDoseLabelsSection(doseLabelList);
 
