@@ -698,6 +698,30 @@ class PA_Admin {
         $products_resp = $this->admin_get('/api/admin/products');
         $products = $products_resp['ok'] && is_array($products_resp['data']) ? $products_resp['data'] : array();
 
+        // The admin API endpoint may not include the same tags that appear on the
+        // public-facing frontend (which uses /api/products). Fetch the public
+        // endpoint so admins can see — and then override — any tags that are
+        // currently displayed to visitors but invisible in the admin UI.
+        $public_resp = $this->api->request('GET', '/api/products');
+        $public_tags_by_id = array();
+        if ($public_resp['ok'] && is_array($public_resp['data'])) {
+            foreach ($public_resp['data'] as $fp) {
+                $fpid = (string) ($fp['id'] ?? '');
+                if ($fpid !== '') {
+                    $public_tags_by_id[$fpid] = array_values((array) ($fp['tags'] ?? array()));
+                }
+            }
+        }
+        // Fill in missing tags from the public endpoint so the admin sees the
+        // same tags the frontend displays before any override has been saved.
+        foreach ($products as &$product) {
+            $pid = (string) ($product['id'] ?? '');
+            if ($pid !== '' && empty($product['tags']) && isset($public_tags_by_id[$pid])) {
+                $product['tags'] = $public_tags_by_id[$pid];
+            }
+        }
+        unset($product);
+
         // Apply admin tag overrides — stored in WordPress so they survive scraper re-runs
         // that re-assign tags on the backend.
         $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
@@ -880,6 +904,7 @@ class PA_Admin {
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
+            var PA_PUBLIC_TAGS = <?php echo wp_json_encode($public_tags_by_id); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
             var PA_KIT_IDS = <?php echo wp_json_encode($kit_ids); ?>;
             var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
@@ -1581,11 +1606,15 @@ class PA_Admin {
                         var data = JSON.parse(xhr.responseText);
                         if (Array.isArray(data)) {
                             // Apply admin tag overrides so scraper-assigned tags don't
-                            // revert changes made in the admin.
+                            // revert changes made in the admin. For products with no
+                            // override and no tags from the admin API, fall back to the
+                            // public-endpoint tags so admins can see what the frontend shows.
                             data.forEach(function(p) {
                                 var pid = String(p.id);
                                 if (PA_TAG_OVERRIDES.hasOwnProperty(pid)) {
                                     p.tags = PA_TAG_OVERRIDES[pid].slice();
+                                } else if ((!p.tags || !p.tags.length) && PA_PUBLIC_TAGS.hasOwnProperty(pid)) {
+                                    p.tags = PA_PUBLIC_TAGS[pid].slice();
                                 }
                             });
                             PA_PRODUCTS = data;
