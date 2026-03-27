@@ -338,14 +338,16 @@
       });
     }
     if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    // Primary: product_name contains "kit" (same logic as the detail view Kits button,
-    // works when the prices endpoint returns full names like "EZP-3P 6mg – (10 vials/Kit)").
+    // Primary: product_name contains "kit"
     var byName = (vendors || []).filter(function(v) {
       return (v.product_name || '').toLowerCase().includes('kit');
     });
+    // DEBUG — remove once prices are correct
+    console.log('[PA kit] vendors in:', (vendors||[]).map(function(v){return{vendor:v.vendor,product_name:v.product_name,price:v.price,_is_kit:v._is_kit};}));
+    console.log('[PA kit] byName:', byName.map(function(v){return v.product_name;}));
+    console.log('[PA kit] _is_kit result:', (vendors||[]).filter(function(v){return v._is_kit===true;}).map(function(v){return{vendor:v.vendor,product_name:v.product_name,price:v.price};}));
     if (byName.length > 0) return byName;
-    // Fallback: _is_kit flag set from admin-tagged source product (products endpoint uses
-    // abbreviated names that may not contain "kit", so fall back to the flag).
+    // Fallback: _is_kit flag
     return (vendors || []).filter(function(v) { return v._is_kit === true; });
   }
 
