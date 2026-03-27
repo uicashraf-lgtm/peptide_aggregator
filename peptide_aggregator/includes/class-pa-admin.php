@@ -879,6 +879,10 @@ class PA_Admin {
                                 </select>
                             </td>
                         </tr>
+                        <tr id="pa-vendor-prices-row" style="display:none">
+                            <th style="vertical-align:top;padding-top:10px">All Prices</th>
+                            <td><div id="pa-vendor-prices"></div></td>
+                        </tr>
                         <tr>
                             <th>Dosage</th>
                             <td>
@@ -1547,6 +1551,48 @@ class PA_Admin {
                     + '&labels=' + encodeURIComponent(JSON.stringify(labels)));
             });
 
+            // ── Vendor price breakdown ──────────────────────────────────────
+            function renderVendorPricesSection(p) {
+                var row = document.getElementById('pa-vendor-prices-row');
+                var wrap = document.getElementById('pa-vendor-prices');
+                if (!row || !wrap) return;
+
+                // Collect dosage buckets from available_dosages, fall back to top_vendors
+                var buckets = [];
+                if (p.available_dosages && p.available_dosages.length) {
+                    p.available_dosages.forEach(function(d) {
+                        var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
+                        var vendors = (d && d.vendors) ? d.vendors : [];
+                        if (lbl || vendors.length) buckets.push({ label: lbl || '(default)', vendors: vendors });
+                    });
+                }
+                if (!buckets.length && p.top_vendors && p.top_vendors.length) {
+                    buckets.push({ label: '', vendors: p.top_vendors });
+                }
+
+                if (!buckets.length) { row.style.display = 'none'; return; }
+
+                var html = '<table style="border-collapse:collapse;font-size:12px;width:100%">';
+                buckets.forEach(function(b) {
+                    html += '<tr><td style="font-weight:600;padding:4px 12px 4px 0;white-space:nowrap;vertical-align:top;color:#555">'
+                          + esc(b.label) + '</td><td style="padding:4px 0">';
+                    if (!b.vendors.length) {
+                        html += '<em style="color:#999">No vendors</em>';
+                    } else {
+                        b.vendors.forEach(function(v, i) {
+                            var price = v.price != null ? '$' + Number(v.price).toFixed(2) : '--';
+                            html += (i > 0 ? '&ensp;&middot;&ensp;' : '')
+                                  + '<span style="color:#333">' + esc(v.vendor || '') + '</span>'
+                                  + ' <span style="color:#2271b1;font-weight:600">' + price + '</span>';
+                        });
+                    }
+                    html += '</td></tr>';
+                });
+                html += '</table>';
+                wrap.innerHTML = html;
+                row.style.display = '';
+            }
+
             // ── Load product into form ──────────────────────────────────────
             function loadProduct(pid) {
                 var p = null;
@@ -1573,6 +1619,7 @@ class PA_Admin {
                 setVal('pa_pf_desc', p.description);
                 setVal('pa_pf_price', p.price_min);
                 setSelect('pa_pf_currency', 'USD');
+                renderVendorPricesSection(p);
 
                 var dosageMg = null;
                 var dosageUnit = 'mg';
@@ -1642,6 +1689,7 @@ class PA_Admin {
                 currentDoseLabels = {};
                 document.getElementById('pa_dose_labels_list').innerHTML = '';
                 document.getElementById('pa_dose_labels_save').style.display = 'none';
+                document.getElementById('pa-vendor-prices-row').style.display = 'none';
             }
 
             document.getElementById('pa-prod-cancel-btn').addEventListener('click', resetForm);
