@@ -917,6 +917,11 @@ class PA_Admin {
                         <option value="<?php echo esc_attr($v['id']); ?>"><?php echo esc_html($v['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
+                <select id="pa-sort-select" style="min-width:140px">
+                    <option value="">Sort: Default</option>
+                    <option value="name">Sort: Name A→Z</option>
+                    <option value="vendor">Sort: Vendor A→Z</option>
+                </select>
                 <a href="<?php echo esc_url($kit_active ? remove_query_arg('kit') : add_query_arg('kit', '1')); ?>"
                    class="button<?php echo $kit_active ? ' button-primary' : ''; ?>">
                     <?php echo $kit_active ? 'Kits Only ✓' : 'Kits Only'; ?>
@@ -955,6 +960,7 @@ class PA_Admin {
             var currentPage = 1;
             var currentSearch = '';
             var currentVendor = 0;
+            var currentSort = '';
             var currentDoseLabelProductName = '';
             var currentDoseLabels = {};
             // Must match the DOSAGE_RE in dashboard.js so admin keys align with frontend keys
@@ -987,6 +993,15 @@ class PA_Admin {
             }
 
             // ── Filtering & rendering ───────────────────────────────────────
+            var vendorNameById = {};
+            PA_VENDORS.forEach(function(v) { vendorNameById[v.id] = (v.name || '').toLowerCase(); });
+
+            function primaryVendorName(p) {
+                if (p.top_vendors && p.top_vendors.length) return (p.top_vendors[0].vendor || '').toLowerCase();
+                var vid = (p.vendor_ids || [])[0];
+                return vid ? (vendorNameById[vid] || '') : '';
+            }
+
             function getFiltered() {
                 var list = PA_PRODUCTS;
                 if (currentSearch) {
@@ -999,6 +1014,16 @@ class PA_Admin {
                 if (currentVendor) {
                     list = list.filter(function(p) {
                         return (p.vendor_ids || []).map(Number).indexOf(currentVendor) !== -1;
+                    });
+                }
+                if (currentSort === 'name') {
+                    list = list.slice().sort(function(a, b) {
+                        return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+                    });
+                } else if (currentSort === 'vendor') {
+                    list = list.slice().sort(function(a, b) {
+                        var va = primaryVendorName(a), vb = primaryVendorName(b);
+                        return va.localeCompare(vb) || (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
                     });
                 }
                 return list;
@@ -1016,7 +1041,7 @@ class PA_Admin {
                 document.getElementById('pa-product-count').textContent = totalItems + ' product(s)';
 
                 // Clear button visibility
-                document.getElementById('pa-clear-btn').style.display = (currentSearch || currentVendor) ? '' : 'none';
+                document.getElementById('pa-clear-btn').style.display = (currentSearch || currentVendor || currentSort) ? '' : 'none';
 
                 // Tbody
                 var tbody = document.getElementById('pa-products-tbody');
@@ -1267,6 +1292,11 @@ class PA_Admin {
             }
 
             // ── Filter controls ─────────────────────────────────────────────
+            document.getElementById('pa-sort-select').addEventListener('change', function() {
+                currentSort = this.value;
+                currentPage = 1;
+                renderTable();
+            });
             document.getElementById('pa-filter-btn').addEventListener('click', function() {
                 currentSearch = document.getElementById('pa-search-input').value.trim();
                 currentVendor = parseInt(document.getElementById('pa-vendor-filter').value) || 0;
@@ -1276,8 +1306,10 @@ class PA_Admin {
             document.getElementById('pa-clear-btn').addEventListener('click', function() {
                 document.getElementById('pa-search-input').value = '';
                 document.getElementById('pa-vendor-filter').value = '0';
+                document.getElementById('pa-sort-select').value = '';
                 currentSearch = '';
                 currentVendor = 0;
+                currentSort = '';
                 currentPage = 1;
                 renderTable();
             });
