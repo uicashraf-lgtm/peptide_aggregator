@@ -257,7 +257,13 @@
             return mgStartRe.test((ad.label || '').trim()) &&
                    (ad.label || '').toLowerCase().replace(/\s+/g, '') === mgLabel;
           });
-          if (destDosage && !destDosage.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+          if (!destDosage) {
+            // No mg-amount tab exists yet — create one so compact mode shows it.
+            var displayLabel = amt + ' ' + (v.amount_unit || 'mg');
+            destDosage = { label: displayLabel, vendors: [] };
+            map[k].available_dosages.push(destDosage);
+          }
+          if (!destDosage.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
             destDosage.vendors.push(v);
           }
         });
