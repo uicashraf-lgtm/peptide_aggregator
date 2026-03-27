@@ -698,6 +698,70 @@ class PA_Admin {
         $products_resp = $this->admin_get('/api/admin/products');
         $products = $products_resp['ok'] && is_array($products_resp['data']) ? $products_resp['data'] : array();
 
+        // The admin API endpoint may not include the same tags that appear on the
+        // public-facing frontend (which uses /api/products). Fetch the public
+        // endpoint so admins can see — and then override — any tags that are
+        // currently displayed to visitors but invisible in the admin UI.
+        $public_resp = $this->api->request('GET', '/api/products');
+        $public_tags_by_id        = array();
+        $public_dosages_by_id     = array();
+        // Also index dosages by lowercased base name (dosage suffix stripped) so
+        // we can populate available_dosages even when product IDs differ between
+        // the admin and public endpoints, or when the individual product has no
+        // dosages but a same-group variant does (mirrors groupByDosage merging).
+        $public_dosages_by_base   = array();
+        $dosage_re_pub = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+        if ($public_resp['ok'] && is_array($public_resp['data'])) {
+            foreach ($public_resp['data'] as $fp) {
+                $fpid   = (string) ($fp['id'] ?? '');
+                $fpbase = strtolower(trim(preg_replace($dosage_re_pub, '', $fp['name'] ?? '')));
+                if ($fpid !== '') {
+                    $public_tags_by_id[$fpid] = array_values((array) ($fp['tags'] ?? array()));
+                }
+                if (!empty($fp['available_dosages'])) {
+                    if ($fpid !== '') {
+                        $public_dosages_by_id[$fpid] = $fp['available_dosages'];
+                    }
+                    // Merge into the base-name bucket (dedup by label).
+                    if ($fpbase !== '') {
+                        if (!isset($public_dosages_by_base[$fpbase])) {
+                            $public_dosages_by_base[$fpbase] = array();
+                        }
+                        foreach ($fp['available_dosages'] as $d) {
+                            $lbl = is_array($d) ? ($d['label'] ?? '') : (string) $d;
+                            $existing_lbls = array_map(function($e) {
+                                return is_array($e) ? ($e['label'] ?? '') : (string) $e;
+                            }, $public_dosages_by_base[$fpbase]);
+                            if ($lbl !== '' && !in_array($lbl, $existing_lbls, true)) {
+                                $public_dosages_by_base[$fpbase][] = $d;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Fill in missing tags and available_dosages from the public endpoint
+        // so the admin sees the same data the frontend displays.
+        foreach ($products as &$product) {
+            $pid  = (string) ($product['id'] ?? '');
+            $base = strtolower(trim(preg_replace($dosage_re_pub, '', $product['name'] ?? '')));
+            if ($pid === '' && $base === '') continue;
+            if (!empty($pid) && empty($product['tags']) && isset($public_tags_by_id[$pid])) {
+                $product['tags'] = $public_tags_by_id[$pid];
+            }
+            // Populate available_dosages: prefer exact ID match, fall back to
+            // base-name bucket which aggregates all variants' dosage labels.
+            if (!empty($pid) && isset($public_dosages_by_id[$pid])) {
+                $product['available_dosages'] = $public_dosages_by_id[$pid];
+            } elseif ($base !== '' && isset($public_dosages_by_base[$base])) {
+                $product['available_dosages'] = $public_dosages_by_base[$base];
+            }
+        }
+        unset($product);
+        // Pass the base-name dosage map to JS so loadProduct() can also collect
+        // dosage labels from group siblings without another network round-trip.
+        $public_dosages_by_base_js = $public_dosages_by_base;
+
         // Apply admin tag overrides — stored in WordPress so they survive scraper re-runs
         // that re-assign tags on the backend.
         $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
@@ -786,6 +850,7 @@ class PA_Admin {
                                     <?php endforeach; ?>
                                 </datalist>
                                 <input type="hidden" name="tags" id="pa_pf_tags_hidden" value="" />
+                                <div id="pa_pf_group_tags_note" style="margin-top:6px"></div>
                             </td>
                         </tr>
                         <tr><th>Description</th><td><textarea name="description" id="pa_pf_desc" rows="3" class="large-text"></textarea></td></tr>
@@ -880,6 +945,9 @@ class PA_Admin {
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
+            var PA_PUBLIC_TAGS = <?php echo wp_json_encode($public_tags_by_id); ?>;
+            var PA_PUBLIC_DOSAGES = <?php echo wp_json_encode($public_dosages_by_id); ?>;
+            var PA_PUBLIC_DOSAGES_BY_BASE = <?php echo wp_json_encode($public_dosages_by_base_js); ?>;
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
             var PA_KIT_IDS = <?php echo wp_json_encode($kit_ids); ?>;
             var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
@@ -1267,6 +1335,86 @@ class PA_Admin {
                 if (e.key === 'Enter') { e.preventDefault(); addTag(); }
             });
 
+            // ── Group tag note ──────────────────────────────────────────────
+            // The frontend groups dosage variants and merges their tags into one
+            // product card. If "NAD+ Buffered" shows tags on the frontend, those
+            // tags might actually belong to "NAD+ Buffered 500mg" — a different
+            // product in the admin list. This note surfaces that so admins can
+            // find and fix the right variant, or clear the whole group at once.
+            var DOSAGE_RE_ADMIN = /\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i;
+            function getBaseName(name) {
+                return (name || '').replace(DOSAGE_RE_ADMIN, '').trim().toLowerCase();
+            }
+            function renderGroupTagsNote(p) {
+                var noteEl = document.getElementById('pa_pf_group_tags_note');
+                noteEl.innerHTML = '';
+                var pBase = getBaseName(p.name);
+                // Collect variants in the same group that have visible tags.
+                var variants = [];
+                PA_PRODUCTS.forEach(function(sp) {
+                    if (sp.id == p.id) return;
+                    if (getBaseName(sp.name) !== pBase) return;
+                    var visibleTags = (sp.tags || []).filter(function(t) {
+                        var tl = t.toLowerCase();
+                        return tl !== 'kit_auto' && !tl.includes('exclude');
+                    });
+                    if (visibleTags.length) variants.push({ id: sp.id, name: sp.name, tags: visibleTags });
+                });
+                if (!variants.length) return;
+
+                var wrap = document.createElement('div');
+                wrap.style.cssText = 'background:#fff8e1;border:1px solid #ffe082;border-radius:3px;padding:8px 10px;font-size:12px';
+
+                var msg = document.createElement('p');
+                msg.style.cssText = 'margin:0 0 4px;color:#7a5800;font-weight:600';
+                msg.textContent = '\u26a0 The frontend merges tags from all dosage variants. These variants also have tags that appear on the "' + p.name + '" card:';
+                wrap.appendChild(msg);
+
+                variants.forEach(function(v) {
+                    var row = document.createElement('p');
+                    row.style.cssText = 'margin:2px 0;color:#555';
+                    row.innerHTML = '<strong>' + esc(v.name) + '</strong>: ' + v.tags.map(function(t) { return '<em>' + esc(t) + '</em>'; }).join(', ');
+                    wrap.appendChild(row);
+                });
+
+                var clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.className = 'button button-small';
+                clearBtn.style.cssText = 'margin-top:6px;color:#b32d2e;border-color:#b32d2e';
+                clearBtn.textContent = 'Clear tags for all variants in this group';
+                clearBtn.addEventListener('click', function() {
+                    if (!confirm('Clear tags for all variants of "' + p.name + '"? This will save an empty tag override for each variant listed above.')) return;
+                    clearBtn.disabled = true;
+                    clearBtn.textContent = 'Clearing\u2026';
+                    var remaining = variants.length;
+                    variants.forEach(function(v) {
+                        var xhrC = new XMLHttpRequest();
+                        xhrC.open('POST', ajaxurl);
+                        xhrC.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                        xhrC.onload = function() {
+                            try {
+                                var r = JSON.parse(xhrC.responseText);
+                                if (r.success) PA_TAG_OVERRIDES[String(v.id)] = [];
+                            } catch(e) {}
+                            remaining--;
+                            if (remaining === 0) {
+                                reloadProducts(function() {
+                                    loadProduct(p.id);
+                                    showNotice('success', 'Group tags cleared.');
+                                });
+                            }
+                        };
+                        xhrC.onerror = function() { remaining--; };
+                        xhrC.send('action=pa_save_product_tags&_wpnonce=' + PA_TAGS_NONCE
+                            + '&product_name=' + encodeURIComponent(v.name)
+                            + '&product_id=' + encodeURIComponent(String(v.id))
+                            + '&tags=' + encodeURIComponent('[]'));
+                    });
+                });
+                wrap.appendChild(clearBtn);
+                noteEl.appendChild(wrap);
+            }
+
             // ── Dose label management ───────────────────────────────────────
             function renderDoseLabelsSection(dosages) {
                 var section = document.getElementById('pa_dose_labels_list');
@@ -1282,6 +1430,7 @@ class PA_Admin {
                     // Try normalized key first so existing labels pre-populate correctly.
                     var normKey = (dose || '').toLowerCase().replace(/\s+/g, '');
                     var customLabel = currentDoseLabels[normKey] || currentDoseLabels[dose] || '';
+                    var isHidden = customLabel === '__exclude__';
                     var row = document.createElement('div');
                     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
                     var origSpan = document.createElement('span');
@@ -1294,12 +1443,27 @@ class PA_Admin {
                     input.type = 'text';
                     input.className = 'regular-text';
                     input.placeholder = 'Custom label (leave blank to use original)';
-                    input.value = customLabel;
+                    input.value = isHidden ? '' : customLabel;
                     input.setAttribute('data-dose', dose);
                     input.style.width = '220px';
+                    input.disabled = isHidden;
+                    // Hide checkbox
+                    var hideLabel = document.createElement('label');
+                    hideLabel.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;color:#b32d2e;cursor:pointer;white-space:nowrap';
+                    var hideCheck = document.createElement('input');
+                    hideCheck.type = 'checkbox';
+                    hideCheck.setAttribute('data-dose-hide', dose);
+                    hideCheck.checked = isHidden;
+                    hideCheck.addEventListener('change', function() {
+                        input.disabled = hideCheck.checked;
+                        if (hideCheck.checked) input.value = '';
+                    });
+                    hideLabel.appendChild(hideCheck);
+                    hideLabel.appendChild(document.createTextNode('Hide'));
                     row.appendChild(origSpan);
                     row.appendChild(arrow);
                     row.appendChild(input);
+                    row.appendChild(hideLabel);
                     section.appendChild(row);
                 });
                 saveBtn.style.display = '';
@@ -1312,8 +1476,14 @@ class PA_Admin {
                     var dose = inp.getAttribute('data-dose');
                     // Normalize key: lowercase + no spaces so "5 mg" and "5mg" both resolve
                     var normDose = dose.toLowerCase().replace(/\s+/g, '');
-                    var val = inp.value.trim();
-                    if (val) labels[normDose] = val;
+                    // Check if the matching hide checkbox is checked
+                    var hideChk = document.querySelector('#pa_dose_labels_list input[data-dose-hide="' + dose.replace(/"/g, '\\"') + '"]');
+                    if (hideChk && hideChk.checked) {
+                        labels[normDose] = '__exclude__';
+                    } else {
+                        var val = inp.value.trim();
+                        if (val) labels[normDose] = val;
+                    }
                 });
                 var btn = document.getElementById('pa_dose_labels_save');
                 btn.disabled = true;
@@ -1367,6 +1537,7 @@ class PA_Admin {
                 setVal('pa_pf_name', p.name);
                 setVal('pa_pf_category', p.category);
                 renderTags(p.tags || []);
+                renderGroupTagsNote(p);
                 setVal('pa_pf_desc', p.description);
                 setVal('pa_pf_price', p.price_min);
                 setSelect('pa_pf_currency', 'USD');
@@ -1387,13 +1558,32 @@ class PA_Admin {
                 // base-name key that groupByDosage() produces on the frontend.
                 currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
-                // Collect dosages: prefer explicit dosages array, fall back to
-                // available_dosages objects (extract label), then empty.
+                // Collect available_dosages labels from ALL variants in this
+                // product's group, mirroring groupByDosage() on the frontend.
+                // The individual product may have no dosages while a sibling
+                // variant (e.g. "NAD+ Buffered 500mg") carries them all.
+                // Sources tried in order: PA_PRODUCTS group merge →
+                //   PA_PUBLIC_DOSAGES_BY_BASE (PHP-built) → p.dosages fallback.
                 var doseLabelList = [];
-                if (p.dosages && p.dosages.length) {
+                var pBaseKey = currentDoseLabelProductName;
+                // 1. Collect from all group members in PA_PRODUCTS.
+                PA_PRODUCTS.forEach(function(sp) {
+                    if (getBaseName(sp.name) !== pBaseKey) return;
+                    (sp.available_dosages || []).forEach(function(d) {
+                        var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
+                        if (lbl && doseLabelList.indexOf(lbl) === -1) doseLabelList.push(lbl);
+                    });
+                });
+                // 2. If still empty, fall back to the PHP-built base-name bucket.
+                if (!doseLabelList.length && PA_PUBLIC_DOSAGES_BY_BASE.hasOwnProperty(pBaseKey)) {
+                    PA_PUBLIC_DOSAGES_BY_BASE[pBaseKey].forEach(function(d) {
+                        var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
+                        if (lbl && doseLabelList.indexOf(lbl) === -1) doseLabelList.push(lbl);
+                    });
+                }
+                // 3. Last resort: raw dosage amounts from the admin API.
+                if (!doseLabelList.length && p.dosages && p.dosages.length) {
                     doseLabelList = p.dosages;
-                } else if (p.available_dosages && p.available_dosages.length) {
-                    doseLabelList = p.available_dosages.map(function(d) { return d.label || d; });
                 }
                 renderDoseLabelsSection(doseLabelList);
 
@@ -1414,6 +1604,7 @@ class PA_Admin {
                 document.getElementById('pa-product-form').reset();
                 document.getElementById('pa_pf_in_stock').checked = true;
                 renderTags([]);
+                document.getElementById('pa_pf_group_tags_note').innerHTML = '';
                 document.getElementById('pa_pf_tag_input').value = '';
                 currentDoseLabelProductName = '';
                 currentDoseLabels = {};
@@ -1581,11 +1772,18 @@ class PA_Admin {
                         var data = JSON.parse(xhr.responseText);
                         if (Array.isArray(data)) {
                             // Apply admin tag overrides so scraper-assigned tags don't
-                            // revert changes made in the admin.
+                            // revert changes made in the admin. For products with no
+                            // override and no tags from the admin API, fall back to the
+                            // public-endpoint tags so admins can see what the frontend shows.
                             data.forEach(function(p) {
                                 var pid = String(p.id);
                                 if (PA_TAG_OVERRIDES.hasOwnProperty(pid)) {
                                     p.tags = PA_TAG_OVERRIDES[pid].slice();
+                                } else if ((!p.tags || !p.tags.length) && PA_PUBLIC_TAGS.hasOwnProperty(pid)) {
+                                    p.tags = PA_PUBLIC_TAGS[pid].slice();
+                                }
+                                if ((!p.available_dosages || !p.available_dosages.length) && PA_PUBLIC_DOSAGES.hasOwnProperty(pid)) {
+                                    p.available_dosages = PA_PUBLIC_DOSAGES[pid];
                                 }
                             });
                             PA_PRODUCTS = data;
