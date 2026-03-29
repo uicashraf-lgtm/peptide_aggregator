@@ -153,10 +153,13 @@
       // field lacks spray/etc keywords still get correctly classified.
       var srcFormulation = getFormulationKey(p.name || '');
       function stampVendor(v) {
-        // Mirror detail view: use product_name || product as the listing name.
-        var pn = (v.product_name || v.product || '').toLowerCase();
+        // Mirror detail view exactly: normalise product_name to product_name||product
+        // so all downstream code (formulation detection, kit detection) has the best name.
+        var effectiveName = v.product_name || v.product || '';
+        var pn = effectiveName.toLowerCase();
         var formulation = getFormulationKey(pn) || srcFormulation || null;
         return Object.assign({}, v, {
+          product_name: effectiveName,
           _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
           _formulation: formulation
         });
