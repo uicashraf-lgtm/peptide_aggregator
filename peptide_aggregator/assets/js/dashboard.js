@@ -1126,8 +1126,8 @@
       if (getDoseLabel(state.detailProductName, d.label) === null) return false;
       return (d.vendors || []).some(function(v) {
         var name = (v.product_name || '').toLowerCase();
-        if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
-        if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
+        if (state.detailTypeFilter === 'kit' && !name.includes('kit') && !name.includes('bulk') && !name.includes('pack')) return false;
+        if (state.detailTypeFilter === 'vial' && (name.includes('kit') || name.includes('bulk') || name.includes('pack'))) return false;
         if (state.detailFormulationFilter === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
         if (state.detailFormulationFilter !== 'all' && state.detailFormulationFilter !== 'vial' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
         return true;
@@ -1142,8 +1142,8 @@
           if (getDoseLabel(state.detailProductName, d.label) === null) return false;
           return (d.vendors || []).some(function(v) {
             var name = (v.product_name || '').toLowerCase();
-            if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
-            if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
+            if (state.detailTypeFilter === 'kit' && !name.includes('kit') && !name.includes('bulk') && !name.includes('pack')) return false;
+            if (state.detailTypeFilter === 'vial' && (name.includes('kit') || name.includes('bulk') || name.includes('pack'))) return false;
             if (candidate === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
             if (candidate !== 'vial' && vendorFormulationKey(v) !== candidate) return false;
             return true;
@@ -1156,8 +1156,8 @@
             if (getDoseLabel(state.detailProductName, d.label) === null) return false;
             return (d.vendors || []).some(function(v) {
               var name = (v.product_name || '').toLowerCase();
-              if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
-              if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
+              if (state.detailTypeFilter === 'kit' && !name.includes('kit') && !name.includes('bulk') && !name.includes('pack')) return false;
+              if (state.detailTypeFilter === 'vial' && (name.includes('kit') || name.includes('bulk') || name.includes('pack'))) return false;
               if (state.detailFormulationFilter === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
               if (state.detailFormulationFilter !== 'all' && state.detailFormulationFilter !== 'vial' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
               return true;
