@@ -149,10 +149,20 @@
       // so their vendors are identified by product_name only.
       var rawNameLower = (p.name || '').toLowerCase();
       var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; }) || rawNameLower.includes('kit') || rawNameLower.includes('pack') || rawNameLower.includes('bulk');
+      // Derive formulation from the product name itself so vendors whose product_name
+      // field lacks spray/etc keywords still get correctly classified.
+      var srcFormulation = getFormulationKey(p.name || '');
       function stampVendor(v) {
-        // Preserve _is_kit injected by REST endpoint at the vendor level so only
-        // the specific vendor's entries are flagged, not all vendors on the product.
-        var pn = (v.product_name || '').toLowerCase(); return Object.assign({}, v, { _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk') });
+        // Mirror detail view exactly: normalise product_name to product_name||product
+        // so all downstream code (formulation detection, kit detection) has the best name.
+        var effectiveName = v.product_name || v.product || '';
+        var pn = effectiveName.toLowerCase();
+        var formulation = getFormulationKey(pn) || srcFormulation || null;
+        return Object.assign({}, v, {
+          product_name: effectiveName,
+          _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
+          _formulation: formulation
+        });
       }
       if (!map[key]) {
         var pKey0 = (pd.base || '').toLowerCase().trim();
@@ -174,11 +184,10 @@
               var normLbl0 = (entry.label || '').toLowerCase().replace(/\s+/g, '');
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
               if (existingInit) {
-                (entry.vendors || []).forEach(function(v) {
-                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
-                    existingInit.vendors.push(v);
-                  }
-                });
+                // Same label appears twice within one product's available_dosages — just append.
+                // Do NOT dedup here: vial and spray from the same vendor legitimately
+                // share a label and must both be preserved for formulation tabs to work.
+                (entry.vendors || []).forEach(function(v) { existingInit.vendors.push(v); });
               } else {
                 initDosages.push(entry);
               }
@@ -208,12 +217,12 @@
         var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase().replace(/\s+/g, '') === lbl; });
         if (existing) {
           // Merge vendors from duplicate dosage, skip vendors already present.
-          // Use vendor+_is_kit as the key so a vendor can appear once as kit
-          // and once as non-kit (needed for the kits filter to work correctly).
+          // Use vendor+_is_kit+formulation as the key so a vendor can appear once as kit
+          // and once as non-kit, and also once per formulation (e.g. vial vs spray).
           (d.vendors || []).forEach(function(v) {
             var stamped = stampVendor(v);
             if (!existing.vendors.some(function(ev) {
-              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
+              return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '');
             })) {
               existing.vendors.push(stamped);
             }
@@ -228,12 +237,11 @@
         grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
-        // Use vendor+_is_kit as the key so a vendor can appear once as kit
-        // and once as non-kit (needed for the kits filter to work correctly).
+        // Deduplicate by vendor+product_name so distinct listings (vial vs spray) survive.
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
-            return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
+            return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '');
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
@@ -732,8 +740,9 @@
     // but uses this card's product tags instead of state.detailProductTags.
     var cardTags = (p.tags || []);
     function getCardFormulationKey(v) {
-      var k = getFormulationKey(v.product_name || '');
+      var k = getFormulationKey(v.product_name || v.product || '');
       if (k !== null) return k;
+      if (v._formulation) return v._formulation;
       for (var fi = 0; fi < FORMULATIONS.length; fi++) {
         if (cardTags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
       }
