@@ -149,10 +149,18 @@
       // so their vendors are identified by product_name only.
       var rawNameLower = (p.name || '').toLowerCase();
       var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; }) || rawNameLower.includes('kit') || rawNameLower.includes('pack') || rawNameLower.includes('bulk');
+      // Derive formulation from the product name itself so vendors whose product_name
+      // field lacks spray/etc keywords still get correctly classified.
+      var srcFormulation = getFormulationKey(p.name || '');
       function stampVendor(v) {
         // Preserve _is_kit injected by REST endpoint at the vendor level so only
         // the specific vendor's entries are flagged, not all vendors on the product.
-        var pn = (v.product_name || '').toLowerCase(); return Object.assign({}, v, { _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk') });
+        var pn = (v.product_name || '').toLowerCase();
+        var formulation = getFormulationKey(pn) || srcFormulation || null;
+        return Object.assign({}, v, {
+          _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
+          _formulation: formulation
+        });
       }
       if (!map[key]) {
         var pKey0 = (pd.base || '').toLowerCase().trim();
@@ -175,7 +183,7 @@
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
               if (existingInit) {
                 (entry.vendors || []).forEach(function(v) {
-                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && getFormulationKey(ev.product_name || '') === getFormulationKey(v.product_name || ''); })) {
+                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
                     existingInit.vendors.push(v);
                   }
                 });
@@ -734,6 +742,7 @@
     function getCardFormulationKey(v) {
       var k = getFormulationKey(v.product_name || '');
       if (k !== null) return k;
+      if (v._formulation) return v._formulation;
       for (var fi = 0; fi < FORMULATIONS.length; fi++) {
         if (cardTags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
       }
