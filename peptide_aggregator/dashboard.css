@@ -1,0 +1,1430 @@
+/* ============================================================
+   PEPTIDE AGGREGATOR — DASHBOARD THEME
+   Clean, professional design
+   ============================================================ */
+.pa-shell {
+    --panel:        #ffffff;
+    --panel-soft:   #f7f9fc;
+    --bg-main:      #f8fafc;
+    --text:         #1a2332;
+    --text-soft:    #3d4f63;
+    --muted:        #6b7a90;
+    --accent:       #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft:  rgba(37, 99, 235, 0.07);
+    --line:         #e4e9f0;
+    --line-soft:    #f0f4f8;
+    --success:      #0ea572;
+    --success-soft: rgba(14, 165, 114, 0.08);
+    --danger:       #e53e3e;
+    --danger-soft:  rgba(229, 62, 62, 0.07);
+    --radius-sm:    8px;
+    --radius-md:    12px;
+    --radius-lg:    16px;
+    --radius-xl:    20px;
+    --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md:    0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg:    0 10px 30px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+    background-color: var(--bg-main) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: var(--text) !important;
+}
+
+/* ─── SEARCH PANEL ─── */
+.pa-shell .pa-search-panel {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 12px 16px !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin-bottom: 4px !important;
+}
+
+.pa-shell .pa-search-input-wrap {
+    position: relative !important;
+}
+
+.pa-shell .pa-search-icon {
+    position: absolute !important;
+    left: 14px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: var(--muted) !important;
+    pointer-events: none !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.pa-shell #pa-search,
+.pa-shell #pas-search {
+    width: 100% !important;
+    height: 46px !important;
+    padding: 0 16px 0 44px !important;
+    border-radius: var(--radius-md) !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--panel-soft) !important;
+    color: var(--text) !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+}
+
+.pa-shell #pa-search::placeholder,
+.pa-shell #pas-search::placeholder {
+    color: var(--muted) !important;
+}
+
+.pa-shell #pa-search:focus,
+.pa-shell #pas-search:focus {
+    border-color: var(--accent) !important;
+    background: var(--panel) !important;
+    box-shadow: 0 0 0 3px var(--accent-soft) !important;
+}
+
+.pa-shell .pa-filter-btn {
+    height: 46px !important;
+    width: 46px !important;
+    min-width: 46px !important;
+    padding: 0 !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--panel) !important;
+    border: 1.5px solid var(--line) !important;
+    color: var(--text-soft) !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    transition: all 0.18s ease !important;
+}
+
+.pa-shell .pa-filter-btn:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+/* Popular chips row */
+.pa-shell .pa-popular-row {
+    gap: 8px !important;
+    margin-top: 14px !important;
+}
+
+.pa-shell .pa-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-chip {
+    height: 28px !important;
+    padding: 0 12px !important;
+    border-radius: 99px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--text-soft) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-chip:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+.pa-shell .pa-chip.is-active {
+    background: var(--accent) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+}
+
+/* Active filters row */
+.pa-shell .pa-divider {
+    height: 1px !important;
+    background: var(--line) !important;
+    margin: 14px 0 12px !important;
+    display: none !important; /* hidden unless filters are active — JS toggles */
+}
+
+.pa-shell .pa-active-row {
+    min-height: 0 !important;
+}
+
+.pa-shell .pa-active-tag {
+    height: 26px !important;
+    padding: 0 10px !important;
+    border-radius: 99px !important;
+    background: var(--accent-soft) !important;
+    border: 1px solid rgba(37,99,235,0.2) !important;
+    color: var(--accent) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+}
+
+.pa-shell .pa-active-chip {
+    height: 28px !important;
+    padding: 0 10px !important;
+    border-radius: 99px !important;
+    background: transparent !important;
+    border: 1px solid var(--accent) !important;
+    color: var(--accent) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-active-chip span {
+    font-size: 12px !important;
+    line-height: 1 !important;
+}
+
+.pa-shell .pa-clear-all,
+#pa-clear-all,
+#pa-dsm-clear-all,
+#pa-dsm-clear-list,
+#pa-modal-clear-all,
+#pas-clear-all,
+[data-action="cat-clear-all"],
+[data-action="sup-clear-all"],
+[data-action="price-clear-all"] {
+    display: none !important;
+}
+
+.pa-shell [onclick*="clear"],
+.pa-shell .clear-btn {
+    height: 26px !important;
+    padding: 0 12px !important;
+    border-radius: var(--radius-sm) !important;
+    background: none !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-clear-all:hover {
+    background: var(--danger-soft) !important;
+    color: var(--danger) !important;
+    border-color: rgba(229,62,62,0.3) !important;
+}
+
+/* ─── RESULTS BAR ─── */
+.pa-shell .pa-results-bar {
+    padding: 10px 2px !important;
+}
+
+.pa-shell .pa-results-count {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--text-soft) !important;
+}
+
+.pa-shell .pa-price-toggle-label,
+.pa-shell .pa-detail-toggle-label {
+    font-size: 12px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-ptoggle {
+    height: 34px !important;
+    padding: 0 14px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel) !important;
+    border: 1.5px solid var(--line) !important;
+    color: var(--muted) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-ptoggle.is-active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25) !important;
+}
+
+.pa-shell .pa-ptoggle:not(.is-active):hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+.pa-shell .pa-sort-label {
+    font-size: 12px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+    gap: 6px !important;
+}
+
+.pa-shell .pa-grid-sort-select {
+    height: 34px !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--panel) !important;
+    color: var(--text-soft) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    padding: 0 28px 0 10px !important;
+    cursor: pointer !important;
+    appearance: auto !important;
+    outline: none !important;
+}
+
+.pa-shell .pa-bar-icon {
+    height: 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel) !important;
+    border: 1.5px solid var(--line) !important;
+    color: var(--muted) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-bar-icon:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+.pa-shell .pa-bar-icon.is-active {
+    background: var(--accent) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+}
+
+.pa-shell .pa-bar-icon svg {
+    width: 15px !important;
+    height: 15px !important;
+    stroke-width: 2px !important;
+}
+
+.pa-shell .pa-flag-us {
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.03em !important;
+}
+
+.pa-shell .pa-view-btn {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: var(--radius-sm) !important;
+    background: none !important;
+    border: 1.5px solid transparent !important;
+    color: var(--muted) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-view-btn:hover,
+.pa-shell .pa-view-btn.is-active {
+    border-color: var(--line) !important;
+    color: var(--text-soft) !important;
+    background: var(--panel) !important;
+}
+
+.pa-shell .pa-view-btn.is-active {
+    color: var(--accent) !important;
+}
+
+.pa-shell .pa-view-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+/* ─── PRODUCT GRID & CARDS ─── */
+.pa-shell .pa-product-grid {
+    gap: 10px !important;
+}
+
+.pa-shell .pa-pcard {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 14px 14px 10px !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+    gap: 10px !important;
+    cursor: pointer !important;
+}
+
+.pa-shell .pa-pcard:hover {
+    border-color: #c7d8f5 !important;
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Card header */
+.pa-shell .pa-pcard-name {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    line-height: 1.3 !important;
+    letter-spacing: -0.01em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.pa-shell .pa-cat-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 20px !important;
+    padding: 0 8px !important;
+    border-radius: 5px !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    white-space: nowrap !important;
+}
+
+/* Dosage label */
+.pa-shell .pa-dosage-label {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* Dosage pills */
+.pa-shell .pa-dosage-pill {
+    height: 24px !important;
+    padding: 0 8px !important;
+    border-radius: 99px !important;
+    background: var(--panel-soft) !important;
+    border: 1.5px solid var(--line) !important;
+    color: var(--muted) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    transition: all 0.15s ease !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-dosage-pill.is-active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.2) !important;
+}
+
+.pa-shell .pa-dosage-pill:not(.is-active):hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+.pa-shell .pa-dosage-arrow {
+    color: var(--muted) !important;
+    background: var(--panel-soft) !important;
+    border: 1.5px solid var(--line) !important;
+    border-radius: 99px !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-dosage-arrow:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* Vendor rows */
+.pa-shell .pa-pcard-vendor-row {
+    grid-template-columns: 32px 1fr auto !important;
+    gap: 10px !important;
+    padding: 10px 6px 10px 12px !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line-soft) !important;
+    margin-bottom: 0 !important;
+    min-height: 0 !important;
+    transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+.pa-shell .pa-pcard-vendor-row:hover {
+    background: #eef4ff !important;
+    border-color: #c7d8f5 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.pa-shell .pa-pcard-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-pcard-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+}
+
+.pa-shell .pa-pcard-vname,
+.pa-shell .pa-pcard-vendor-name {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+    line-height: 1.3 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-transform: capitalize !important;
+}
+
+.pa-shell .pa-pcard-stock {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+}
+
+.pa-shell .pa-pcard-stock.is-in-stock {
+    color: #16a34a !important;
+}
+
+.pa-shell .pa-pcard-stock.is-in-stock::before {
+    content: "" !important;
+    width: 5px !important;
+    height: 5px !important;
+    background: #16a34a !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 2px rgba(22,163,74,0.2) !important;
+}
+
+.pa-shell .pa-pcard-stock.is-out-of-stock {
+    color: #ef4444 !important;
+}
+
+/* JS-rendered card status classes (pa-pcard-status is-instock / is-oos) */
+.pa-shell .pa-pcard-status {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+.pa-shell .pa-pcard-status.is-instock {
+    color: #16a34a !important;
+}
+
+.pa-shell .pa-pcard-status.is-oos {
+    color: #ef4444 !important;
+}
+
+.pa-shell .pa-pcard-price {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    letter-spacing: -0.01em !important;
+}
+
+.pa-shell .pa-pcard-permg {
+    font-size: 10px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+}
+
+.pa-shell .pa-pcard-vprod {
+    display: none !important;
+}
+
+.pa-shell .pa-pcard-extlink {
+    width: 28px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--muted) !important;
+    border-radius: var(--radius-sm) !important;
+    transition: all 0.15s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-pcard-extlink svg {
+    width: 14px !important;
+    height: 14px !important;
+    stroke-width: 2px !important;
+}
+
+.pa-shell .pa-pcard-extlink:hover {
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+/* Card footer */
+.pa-shell .pa-pcard-foot {
+    padding-top: 8px !important;
+    border-top: 1px solid var(--line-soft) !important;
+    margin-top: 4px !important;
+}
+
+.pa-shell .pa-icon-btn {
+    color: var(--muted) !important;
+    border-radius: var(--radius-sm) !important;
+    transition: color 0.15s ease, background 0.15s ease !important;
+}
+
+.pa-shell .pa-icon-btn:hover {
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+.pa-shell .pa-icon-btn.is-active {
+    color: #f97316 !important;
+}
+
+/* Coupon badges */
+.pa-shell .pa-coupon-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 3px 8px !important;
+    background: #f0fdf4 !important;
+    color: #16a34a !important;
+    border: 1px dashed rgba(22,163,74,0.4) !important;
+    border-radius: 5px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    cursor: copy !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-coupon-badge:hover {
+    background: #16a34a !important;
+    color: #ffffff !important;
+    border-color: #16a34a !important;
+    border-style: solid !important;
+}
+
+/* Loading state */
+.pa-shell .pa-loading {
+    text-align: center !important;
+    color: var(--muted) !important;
+    font-size: 14px !important;
+    padding: 60px 0 !important;
+    grid-column: 1 / -1 !important;
+}
+
+/* ─── DETAIL VIEW ─── */
+.pa-shell .pa-back-btn {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--accent) !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: opacity 0.15s ease !important;
+}
+
+.pa-shell .pa-back-btn:hover {
+    opacity: 0.75 !important;
+}
+
+.pa-shell .pa-detail-card,
+.pa-shell .pa-detail-dosage-card {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 16px !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.pa-shell .pa-detail-name {
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    color: var(--text) !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+    margin: 0 0 8px !important;
+}
+
+.pa-shell .pa-detail-desc {
+    font-size: 13px !important;
+    color: var(--muted) !important;
+    line-height: 1.6 !important;
+    margin: 10px 0 0 !important;
+}
+
+.pa-shell .pa-detail-dosage-title {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--text-soft) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* Detail dosage buttons */
+.pa-shell .pa-ddosage-btn {
+    padding: 6px 10px !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--panel-soft) !important;
+    border: 1.5px solid var(--line) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-ddosage-btn.is-active {
+    background: var(--accent-soft) !important;
+    border-color: var(--accent) !important;
+}
+
+.pa-shell .pa-ddosage-btn:hover:not(.is-active) {
+    border-color: var(--accent) !important;
+}
+
+.pa-shell .pa-ddosage-label {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+}
+
+.pa-shell .pa-ddosage-btn.is-active .pa-ddosage-label {
+    color: var(--accent) !important;
+}
+
+.pa-shell .pa-ddosage-count {
+    font-size: 10px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+}
+
+/* Detail prices section */
+.pa-shell .pa-detail-prices {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-xl) !important;
+    overflow: hidden !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.pa-shell .pa-detail-prices-bar {
+    background: var(--panel-soft) !important;
+    border-bottom: 1px solid var(--line) !important;
+    padding: 14px 20px !important;
+}
+
+.pa-shell .pa-dpbar-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+}
+
+.pa-shell .pa-dpbar-subtitle {
+    font-size: 11px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+}
+
+.pa-shell .pa-dpbar-stock-btn,
+.pa-shell .pa-dpbar-sort-btn,
+.pa-shell .pa-dpbar-supplier-btn {
+    height: 30px !important;
+    padding: 0 12px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--text-soft) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-dpbar-stock-btn:hover,
+.pa-shell .pa-dpbar-sort-btn:hover,
+.pa-shell .pa-dpbar-supplier-btn:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* Detail vendor rows */
+.pa-shell .pa-detail-vendor-list {
+    padding: 8px 16px 12px !important;
+}
+
+.pa-shell .pa-detail-vrow {
+    display: grid !important;
+    grid-template-columns: 40px 1fr auto !important;
+    padding: 14px 8px !important;
+    border-bottom: 1px solid var(--line-soft) !important;
+    border-radius: 0 !important;
+    transition: background 0.12s ease !important;
+}
+
+.pa-shell .pa-detail-vrow:last-child {
+    border-bottom: none !important;
+}
+
+.pa-shell .pa-detail-vrow:hover {
+    background: var(--panel-soft) !important;
+    border-radius: var(--radius-sm) !important;
+}
+
+.pa-shell .pa-vendor-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    overflow: hidden !important;
+}
+
+.pa-shell .pa-vendor-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+}
+
+.pa-shell .pa-vendor-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+    line-height: 1.3 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.pa-shell .pa-vendor-stock {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+}
+
+.pa-shell .pa-vendor-stock.is-in-stock {
+    color: #16a34a !important;
+}
+
+.pa-shell .pa-vendor-stock.is-in-stock::before {
+    content: "" !important;
+    width: 5px !important;
+    height: 5px !important;
+    background: #16a34a !important;
+    border-radius: 50% !important;
+}
+
+.pa-shell .pa-vendor-stock.is-out-of-stock {
+    color: #ef4444 !important;
+}
+
+.pa-shell .pa-vendor-prodname {
+    font-size: 11px !important;
+    color: var(--muted) !important;
+    font-weight: 400 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.pa-shell .pa-detail-prev-price {
+    font-size: 11px !important;
+    color: var(--muted) !important;
+    text-decoration: line-through !important;
+    font-weight: 500 !important;
+}
+
+.pa-shell .pa-dpbar-stock-btn.is-active,
+.pa-shell .pa-dpbar-supplier-btn.is-active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+.pa-shell .pa-detail-price {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    color: var(--text) !important;
+    letter-spacing: -0.02em !important;
+}
+
+.pa-shell .pa-detail-permg {
+    font-size: 10px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+}
+
+.pa-shell .pa-detail-link-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    transition: all 0.15s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-detail-link-icon:hover {
+    background: var(--accent-soft) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+.pa-shell .pa-detail-link-icon svg {
+    width: 14px !important;
+    height: 14px !important;
+    stroke-width: 2px !important;
+}
+
+/* ─── BAR BUTTONS (legacy .pa-bar) ─── */
+.pa-shell .pa-bar,
+.pa-shell .pa-bar-btn {
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 12px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel) !important;
+    border: 1.5px solid var(--line) !important;
+    color: var(--text-soft) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-bar:hover,
+.pa-shell .pa-bar-btn:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+.pa-shell .pa-bar.is-active,
+.pa-shell .pa-bar:active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+.pa-shell .pa-bar svg,
+.pa-shell .pa-bar i {
+    width: 15px !important;
+    height: 15px !important;
+    stroke-width: 2px !important;
+}
+
+/* ─── MODAL ─── */
+.pa-shell ~ .pa-modal,
+.pa-modal {
+    z-index: 999999 !important;
+}
+
+.pa-modal-backdrop {
+    background: rgba(15,23,42,0.45) !important;
+    backdrop-filter: blur(3px) !important;
+}
+
+.pa-modal-card {
+    background: var(--panel) !important;
+    border-radius: 22px 22px 0 0 !important;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.12) !important;
+    max-height: 82vh !important;
+}
+
+.pa-modal-grip {
+    width: 36px !important;
+    height: 4px !important;
+    background: var(--line) !important;
+    border-radius: 99px !important;
+    margin: 10px auto 0 !important;
+}
+
+.pa-modal-head {
+    padding: 16px 20px 12px !important;
+    border-bottom: 1px solid var(--line-soft) !important;
+}
+
+.pa-modal-head h2 {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    margin: 0 !important;
+}
+
+.pa-modal-close {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-modal-close:hover {
+    background: var(--danger-soft) !important;
+    color: var(--danger) !important;
+    border-color: rgba(229,62,62,0.25) !important;
+}
+
+.pa-modal-tabs {
+    background: var(--panel-soft) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 4px !important;
+    margin: 12px 20px !important;
+    gap: 2px !important;
+}
+
+.pa-modal-tab {
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    border: none !important;
+    background: none !important;
+    transition: all 0.15s ease !important;
+    gap: 5px !important;
+}
+
+.pa-modal-tab.is-active {
+    background: var(--panel) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.pa-modal-body {
+    padding: 0 20px !important;
+}
+
+.pa-modal-divider {
+    height: 1px !important;
+    background: var(--line-soft) !important;
+    margin: 12px 0 !important;
+}
+
+/* Filter modal sections */
+.pa-section-head h3 {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: var(--text-soft) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    margin: 0 !important;
+}
+
+.pa-link-btn {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--accent) !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: opacity 0.15s ease !important;
+}
+
+.pa-link-btn:hover {
+    opacity: 0.75 !important;
+}
+
+.pa-link-btn.pa-danger {
+    color: var(--danger) !important;
+}
+
+/* Toggle rows (In Stock, Kits, etc.) */
+.pa-toggle-row {
+    padding: 10px 0 !important;
+    border-bottom: 1px solid var(--line-soft) !important;
+}
+
+.pa-toggle-row:last-child {
+    border-bottom: none !important;
+}
+
+.pa-toggle-row span {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-soft) !important;
+}
+
+/* Check list items */
+.pa-check-item {
+    padding: 9px 12px !important;
+    border-radius: var(--radius-sm) !important;
+    transition: background 0.12s ease !important;
+}
+
+.pa-check-item:hover {
+    background: var(--panel-soft) !important;
+}
+
+.pa-check-item span {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-soft) !important;
+}
+
+/* Price range grid */
+.pa-price-grid {
+    gap: 6px !important;
+    margin-bottom: 12px !important;
+}
+
+/* Sort items */
+.pa-sort-item {
+    padding: 10px 12px !important;
+    border-radius: var(--radius-sm) !important;
+    transition: background 0.12s ease !important;
+}
+
+.pa-sort-item:hover {
+    background: var(--panel-soft) !important;
+}
+
+.pa-sort-item span {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-soft) !important;
+}
+
+.pa-sort-item.is-active span {
+    color: var(--accent) !important;
+    font-weight: 600 !important;
+}
+
+/* Search inline */
+.pa-search-inline {
+    width: 100% !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--panel-soft) !important;
+    color: var(--text) !important;
+    font-size: 13px !important;
+    outline: none !important;
+    transition: border-color 0.15s ease !important;
+    margin-bottom: 8px !important;
+}
+
+.pa-search-inline:focus {
+    border-color: var(--accent) !important;
+}
+
+/* Modal footer */
+.pa-modal-foot,
+.pa-modal-footer {
+    border-top: 1px solid var(--line-soft) !important;
+    padding: 14px 20px !important;
+}
+
+.pa-foot-btn,
+.pa-modal-cancel-btn,
+.pa-modal-apply-btn {
+    height: 40px !important;
+    padding: 0 22px !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-foot-btn.is-cancel,
+.pa-modal-cancel-btn {
+    background: var(--panel-soft) !important;
+    border: 1.5px solid var(--line) !important;
+    color: var(--text-soft) !important;
+}
+
+.pa-foot-btn.is-cancel:hover,
+.pa-modal-cancel-btn:hover {
+    border-color: var(--muted) !important;
+    color: var(--text) !important;
+}
+
+.pa-foot-btn.is-apply,
+.pa-modal-apply-btn {
+    background: var(--accent) !important;
+    border: 1.5px solid var(--accent) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.2) !important;
+}
+
+.pa-foot-btn.is-apply:hover,
+.pa-modal-apply-btn:hover {
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+}
+
+/* DSM (Detail Supplier Modal) */
+.pa-dsm-search-input {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 12px 0 36px !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--panel-soft) !important;
+    color: var(--text) !important;
+    font-size: 13px !important;
+    outline: none !important;
+    transition: border-color 0.15s ease !important;
+}
+
+.pa-dsm-search-input:focus {
+    border-color: var(--accent) !important;
+}
+
+.pa-dsm-search-icon {
+    color: var(--muted) !important;
+}
+
+.pa-dsm-list {
+    padding: 0 20px !important;
+}
+
+/* Nav links (supplier / about page tabs) */
+.pa-shell .pa-nav-links {
+    background: var(--panel-soft) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 3px !important;
+    gap: 2px !important;
+}
+
+.pa-shell .pa-nav-link {
+    height: 30px !important;
+    padding: 0 14px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-nav-link:hover {
+    color: var(--text) !important;
+    background: var(--panel) !important;
+}
+
+.pa-shell .pa-nav-link.is-active {
+    background: var(--panel) !important;
+    color: var(--accent) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* Sort direction buttons */
+.pa-shell .pa-sort-dir {
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.pa-shell .pa-sort-dir:hover,
+.pa-shell .pa-sort-dir.is-active {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* ─── SUPPLIER CARDS ─── */
+.pa-shell .pa-scard {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+}
+
+.pa-shell .pa-scard:hover {
+    border-color: #c7d8f5 !important;
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ─── ABOUT PAGE ─── */
+.pa-about-stat {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 24px 16px !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.pa-about-stat-value {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: var(--accent) !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1 !important;
+}
+
+.pa-about-stat-label {
+    font-size: 12px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+}
+
+.pa-about-btn {
+    height: 40px !important;
+    padding: 0 20px !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    transition: all 0.15s ease !important;
+    gap: 8px !important;
+}
+
+/* ─── INLINE CHECK (US Only label) ─── */
+.pa-inline-check {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--text-soft) !important;
+    cursor: pointer !important;
+}
+
+/* ─── MISC UTILITY ─── */
+.pa-dot {
+    background: var(--line) !important;
+    width: 3px !important;
+    height: 3px !important;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 600px) {
+    /* Detail view: stack sidebar above main instead of side-by-side */
+    .pa-shell .pa-detail-layout {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .pa-shell .pa-detail-sidebar {
+        width: 100% !important;
+    }
+
+    /* Prices bar: stack left/center/right vertically */
+    .pa-shell .pa-detail-prices-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    /* Dosage head: allow wrapping more naturally */
+    .pa-shell .pa-detail-dosage-head {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    /* Vendor rows: keep avatar | info | price on one line */
+    .pa-shell .pa-detail-vrow {
+        grid-template-columns: 40px 1fr auto !important;
+        gap: 8px !important;
+        padding: 10px 8px !important;
+    }
+
+    .pa-shell .pa-detail-vrow-right {
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+    }
+
+    /* Compact card margins */
+    .pa-shell .pa-search-panel {
+        padding: 10px 12px !important;
+    }
+
+    .pa-shell .pa-results-bar {
+        padding: 8px 2px !important;
+    }
+
+    .pa-shell .pa-product-grid {
+        gap: 8px !important;
+    }
+
+    .pa-shell .pa-pcard {
+        padding: 10px 8px 6px !important;
+        gap: 8px !important;
+    }
+
+    .pa-shell .pa-pcard-vendor-row {
+        padding: 8px 4px 8px 8px !important;
+    }
+
+    .pa-shell .pa-pcard-vright {
+        gap: 3px !important;
+    }
+
+    .pa-shell .pa-pcard-extlink {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .pa-shell .pa-coupon-badge {
+        padding: 2px 5px !important;
+        gap: 2px !important;
+    }
+
+    /* Detail card margins */
+    .pa-shell .pa-detail-card,
+    .pa-shell .pa-detail-dosage-card {
+        padding: 12px !important;
+    }
+
+    .pa-shell .pa-detail-layout {
+        gap: 8px !important;
+    }
+
+    .pa-shell .pa-detail-vrow-right .pa-coupon-badge {
+        padding: 2px 5px !important;
+        gap: 2px !important;
+    }
+
+    /* Smaller filter/sort buttons in detail view */
+    .pa-shell .pa-dpbar-stock-btn,
+    .pa-shell .pa-dpbar-sort-btn,
+    .pa-shell .pa-dpbar-supplier-btn {
+        height: 24px !important;
+        padding: 0 8px !important;
+        font-size: 10px !important;
+    }
+}
