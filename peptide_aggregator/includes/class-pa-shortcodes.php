@@ -30,14 +30,14 @@ class PA_Shortcodes {
 
     /**
      * Return the critical layout CSS that must load AFTER Elementor.
-     * Covers flex/grid display values only – colours live in dashboard.css.
+     * Covers flex/grid display values only â€“ colours live in dashboard.css.
      */
     private function critical_layout_css() {
         return '
-/* pa: critical layout – injected after Elementor to guarantee source-order win */
+/* pa: critical layout â€“ injected after Elementor to guarantee source-order win */
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
 .pa-shell{display:block!important;width:100%!important}
-/* detail view show/hide — pa-hidden/pa-visible toggled on each element */
+/* detail view show/hide â€” pa-hidden/pa-visible toggled on each element */
 /* belt-and-suspenders: height:0+overflow:hidden ensures no space even if display is overridden */
 #pa-product-detail{display:none!important;height:0!important;max-height:0!important;overflow:hidden!important}
 #pa-product-detail.pa-visible{display:block!important;height:auto!important;max-height:none!important;overflow:visible!important}
@@ -136,10 +136,12 @@ class PA_Shortcodes {
 .pa-about-stat-icon,.pa-about-list-icon,.pa-about-mini-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
 .pa-about-contact-pill{display:inline-flex!important;align-items:center!important;gap:8px!important}
 .pa-about-copy-btn{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important}
-.pa-modal{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;z-index:999999!important;display:flex!important;align-items:flex-end!important;justify-content:center!important}
-.pa-modal[aria-hidden="true"]{display:none!important}
+.pa-modal{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;z-index:999999!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:opacity 0.28s ease,visibility 0.28s ease!important}
+.pa-modal.is-open{opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+.pa-modal[aria-hidden="true"]{display:flex!important}
 .pa-modal-backdrop{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
-.pa-modal-card{position:relative!important;width:100%!important;max-width:480px!important;max-height:80vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:1!important;border-radius:22px 22px 0 0!important;background:#ffffff!important;color:#1a2332!important}
+.pa-modal-card{position:relative!important;width:100%!important;max-width:480px!important;max-height:80vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:1!important;border-radius:22px 22px 0 0!important;background:#ffffff!important;color:#1a2332!important;transform:translateY(100%)!important;transition:transform 0.32s cubic-bezier(0.32,0.72,0,1)!important}
+.pa-modal.is-open .pa-modal-card{transform:translateY(0)!important}
 .pa-modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:16px 20px 12px!important;flex-shrink:0!important;border-bottom:1px solid #e4e9f0!important}
 .pa-modal-head-actions{display:flex!important;align-items:center!important;gap:12px!important}
 .pa-modal-tabs{display:flex!important;gap:4px!important;padding:4px!important;margin:0 20px 12px!important;flex-shrink:0!important;background:#f7f9fc!important;border-radius:8px!important}
@@ -223,7 +225,7 @@ class PA_Shortcodes {
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), PA_PLUGIN_VERSION, false);
         if (!is_admin()) {
             wp_enqueue_style('pa-dashboard-css');
-            // Inline CSS appended to our stylesheet – guaranteed to appear after
+            // Inline CSS appended to our stylesheet â€“ guaranteed to appear after
             // both Elementor and dashboard.css in document order.
             wp_add_inline_style( 'pa-dashboard-css', $this->critical_layout_css() );
             wp_enqueue_script('pa-dashboard-js');
@@ -868,6 +870,15 @@ class PA_Shortcodes {
         return ob_get_clean();
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 
