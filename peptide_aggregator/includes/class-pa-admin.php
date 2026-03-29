@@ -15,6 +15,7 @@ class PA_Admin {
         add_action('wp_ajax_pa_delete_product', array($this, 'ajax_delete_product'));
         add_action('wp_ajax_pa_delete_vendor', array($this, 'ajax_delete_vendor'));
         add_action('wp_ajax_pa_save_dose_labels', array($this, 'ajax_save_dose_labels'));
+        add_action('wp_ajax_pa_save_default_dose', array($this, 'ajax_save_default_dose'));
         add_action('wp_ajax_pa_save_product_tags', array($this, 'ajax_save_product_tags'));
         add_action('wp_ajax_pa_toggle_kit_product', array($this, 'ajax_toggle_kit_product'));
     }
@@ -897,9 +898,9 @@ class PA_Admin {
                         <tr>
                             <th>Dose Labels</th>
                             <td>
-                                <p class="description" style="margin:0 0 8px 0">Override how each dose is shown on the front end. Leave blank to use the original value.</p>
+                                <p class="description" style="margin:0 0 8px 0">Override how each dose is shown on the front end, or remap it to a canonical value so it merges with other vendors. Leave both blank to use the original scraped value.</p>
                                 <div id="pa_dose_labels_list" style="margin-bottom:8px"></div>
-                                <button type="button" class="button button-small" id="pa_dose_labels_save" style="display:none">Save Dose Labels</button>
+                                <button type="button" class="button button-small" id="pa_dose_labels_save" style="display:none">Save</button>
                             </td>
                         </tr>
                         <tr id="pa-scraped-prices-row" style="display:none">
@@ -955,8 +956,11 @@ class PA_Admin {
             var PA_NONCE = '<?php echo wp_create_nonce('pa_toggle_status'); ?>';
             var PA_DELETE_NONCE = '<?php echo wp_create_nonce('pa_product_delete_action'); ?>';
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
+            var PA_DEFAULT_DOSE_NONCE = '<?php echo wp_create_nonce('pa_default_dose_action'); ?>';
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
+            var PA_DEFAULT_DOSES = <?php echo wp_json_encode((array) get_option('pa_default_doses', array())); ?>;
+            var PA_DOSE_REMAPS = <?php echo wp_json_encode((array) get_option('pa_dose_remaps', array())); ?>;
             var PA_TAG_OVERRIDES = <?php echo wp_json_encode($tag_overrides); ?>;
             var PA_PUBLIC_TAGS = <?php echo wp_json_encode($public_tags_by_id); ?>;
             var PA_PUBLIC_DOSAGES = <?php echo wp_json_encode($public_dosages_by_id); ?>;
@@ -971,6 +975,8 @@ class PA_Admin {
             var currentSort = '';
             var currentDoseLabelProductName = '';
             var currentDoseLabels = {};
+            var currentDefaultDose = '';
+            var currentDoseRemaps = {};
             // Must match the DOSAGE_RE in dashboard.js so admin keys align with frontend keys
             var ADMIN_DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)$/i;
             function stripDosageSuffix(name) {
@@ -1465,28 +1471,62 @@ class PA_Admin {
                     saveBtn.style.display = 'none';
                     return;
                 }
+                var savedDefault = PA_DEFAULT_DOSES[currentDoseLabelProductName] || '';
+
+                // Column header
+                var header = document.createElement('div');
+                header.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid #ddd';
+                var hSpacer = document.createElement('span'); hSpacer.style.cssText = 'min-width:90px;font-size:11px;color:#888;font-weight:600'; hSpacer.textContent = 'Scraped';
+                var hArrow  = document.createElement('span'); hArrow.style.cssText = 'font-size:11px;color:#ccc'; hArrow.textContent = '\u2192';
+                var hRemap  = document.createElement('span'); hRemap.style.cssText = 'width:150px;font-size:11px;color:#888;font-weight:600'; hRemap.textContent = 'Remap to';
+                var hSep    = document.createElement('span'); hSep.style.cssText = 'width:8px';
+                var hLabel  = document.createElement('span'); hLabel.style.cssText = 'width:180px;font-size:11px;color:#888;font-weight:600'; hLabel.textContent = 'Display label';
+                header.appendChild(hSpacer); header.appendChild(hArrow); header.appendChild(hRemap); header.appendChild(hSep); header.appendChild(hLabel);
+                section.appendChild(header);
+
                 dosages.forEach(function(dose) {
-                    // Keys in currentDoseLabels are normalized (lowercase, no spaces).
-                    // Try normalized key first so existing labels pre-populate correctly.
                     var normKey = (dose || '').toLowerCase().replace(/\s+/g, '');
                     var customLabel = currentDoseLabels[normKey] || currentDoseLabels[dose] || '';
                     var isHidden = customLabel === '__exclude__';
+                    var remapVal = currentDoseRemaps[normKey] || '';
+
                     var row = document.createElement('div');
                     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+
+                    // Scraped value
                     var origSpan = document.createElement('span');
                     origSpan.style.cssText = 'min-width:90px;font-size:13px;color:#444;font-weight:600';
                     origSpan.textContent = dose;
+
                     var arrow = document.createElement('span');
                     arrow.textContent = '\u2192';
                     arrow.style.color = '#888';
+
+                    // Remap input
+                    var remapInput = document.createElement('input');
+                    remapInput.type = 'text';
+                    remapInput.className = 'regular-text';
+                    remapInput.placeholder = 'e.g. 6mg';
+                    remapInput.value = remapVal;
+                    remapInput.setAttribute('data-dose-remap', dose);
+                    remapInput.style.cssText = 'width:150px';
+                    remapInput.title = 'Remap this scraped dose to a canonical value so it merges with other vendors (e.g. reta6mg \u2192 6mg)';
+
+                    // Separator
+                    var sep = document.createElement('span');
+                    sep.style.cssText = 'font-size:11px;color:#bbb';
+                    sep.textContent = '|';
+
+                    // Display label input
                     var input = document.createElement('input');
                     input.type = 'text';
                     input.className = 'regular-text';
-                    input.placeholder = 'Custom label (leave blank to use original)';
+                    input.placeholder = 'Custom display label';
                     input.value = isHidden ? '' : customLabel;
                     input.setAttribute('data-dose', dose);
-                    input.style.width = '220px';
+                    input.style.cssText = 'width:180px';
                     input.disabled = isHidden;
+
                     // Hide checkbox
                     var hideLabel = document.createElement('label');
                     hideLabel.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;color:#b32d2e;cursor:pointer;white-space:nowrap';
@@ -1500,10 +1540,25 @@ class PA_Admin {
                     });
                     hideLabel.appendChild(hideCheck);
                     hideLabel.appendChild(document.createTextNode('Hide'));
+
+                    // Default radio
+                    var defaultLabel = document.createElement('label');
+                    defaultLabel.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;color:#1d8348;cursor:pointer;white-space:nowrap';
+                    var defaultRadio = document.createElement('input');
+                    defaultRadio.type = 'radio';
+                    defaultRadio.name = 'pa_default_dose_radio';
+                    defaultRadio.setAttribute('data-dose-default', dose);
+                    defaultRadio.checked = (normKey === (savedDefault || '').toLowerCase().replace(/\s+/g, ''));
+                    defaultLabel.appendChild(defaultRadio);
+                    defaultLabel.appendChild(document.createTextNode('Default'));
+
                     row.appendChild(origSpan);
                     row.appendChild(arrow);
+                    row.appendChild(remapInput);
+                    row.appendChild(sep);
                     row.appendChild(input);
                     row.appendChild(hideLabel);
+                    row.appendChild(defaultLabel);
                     section.appendChild(row);
                 });
                 saveBtn.style.display = '';
@@ -1528,31 +1583,66 @@ class PA_Admin {
                 var btn = document.getElementById('pa_dose_labels_save');
                 btn.disabled = true;
                 btn.textContent = 'Saving\u2026';
+
+                // --- Collect remaps ---
+                var remapInputs = document.querySelectorAll('#pa_dose_labels_list input[data-dose-remap]');
+                var remaps = {};
+                remapInputs.forEach(function(ri) {
+                    var dose = ri.getAttribute('data-dose-remap');
+                    var normDose = dose.toLowerCase().replace(/\s+/g, '');
+                    var val = ri.value.trim().toLowerCase();
+                    if (val) remaps[normDose] = val;
+                });
+
+                // --- Save default dose (fire-and-forget) ---
+                var defaultRadioChecked = document.querySelector('#pa_dose_labels_list input[data-dose-default]:checked');
+                var defaultDoseVal = defaultRadioChecked ? defaultRadioChecked.getAttribute('data-dose-default') : '';
+                var normDefaultDose = defaultDoseVal ? defaultDoseVal.toLowerCase().replace(/\s+/g, '') : '';
+                var xhrD = new XMLHttpRequest();
+                xhrD.open('POST', ajaxurl);
+                xhrD.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhrD.onload = function() {
+                    try {
+                        var r = JSON.parse(xhrD.responseText);
+                        if (r.success) {
+                            if (normDefaultDose) { PA_DEFAULT_DOSES[currentDoseLabelProductName] = normDefaultDose; } else { delete PA_DEFAULT_DOSES[currentDoseLabelProductName]; }
+                            currentDefaultDose = normDefaultDose;
+                        }
+                    } catch(e) {}
+                };
+                xhrD.send('action=pa_save_default_dose&_wpnonce=' + PA_DEFAULT_DOSE_NONCE
+                    + '&product_name=' + encodeURIComponent(currentDoseLabelProductName)
+                    + '&default_dose=' + encodeURIComponent(normDefaultDose));
+
+                // --- Save labels + remaps together ---
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', ajaxurl);
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                 xhr.onload = function() {
                     btn.disabled = false;
-                    btn.textContent = 'Save Dose Labels';
+                    btn.textContent = 'Save';
                     try {
                         var r = JSON.parse(xhr.responseText);
                         if (r.success) {
                             PA_DOSE_LABELS[currentDoseLabelProductName] = labels;
                             currentDoseLabels = labels;
-                            showNotice('success', 'Dose labels saved.');
+                            PA_DOSE_REMAPS[currentDoseLabelProductName] = remaps;
+                            currentDoseRemaps = remaps;
+                            showNotice('success', 'Dose settings saved.');
                         } else {
                             showNotice('error', 'Failed to save: ' + (r.data || 'unknown error'));
                         }
-                    } catch(e) { showNotice('error', 'Error saving dose labels'); }
+                    } catch(e) { showNotice('error', 'Error saving dose settings'); }
                 };
                 xhr.onerror = function() {
                     btn.disabled = false;
-                    btn.textContent = 'Save Dose Labels';
+                    btn.textContent = 'Save';
                     showNotice('error', 'Network error');
                 };
                 xhr.send('action=pa_save_dose_labels&_wpnonce=' + PA_DOSE_LABELS_NONCE
                     + '&product_name=' + encodeURIComponent(currentDoseLabelProductName)
-                    + '&labels=' + encodeURIComponent(JSON.stringify(labels)));
+                    + '&labels=' + encodeURIComponent(JSON.stringify(labels))
+                    + '&remaps=' + encodeURIComponent(JSON.stringify(remaps)));
             });
 
             // ── Scraped prices (read-only, grouped by dose) ─────────────────
@@ -1673,6 +1763,8 @@ class PA_Admin {
                 // base-name key that groupByDosage() produces on the frontend.
                 currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
+                currentDefaultDose = PA_DEFAULT_DOSES[currentDoseLabelProductName] || '';
+                currentDoseRemaps = PA_DOSE_REMAPS[currentDoseLabelProductName] || {};
                 // Collect available_dosages labels from ALL variants in this
                 // product's group, mirroring groupByDosage() on the frontend.
                 // The individual product may have no dosages while a sibling
@@ -1700,6 +1792,29 @@ class PA_Admin {
                 if (!doseLabelList.length && p.dosages && p.dosages.length) {
                     doseLabelList = p.dosages;
                 }
+                // 4. Check scraped prices for any null-dose ("default") vendors.
+                //    If found, inject 'default' so it appears as a remappable row.
+                var _dllSnapshot = doseLabelList.slice();
+                var _pidForDose  = pid;
+                var _pNameForDose = currentDoseLabelProductName;
+                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products/' + encodeURIComponent(_pidForDose) + '/prices')
+                    .then(function(r) { return r.json(); })
+                    .then(function(prices) {
+                        var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
+                        var hasDefault = prices.some(function(v) {
+                            if (v.amount_mg != null && v.amount_unit) return false;
+                            if ((v.product || '').match(DOSAGE_RE)) return false;
+                            return true; // null dose → would become 'default'
+                        });
+                        if (hasDefault && _dllSnapshot.indexOf('default') === -1) {
+                            // Only re-render if we're still editing the same product
+                            if (currentDoseLabelProductName === _pNameForDose) {
+                                _dllSnapshot.push('default');
+                                renderDoseLabelsSection(_dllSnapshot);
+                            }
+                        }
+                    })
+                    .catch(function() { /* silently ignore */ });
                 renderDoseLabelsSection(doseLabelList);
 
                 document.getElementById('pa-product-form-wrap').scrollIntoView({behavior:'smooth', block:'start'});
@@ -1723,6 +1838,8 @@ class PA_Admin {
                 document.getElementById('pa_pf_tag_input').value = '';
                 currentDoseLabelProductName = '';
                 currentDoseLabels = {};
+                currentDefaultDose = '';
+                currentDoseRemaps = {};
                 document.getElementById('pa_dose_labels_list').innerHTML = '';
                 document.getElementById('pa_dose_labels_save').style.display = 'none';
                 document.getElementById('pa-price-range-row').style.display = 'none';
@@ -2014,6 +2131,49 @@ class PA_Admin {
             $all_labels[$product_name] = $labels;
         }
         update_option('pa_dose_labels', $all_labels, false);
+
+        // Save remaps alongside labels in the same request.
+        $remaps_json = wp_unslash($_POST['remaps'] ?? '{}');
+        $remaps      = json_decode($remaps_json, true);
+        if (!is_array($remaps)) {
+            $remaps = array();
+        }
+        $remaps = array_map('sanitize_text_field', $remaps);
+
+        $all_remaps = get_option('pa_dose_remaps', array());
+        if (!is_array($all_remaps)) {
+            $all_remaps = array();
+        }
+        if (empty($remaps)) {
+            unset($all_remaps[$product_name]);
+        } else {
+            $all_remaps[$product_name] = $remaps;
+        }
+        update_option('pa_dose_remaps', $all_remaps, false);
+
+        wp_send_json_success();
+    }
+
+    public function ajax_save_default_dose() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_default_dose_action', '_wpnonce');
+        $product_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        $product_name = preg_replace('/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $product_name);
+        $product_name = trim($product_name);
+        $default_dose = sanitize_text_field(wp_unslash($_POST['default_dose'] ?? ''));
+
+        $all_defaults = get_option('pa_default_doses', array());
+        if (!is_array($all_defaults)) {
+            $all_defaults = array();
+        }
+        if ($default_dose === '') {
+            unset($all_defaults[$product_name]);
+        } else {
+            $all_defaults[$product_name] = $default_dose;
+        }
+        update_option('pa_default_doses', $all_defaults, false);
         wp_send_json_success();
     }
 

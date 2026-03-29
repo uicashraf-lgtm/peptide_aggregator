@@ -17,9 +17,12 @@
   // Order matters: most specific first so the first match wins.
   var FORMULATIONS = [
     { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'] },
+    { key: 'liquid',  label: 'Liquid',   terms: ['liquid', 'solution', 'dropper'] },
     { key: 'topical', label: 'Topical',  terms: ['topical', 'cream', 'gel', 'patch', 'lotion'] },
     { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal'] },
   ];
+  // Keys that are NOT vials — used to exclude non-vial vendors when Vials is selected
+  var NON_VIAL_KEYS = FORMULATIONS.map(function(f) { return f.key; });
 
   function getFormulationKey(str) {
     var s = (str || '').toLowerCase();
@@ -104,12 +107,14 @@
     detailProductName: '',    // product name shown in detail view
     detailStockFilter: 'all',       // 'all' | 'instock'
     detailTypeFilter: 'all',        // 'all' | 'kit' | 'vial'
-    detailFormulationFilter: 'all', // 'all' | formulation key
+    detailFormulationFilter: 'vial', // 'vial' | formulation key
     detailProductTags: [],          // tags of the current detail product
     detailSortDir: 'asc',     // 'asc' | 'desc'
     detailSupplierFilter: new Set(), // selected vendor names (empty = all)
     detailSupplierDraft: new Set(),  // draft while modal is open
     detailCurrentVendors: [],        // full unfiltered vendor list for current dosage
+    detailFormKeys: [],              // formulation keys present for current detail product
+    detailHasVials: true,            // whether current detail product has any vial vendors
   };
 
   function copyDraft(src) {
@@ -125,7 +130,7 @@
   }
 
   // ─── Dosage grouping ────────────────────────────────────────
-  var DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)$/i;
+  var DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)(?:\s*\([^)]*\))?$/i;
 
   function parseDosage(name) {
     var m = name.match(DOSAGE_RE);
@@ -149,6 +154,8 @@
         return Object.assign({}, v, { _is_kit: v._is_kit === true || srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
       }
       if (!map[key]) {
+        var pKey0 = (pd.base || '').toLowerCase().trim();
+        var remapMap0 = (UI.dose_remaps && UI.dose_remaps[pKey0]) || {};
         map[key] = {
           id: p.id, name: pd.base, category: p.category,
           description: p.description, dosages: [],
@@ -157,9 +164,26 @@
           vendor_count: p.vendor_count,
           tags: p.tags || [],
           _is_kit_product: p._is_kit_product || false,
-          available_dosages: (p.available_dosages || []).map(function(d) {
-            return Object.assign({}, d, { vendors: (d.vendors || []).map(stampVendor) });
-          }),
+          available_dosages: (function() {
+            var initDosages = [];
+            (p.available_dosages || []).forEach(function(d) {
+              var normRaw0 = (d.label || '').toLowerCase().replace(/\s+/g, '');
+              var remapped = remapMap0[normRaw0] ? Object.assign({}, d, { label: remapMap0[normRaw0] }) : d;
+              var entry = Object.assign({}, remapped, { vendors: (remapped.vendors || []).map(stampVendor) });
+              var normLbl0 = (entry.label || '').toLowerCase().replace(/\s+/g, '');
+              var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
+              if (existingInit) {
+                (entry.vendors || []).forEach(function(v) {
+                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+                    existingInit.vendors.push(v);
+                  }
+                });
+              } else {
+                initDosages.push(entry);
+              }
+            });
+            return initDosages;
+          })(),
         };
         order.push(key);
       }
@@ -170,8 +194,17 @@
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
       // Merge available_dosages (objects with {label, vendors})
       (p.available_dosages || []).forEach(function(d) {
-        var lbl = (d.label || d).toLowerCase();
-        var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase() === lbl; });
+        var rawLabel = (d.label || d);
+        // Apply dose remap: if this product has a remap for this scraped label,
+        // rewrite the label so it merges into the correct canonical bucket.
+        var pKey = (pd.base || '').toLowerCase().trim();
+        var remapMap = (UI.dose_remaps && UI.dose_remaps[pKey]) || {};
+        var normRaw = rawLabel.toLowerCase().replace(/\s+/g, '');
+        if (remapMap[normRaw]) {
+          d = Object.assign({}, d, { label: remapMap[normRaw] });
+        }
+        var lbl = (d.label || d).toLowerCase().replace(/\s+/g, '');
+        var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase().replace(/\s+/g, '') === lbl; });
         if (existing) {
           // Merge vendors from duplicate dosage, skip vendors already present.
           // Use vendor+_is_kit as the key so a vendor can appear once as kit
@@ -204,6 +237,17 @@
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
           }
+          // Also merge into every existing dosage's top_vendors so null-dosage
+          // vendors (e.g. "CAPSULES – Product 50mg x 60 Capsules") appear
+          // alongside dosage-specific vendors on the card.
+          grp.dosages.forEach(function(dos) {
+            if (!dos.top_vendors.some(function(ev) {
+              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
+            })) {
+              dos.top_vendors.push(stamped);
+              dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+            }
+          });
         });
         if (grp.top_vendors) grp.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
         grp.vendor_count = (grp.vendor_count || 0) + (p.vendor_count || 0);
@@ -215,13 +259,40 @@
       map[k].dosages.sort(function (a, b) {
         return parseFloat(a.label) - parseFloat(b.label);
       });
+      map[k].available_dosages.sort(function (a, b) {
+        return parseFloat(a.label) - parseFloat(b.label);
+      });
       // Use first dosage variant's vendors as default
       if (map[k].dosages.length > 0) {
         var first = map[k].dosages[0];
+        // Save any null-dosage vendors accumulated into top_vendors before overwriting
+        var nullDosageVendors = (map[k].top_vendors || []).filter(function(v) {
+          return !map[k].dosages.some(function(d) {
+            return d.top_vendors.some(function(dv) { return dv.vendor === v.vendor && !!dv._is_kit === !!v._is_kit; });
+          });
+        });
         map[k].id = first.id;
         map[k].top_vendors = first.top_vendors;
         map[k].min_price = first.min_price;
         map[k].vendor_count = first.vendor_count;
+        // Merge null-dosage vendors into every dosage so they appear on all pills
+        if (nullDosageVendors.length > 0) {
+          map[k].dosages.forEach(function(dos) {
+            nullDosageVendors.forEach(function(v) {
+              if (!dos.top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+                dos.top_vendors.push(v);
+              }
+            });
+            dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+          });
+          // Also reflect in the root top_vendors (now pointing to first dosage)
+          nullDosageVendors.forEach(function(v) {
+            if (!map[k].top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+              map[k].top_vendors.push(v);
+            }
+          });
+          map[k].top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+        }
       }
       // Merge top_vendors from dosage-variant products into matching available_dosages entries.
       // A vendor whose product name ends with "500mg" (contributing to grp.dosages) should also
@@ -284,6 +355,19 @@
       const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
+      // Debug: log 5-Amino-1MQ product data after grouping
+      var mq = state.allProducts.find(function(p) { return (p.name||'').toLowerCase().includes('amino') && (p.name||'').toLowerCase().includes('1mq'); });
+      if (mq) {
+        console.log('[PA-DEBUG] 1MQ grouped product:', mq.name);
+        console.log('[PA-DEBUG] top_vendors:', JSON.stringify((mq.top_vendors||[]).map(function(v){return {vendor:v.vendor,product_name:v.product_name};})));
+        console.log('[PA-DEBUG] dosages:', JSON.stringify((mq.dosages||[]).map(function(d){return {label:d.label,vendors:(d.top_vendors||[]).map(function(v){return v.vendor;})};})));
+        console.log('[PA-DEBUG] available_dosages:', JSON.stringify((mq.available_dosages||[]).map(function(d){return {label:d.label,vendors:(d.vendors||[]).map(function(v){return v.vendor;})};})));
+      } else {
+        console.log('[PA-DEBUG] 1MQ product not found in grouped products');
+        // Log raw entries that mention 1MQ
+        var rawMq = (Array.isArray(raw) ? raw : []).filter(function(p){ return (p.name||'').toLowerCase().includes('1mq'); });
+        console.log('[PA-DEBUG] raw 1MQ entries:', JSON.stringify(rawMq.map(function(p){return {name:p.name,top_vendors:(p.top_vendors||[]).map(function(v){return v.vendor;})};})));
+      }
       // Debug: log any products that have non-empty tags so kit filter issues are visible.
       var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
       if (tagged.length) console.log('[PA] products with tags:', tagged.map(function(p) { return p.name + ': ' + JSON.stringify(p.tags); }));
@@ -416,12 +500,24 @@
   }
 
   // When the kits filter is active, pick the first kit dosage index; otherwise pick the dosage
-  // with the most vendors. Returns the best index from the dosages array.
-  function bestDosageIdx(dosages) {
+  // with the most vendors. If an admin default dose is set for this product, honour it first.
+  // Returns the best index from the dosages array.
+  function bestDosageIdx(dosages, productName) {
     var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
     if (kitsActive) {
       for (var i = 0; i < dosages.length; i++) {
         if (isKitDosage(dosages[i])) return i;
+      }
+    }
+    // Check for an admin-set default dose for this product.
+    if (productName && UI.default_doses) {
+      var pKey = productName.toLowerCase().trim();
+      var savedDefault = UI.default_doses[pKey] || '';
+      if (savedDefault) {
+        for (var j = 0; j < dosages.length; j++) {
+          var normLabel = (dosages[j].label || '').toLowerCase().replace(/\s+/g, '');
+          if (normLabel === savedDefault) return j;
+        }
       }
     }
     var best = 0, bestCount = -1;
@@ -509,6 +605,14 @@
   function buildProductCard(p) {
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
+
+    // Debug logging for 5-Amino-1MQ
+    if ((p.name || '').toLowerCase().includes('amino') && (p.name || '').toLowerCase().includes('1mq')) {
+      console.log('[PA-DEBUG] buildProductCard:', p.name);
+      console.log('[PA-DEBUG] p.top_vendors:', JSON.stringify((p.top_vendors || []).map(function(v){ return {vendor: v.vendor, product_name: v.product_name}; })));
+      console.log('[PA-DEBUG] p.dosages:', JSON.stringify((p.dosages || []).map(function(d){ return {label: d.label, vendors: (d.top_vendors||[]).map(function(v){return v.vendor;})}; })));
+      console.log('[PA-DEBUG] p.available_dosages:', JSON.stringify((p.available_dosages || []).map(function(d){ return {label: d.label, vendors: (d.vendors||[]).map(function(v){return v.vendor;})}; })));
+    }
 
     // Header row: name + icons (no category badge here — moved to tag row below)
     const head = el('div', 'pa-pcard-head');
@@ -605,7 +709,66 @@
       }
     }
 
-    var activeFormulation = 'all';
+    // Compute which non-vial formulations exist for this product (needed before pill render)
+    var allCardVendors = [];
+    dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
+    if (allCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { allCardVendors.push(v); });
+
+    // Tag-aware formulation resolver for compact card — mirrors vendorFormulationKey()
+    // but uses this card's product tags instead of state.detailProductTags.
+    var cardTags = (p.tags || []);
+    function getCardFormulationKey(v) {
+      var k = getFormulationKey(v.product_name || '');
+      if (k !== null) return k;
+      for (var fi = 0; fi < FORMULATIONS.length; fi++) {
+        if (cardTags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
+      }
+      return null;
+    }
+
+    var cardFormKeys = [];
+    allCardVendors.forEach(function(v) {
+      var fk = getCardFormulationKey(v);
+      if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
+    });
+    var hasFormulationRow = cardFormKeys.length >= 1;
+
+    // Check if any dosage actually has vial vendors (used to hide the Vials button and auto-select)
+    var hasVialVendors = false;
+    // We need filterByFormulation defined first, so we check after — use a pre-check here:
+    // A vendor is a vial if its formulation key is NOT in NON_VIAL_KEYS
+    function vendorIsVial(v) {
+      return NON_VIAL_KEYS.indexOf(getCardFormulationKey(v)) === -1;
+    }
+    if (hasFormulationRow) {
+      allCardVendors.forEach(function(v) { if (vendorIsVial(v)) hasVialVendors = true; });
+    } else {
+      hasVialVendors = true; // no formulation row means treat everything as vial
+    }
+
+    // Default to 'vial' if any vial vendors exist; otherwise pick the first available formulation
+    var activeFormulation = hasVialVendors ? 'vial' : (cardFormKeys[0] || 'vial');
+
+    // Helper: filter vendors by active formulation.
+    // 'vial' = exclude all non-vial formulation vendors.
+    // Any other key = include only vendors matching that key.
+    // When no formulation row exists, 'vial' acts like 'all'.
+    function filterByFormulation(vendors, fKey) {
+      if (!hasFormulationRow) return vendors || [];
+      if (fKey === 'vial') {
+        return (vendors || []).filter(function(v) {
+          return NON_VIAL_KEYS.indexOf(getCardFormulationKey(v)) === -1;
+        });
+      }
+      return (vendors || []).filter(function(v) {
+        return getCardFormulationKey(v) === fKey;
+      });
+    }
+
+    // Returns true if a dosage has at least one vendor visible under the given formulation.
+    function dosageHasFormulation(d, fKey) {
+      return filterByFormulation(d.top_vendors || [], fKey).length > 0;
+    }
 
     if (dosages.length >= 1) {
       var dosageRow = el('div', 'pa-pcard-dosage');
@@ -620,13 +783,14 @@
       rightBtn.type = 'button'; rightBtn.title = 'Scroll right';
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
-      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages);
+      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
       if (activeIdx >= dosages.length) activeIdx = 0;
 
       dosages.forEach(function (d, idx) {
         var isActive = idx === activeIdx;
         var displayLabel = getDoseLabel(p.name, d.label);
         if (displayLabel === null) return; // hidden via admin dose labels
+        if (!dosageHasFormulation(d, activeFormulation)) return; // hidden for current formulation
         var pillHtml = (isActive ? '<svg class="pa-pill-star" viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M6 1l1.4 2.8L11 4.3l-2.5 2.4.6 3.4L6 8.5 2.9 10.1l.6-3.4L1 4.3l3.6-.5z"/></svg>' : '') + escHtml(displayLabel);
         var pill = el('button', 'pa-dosage-pill' + (isActive ? ' is-active' : ''), pillHtml);
         pill.type = 'button';
@@ -647,7 +811,7 @@
             pill.insertBefore(star, pill.firstChild);
           }
           p._activeId = d.id;
-          var filteredByForm = activeFormulation === 'all' ? d.top_vendors : (d.top_vendors || []).filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; });
+          var filteredByForm = filterByFormulation(d.top_vendors, activeFormulation);
           renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d));
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
@@ -668,47 +832,64 @@
       card.appendChild(dosageRow);
     }
 
-    // Formulation filter row — shown only when 2+ formulations exist across vendors
-    var allCardVendors = [];
-    dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
-    if (allCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { allCardVendors.push(v); });
-    var cardFormKeys = [];
-    allCardVendors.forEach(function(v) {
-      var fk = getFormulationKey(v.product_name || '');
-      if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
-    });
-    if (cardFormKeys.length >= 1) {
+    // Formulation filter row — shown only when non-vial formulations exist across vendors
+    if (hasFormulationRow) {
       var formRow = el('div', 'pa-pcard-dosage');
       formRow.appendChild(el('span', 'pa-dosage-label', 'Formulation:'));
       var formBtns = [];
-      [{ key: 'all', label: 'All' }].concat(FORMULATIONS.filter(function(f) { return cardFormKeys.indexOf(f.key) !== -1; })).forEach(function(f) {
-        var btn = el('button', 'pa-dosage-pill' + (f.key === 'all' ? ' is-active' : ''), f.label);
+      var formOptions = (hasVialVendors ? [{ key: 'vial', label: 'Vials' }] : []).concat(FORMULATIONS.filter(function(f) { return cardFormKeys.indexOf(f.key) !== -1; }));
+      formOptions.forEach(function(f) {
+        var btn = el('button', 'pa-dosage-pill' + (f.key === activeFormulation ? ' is-active' : ''), f.label);
         btn.type = 'button';
         btn.addEventListener('click', (function(fKey, fBtn) { return function(e) {
           e.stopPropagation();
           activeFormulation = fKey;
           formBtns.forEach(function(b) { b.classList.remove('is-active'); });
           fBtn.classList.add('is-active');
-          var curIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : 0;
-          // If a specific formulation is selected, switch to the first dosage that has vendors for it
-          if (fKey !== 'all') {
-            var hasFormInCurrent = (dosages[curIdx] && dosages[curIdx].top_vendors || []).some(function(v) { return getFormulationKey(v.product_name || '') === fKey; });
-            if (!hasFormInCurrent) {
-              for (var fi = 0; fi < dosages.length; fi++) {
-                if ((dosages[fi].top_vendors || []).some(function(v) { return getFormulationKey(v.product_name || '') === fKey; })) {
-                  curIdx = fi;
-                  state.activeDosages[p.id] = fi;
-                  pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x, xi) {
-                    x.classList.toggle('is-active', xi === fi);
-                  });
-                  break;
-                }
+          // Re-render dosage pills: show only those that have vendors for the selected formulation
+          pillsContainer.innerHTML = '';
+          var newActiveIdx = -1;
+          var savedIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : 0;
+          dosages.forEach(function(d2, idx2) {
+            var dl2 = getDoseLabel(p.name, d2.label);
+            if (dl2 === null) return;
+            if (!dosageHasFormulation(d2, fKey)) return;
+            var isAct = (newActiveIdx === -1 && (idx2 === savedIdx || savedIdx < idx2)) || false;
+            if (newActiveIdx === -1 && dosageHasFormulation(d2, fKey)) {
+              if (idx2 === savedIdx || newActiveIdx === -1) {
+                // prefer saved index if it has vendors, else first available
+                if (idx2 === savedIdx) { newActiveIdx = idx2; }
+                else if (newActiveIdx === -1) { newActiveIdx = idx2; }
               }
             }
+            var ph = escHtml(dl2);
+            var p2 = el('button', 'pa-dosage-pill', ph);
+            p2.type = 'button';
+            p2.addEventListener('click', (function(d3, i3, p3) { return function(ev) {
+              ev.stopPropagation();
+              state.activeDosages[p.id] = i3;
+              pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) {
+                x.classList.remove('is-active');
+                x.querySelector('.pa-pill-star') && x.querySelector('.pa-pill-star').remove();
+              });
+              p3.classList.add('is-active');
+              renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(d3.top_vendors, activeFormulation), d3));
+            }; })(d2, idx2, p2));
+            pillsContainer.appendChild(p2);
+          });
+          // Activate first visible pill
+          var firstPill = pillsContainer.querySelector('.pa-dosage-pill');
+          if (firstPill) { firstPill.classList.add('is-active'); }
+          // Find the first visible dosage and render its vendors
+          var visibleDosage = null;
+          for (var vi = 0; vi < dosages.length; vi++) {
+            if (getDoseLabel(p.name, dosages[vi].label) !== null && dosageHasFormulation(dosages[vi], fKey)) {
+              if (visibleDosage === null || vi === savedIdx) visibleDosage = dosages[vi];
+              if (vi === savedIdx) break;
+            }
           }
-          var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
-          var curVendors = (curDosage && curDosage.top_vendors && curDosage.top_vendors.length > 0) ? curDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(activeFormulation === 'all' ? curVendors : curVendors.filter(function(v) { return getFormulationKey(v.product_name || '') === activeFormulation; }), curDosage));
+          var vds = visibleDosage ? visibleDosage.top_vendors : (p.top_vendors || []);
+          renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage));
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -716,13 +897,13 @@
       card.appendChild(formRow);
     }
 
-    // Vendor rows — use active dosage's vendors if available, else top_vendors
-    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages);
+    // Vendor rows — use active dosage's vendors if available, else top_vendors, filtered by formulation
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(defaultVendors, activeDosage));
+    renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(defaultVendors, activeFormulation), activeDosage));
     card.appendChild(vendorList);
 
     // Footer
@@ -763,7 +944,9 @@
     state.detailProductName = productName;
     state.detailStockFilter = 'all';
     state.detailTypeFilter = 'all';
-    state.detailFormulationFilter = 'all';
+    state.detailFormulationFilter = 'vial';
+    state.detailFormKeys = [];
+    state.detailHasVials = true;
     state.detailProductTags = [];
     state.detailSortDir = 'asc';
 
@@ -819,9 +1002,13 @@
       const allPrices = await res.json();
 
       // Build dosage groups from all listings (no dedup — show every listing)
-      var dosageMap = {};
-      var dosageOrder = [];
+      var dosageMap = {};    // normKey -> array of vendors
+      var dosageLabelMap = {}; // normKey -> display label (first seen wins)
+      var dosageOrder = [];  // normKeys in insertion order
       var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
+      var detailRemapMap = (UI.dose_remaps && state.detailProductName && UI.dose_remaps[state.detailProductName.toLowerCase().trim()]) || {};
+      console.log('[PA debug] detailProductName:', state.detailProductName);
+      console.log('[PA debug] detailRemapMap:', JSON.stringify(detailRemapMap));
       allPrices.forEach(function(v) {
         var lbl = null;
         if (v.amount_mg != null && v.amount_unit) {
@@ -833,18 +1020,26 @@
           if (m) lbl = m[1] + ' ' + m[2].toLowerCase();
         }
         if (!lbl) lbl = 'default';
-        if (!dosageMap[lbl]) { dosageMap[lbl] = []; dosageOrder.push(lbl); }
-        dosageMap[lbl].push(v);
+        var normLbl = lbl.toLowerCase().replace(/\s+/g, '');
+        console.log('[PA debug] vendor:', v.vendor, '| product:', v.product, '| amount_mg:', v.amount_mg, '| amount_unit:', v.amount_unit, '| raw lbl:', lbl, '| normLbl:', normLbl, '| remap->', detailRemapMap[normLbl] || '(none)');
+        if (detailRemapMap[normLbl]) {
+          lbl = detailRemapMap[normLbl];
+          normLbl = lbl.toLowerCase().replace(/\s+/g, '');
+        }
+        // Use normKey for bucket identity so "6 mg" and "6mg" always merge.
+        if (!dosageMap[normLbl]) { dosageMap[normLbl] = []; dosageLabelMap[normLbl] = lbl; dosageOrder.push(normLbl); }
+        dosageMap[normLbl].push(v);
       });
+      console.log('[PA debug] final dosageOrder:', dosageOrder, '| dosageLabelMap:', JSON.stringify(dosageLabelMap));
       // Sort dosage labels numerically
       dosageOrder.sort(function(a, b) {
         var na = parseFloat(a) || 0, nb = parseFloat(b) || 0;
         return na - nb;
       });
-      var dosages = dosageOrder.map(function(lbl) {
+      var dosages = dosageOrder.map(function(normKey) {
         return {
-          label: lbl,
-          vendors: dosageMap[lbl].sort(function(a, b) {
+          label: dosageLabelMap[normKey],
+          vendors: dosageMap[normKey].sort(function(a, b) {
             return (a.effective_price == null) - (b.effective_price == null) || (a.effective_price || 0) - (b.effective_price || 0);
           }).map(function(v) {
             return {
@@ -866,6 +1061,29 @@
       });
       state.detailActiveDosage = initialIdx;
       state.detailDosages = dosages;
+
+      // Compute which formulations exist across all dosages for this product
+      var allDetailVendors = [];
+      dosages.forEach(function(d) { (d.vendors || []).forEach(function(v) { allDetailVendors.push(v); }); });
+      var detailFormKeys = [];
+      allDetailVendors.forEach(function(v) {
+        var fk = vendorFormulationKey(v);
+        if (fk && detailFormKeys.indexOf(fk) === -1) detailFormKeys.push(fk);
+      });
+      var detailHasVials = allDetailVendors.some(function(v) {
+        return NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) === -1;
+      });
+      state.detailFormKeys = detailFormKeys;
+      state.detailHasVials = detailHasVials;
+
+      // Auto-select nearest valid type filter: if no vials exist, switch away from 'vial'
+      if (state.detailTypeFilter === 'vial' && !detailHasVials) {
+        state.detailTypeFilter = 'all';
+      }
+      // Auto-select nearest valid formulation filter: if selected formulation has no vendors, reset to 'all'
+      if (state.detailFormulationFilter !== 'vial' && state.detailFormulationFilter !== 'all' && detailFormKeys.indexOf(state.detailFormulationFilter) === -1) {
+        state.detailFormulationFilter = 'vial';
+      }
 
       if (dosages.length > 0) {
         renderDetailDosageGrid();
@@ -896,10 +1114,46 @@
         var name = (v.product_name || '').toLowerCase();
         if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
         if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
-        if (state.detailFormulationFilter !== 'all' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
+        if (state.detailFormulationFilter === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
+        if (state.detailFormulationFilter !== 'all' && state.detailFormulationFilter !== 'vial' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
         return true;
       });
     });
+    // If no dosages match the current formulation filter, switch to the nearest one that has vendors.
+    if (visibleDosages.length === 0 && state.detailFormulationFilter !== 'vial') {
+      var fallbackOrder = ['vial'].concat((state.detailFormKeys || []).filter(function(k) { return k !== state.detailFormulationFilter; }));
+      for (var fi = 0; fi < fallbackOrder.length; fi++) {
+        var candidate = fallbackOrder[fi];
+        var hasMatch = dosages.some(function(d) {
+          if (getDoseLabel(state.detailProductName, d.label) === null) return false;
+          return (d.vendors || []).some(function(v) {
+            var name = (v.product_name || '').toLowerCase();
+            if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
+            if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
+            if (candidate === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
+            if (candidate !== 'vial' && vendorFormulationKey(v) !== candidate) return false;
+            return true;
+          });
+        });
+        if (hasMatch) {
+          state.detailFormulationFilter = candidate;
+          // Recompute visibleDosages with new filter
+          visibleDosages = dosages.filter(function(d) {
+            if (getDoseLabel(state.detailProductName, d.label) === null) return false;
+            return (d.vendors || []).some(function(v) {
+              var name = (v.product_name || '').toLowerCase();
+              if (state.detailTypeFilter === 'kit' && !name.includes('kit')) return false;
+              if (state.detailTypeFilter === 'vial' && name.includes('kit')) return false;
+              if (state.detailFormulationFilter === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
+              if (state.detailFormulationFilter !== 'all' && state.detailFormulationFilter !== 'vial' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
+              return true;
+            });
+          });
+          break;
+        }
+      }
+    }
+
     // If the active dosage is now hidden, advance to first visible one.
     if (visibleDosages.length > 0 && !visibleDosages.some(function(d) { return dosages.indexOf(d) === activeIdx; })) {
       state.detailActiveDosage = dosages.indexOf(visibleDosages[0]);
@@ -981,6 +1235,8 @@
     barCenter.appendChild(typeSep);
     [['all', 'All'], ['vial', 'Vials'], ['kit', 'Kits']].forEach(function(pair) {
       var mode = pair[0], label = pair[1];
+      // Hide "Vials" button if this product has no vial vendors
+      if (mode === 'vial' && state.detailHasVials === false) return;
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailTypeFilter === mode ? ' is-active' : ''), label);
       btn.type = 'button';
       btn.addEventListener('click', (function(m) { return function() { state.detailTypeFilter = m; renderDetailDosageGrid(); }; })(mode));
@@ -991,10 +1247,18 @@
     // Right: formulation select (dynamic) + sort + suppliers
     var barRight = el('div', 'pa-dpbar-right');
 
-    // Formulation toggle buttons — always visible, same style as Vial/Kit type buttons.
+    // Formulation toggle buttons — show 'Vials' first, then formulations that actually have vendors for this product.
     var formSep = el('span', 'pa-dpbar-sep');
     barRight.appendChild(formSep);
-    [{ key: 'all', label: 'All' }].concat(FORMULATIONS).forEach(function(f) {
+    var vialBtn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === 'vial' ? ' is-active' : ''), 'Vials');
+    vialBtn.type = 'button';
+    vialBtn.addEventListener('click', function() {
+      state.detailFormulationFilter = 'vial';
+      renderDetailDosageGrid();
+    });
+    barRight.insertBefore(vialBtn, formSep);
+    var availableFormulations = FORMULATIONS.filter(function(f) { return (state.detailFormKeys || []).indexOf(f.key) !== -1; });
+    availableFormulations.forEach(function(f) {
       var btn = el('button', 'pa-dpbar-stock-btn' + (state.detailFormulationFilter === f.key ? ' is-active' : ''), f.label);
       btn.type = 'button';
       btn.addEventListener('click', (function(fKey) { return function() {
@@ -1035,7 +1299,9 @@
     } else if (state.detailTypeFilter === 'vial') {
       filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
     }
-    if (state.detailFormulationFilter !== 'all') {
+    if (state.detailFormulationFilter === 'vial') {
+      filtered = filtered.filter(function(v) { return NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) === -1; });
+    } else if (state.detailFormulationFilter !== 'all') {
       filtered = filtered.filter(function(v) { return vendorFormulationKey(v) === state.detailFormulationFilter; });
     }
     if (state.detailSupplierFilter.size > 0) {
