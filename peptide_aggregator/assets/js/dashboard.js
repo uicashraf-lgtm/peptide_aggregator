@@ -175,7 +175,7 @@
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
               if (existingInit) {
                 (entry.vendors || []).forEach(function(v) {
-                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && getFormulationKey(ev.product_name || '') === getFormulationKey(v.product_name || ''); })) {
                     existingInit.vendors.push(v);
                   }
                 });
@@ -208,12 +208,12 @@
         var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase().replace(/\s+/g, '') === lbl; });
         if (existing) {
           // Merge vendors from duplicate dosage, skip vendors already present.
-          // Use vendor+_is_kit as the key so a vendor can appear once as kit
-          // and once as non-kit (needed for the kits filter to work correctly).
+          // Use vendor+_is_kit+formulation as the key so a vendor can appear once as kit
+          // and once as non-kit, and also once per formulation (e.g. vial vs spray).
           (d.vendors || []).forEach(function(v) {
             var stamped = stampVendor(v);
             if (!existing.vendors.some(function(ev) {
-              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
+              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit && getFormulationKey(ev.product_name || '') === getFormulationKey(stamped.product_name || '');
             })) {
               existing.vendors.push(stamped);
             }
