@@ -83,6 +83,17 @@
     box-shadow: 0 0 0 3px var(--accent-soft) !important;
 }
 
+@keyframes pa-slide-up {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 .pa-shell .pa-filter-btn {
     height: 46px !important;
     width: 46px !important;
@@ -95,6 +106,7 @@
     cursor: pointer !important;
     box-sizing: border-box !important;
     transition: all 0.18s ease !important;
+    animation: pa-slide-up 0.3s ease forwards !important;
 }
 
 .pa-shell .pa-filter-btn:hover {
