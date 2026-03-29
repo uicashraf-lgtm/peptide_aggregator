@@ -184,13 +184,10 @@
               var normLbl0 = (entry.label || '').toLowerCase().replace(/\s+/g, '');
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
               if (existingInit) {
-                (entry.vendors || []).forEach(function(v) {
-                  if (!existingInit.vendors.some(function(ev) {
-                    return v.listing_id && ev.listing_id ? ev.listing_id === v.listing_id : ev.vendor === v.vendor && (ev.product_name || '') === (v.product_name || '');
-                  })) {
-                    existingInit.vendors.push(v);
-                  }
-                });
+                // Same label appears twice within one product's available_dosages — just append.
+                // Do NOT dedup here: vial and spray from the same vendor legitimately
+                // share a label and must both be preserved for formulation tabs to work.
+                (entry.vendors || []).forEach(function(v) { existingInit.vendors.push(v); });
               } else {
                 initDosages.push(entry);
               }
