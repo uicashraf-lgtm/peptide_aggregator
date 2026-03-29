@@ -13,7 +13,7 @@
 
 
   // ─── Utility ─────────────────────────────────────────────────────────────
-  // Formulation keywords used for detail-view vendor filtering.
+  // Formulation keywords used for detail-view vendor filtering
   // Order matters: most specific first so the first match wins.
   var FORMULATIONS = [
     { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'] },
