@@ -183,7 +183,9 @@
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
               if (existingInit) {
                 (entry.vendors || []).forEach(function(v) {
-                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && (ev.product_name || '') === (v.product_name || ''); })) {
+                  if (!existingInit.vendors.some(function(ev) {
+                    return v.listing_id && ev.listing_id ? ev.listing_id === v.listing_id : ev.vendor === v.vendor && (ev.product_name || '') === (v.product_name || '');
+                  })) {
                     existingInit.vendors.push(v);
                   }
                 });
@@ -221,7 +223,7 @@
           (d.vendors || []).forEach(function(v) {
             var stamped = stampVendor(v);
             if (!existing.vendors.some(function(ev) {
-              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit && getFormulationKey(ev.product_name || '') === getFormulationKey(stamped.product_name || '');
+              return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '');
             })) {
               existing.vendors.push(stamped);
             }
@@ -240,7 +242,7 @@
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
-            return ev.vendor === v.vendor && (ev.product_name || '') === (stamped.product_name || '');
+            return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '');
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
