@@ -183,7 +183,7 @@
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
               if (existingInit) {
                 (entry.vendors || []).forEach(function(v) {
-                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
+                  if (!existingInit.vendors.some(function(ev) { return ev.vendor === v.vendor && (ev.product_name || '') === (v.product_name || ''); })) {
                     existingInit.vendors.push(v);
                   }
                 });
@@ -236,12 +236,11 @@
         grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
-        // Use vendor+_is_kit as the key so a vendor can appear once as kit
-        // and once as non-kit (needed for the kits filter to work correctly).
+        // Deduplicate by vendor+product_name so distinct listings (vial vs spray) survive.
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
-            return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
+            return ev.vendor === v.vendor && (ev.product_name || '') === (stamped.product_name || '');
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
