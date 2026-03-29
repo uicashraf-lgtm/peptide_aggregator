@@ -19,7 +19,7 @@
     { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'] },
     { key: 'liquid',  label: 'Liquid',   terms: ['liquid', 'solution', 'dropper'] },
     { key: 'topical', label: 'Topical',  terms: ['topical', 'cream', 'gel', 'patch', 'lotion'] },
-    { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal'] },
+    { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal', 'aerosol'] },
   ];
   // Keys that are NOT vials — used to exclude non-vial vendors when Vials is selected
   var NON_VIAL_KEYS = FORMULATIONS.map(function(f) { return f.key; });
