@@ -1321,14 +1321,19 @@
     if (state.detailSupplierFilter.size > 0) {
       filtered = filtered.filter(function(v) { return state.detailSupplierFilter.has(v.vendor); });
     }
-    // Deduplicate by vendor name, keeping best (lowest) price per vendor
+    // Deduplicate: in kit mode use vendor+product_name so distinct kit products from the
+    // same vendor (e.g. "DSIP Kit" and "DSIP Bulk Pack") both appear; otherwise keep
+    // best (lowest) price per vendor.
     var vendorBest = {};
     filtered.forEach(function(v) {
+      var dedupKey = state.detailTypeFilter === 'kit'
+        ? v.vendor + '\x00' + (v.product_name || '')
+        : v.vendor;
       var p = v.price != null ? v.price : Infinity;
-      var existing = vendorBest[v.vendor];
+      var existing = vendorBest[dedupKey];
       var ep = existing && existing.price != null ? existing.price : Infinity;
       if (!existing || p < ep) {
-        vendorBest[v.vendor] = v;
+        vendorBest[dedupKey] = v;
       }
     });
     filtered = Object.keys(vendorBest).map(function(k) { return vendorBest[k]; });
