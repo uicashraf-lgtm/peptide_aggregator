@@ -1309,9 +1309,9 @@
       filtered = filtered.filter(function(v) { return v.in_stock !== false; });
     }
     if (state.detailTypeFilter === 'kit') {
-      filtered = filtered.filter(function(v) { return (v.product_name || '').toLowerCase().includes('kit'); });
+      filtered = filtered.filter(function(v) { var pn = (v.product_name || '').toLowerCase(); return pn.includes('kit') || pn.includes('bulk') || pn.includes('pack'); });
     } else if (state.detailTypeFilter === 'vial') {
-      filtered = filtered.filter(function(v) { return !(v.product_name || '').toLowerCase().includes('kit'); });
+      filtered = filtered.filter(function(v) { var pn = (v.product_name || '').toLowerCase(); return !pn.includes('kit') && !pn.includes('bulk') && !pn.includes('pack'); });
     }
     if (state.detailFormulationFilter === 'vial') {
       filtered = filtered.filter(function(v) { return NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) === -1; });
