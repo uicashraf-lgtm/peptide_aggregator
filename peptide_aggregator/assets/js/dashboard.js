@@ -147,11 +147,12 @@
       // srcIsKit: only true for admin-tagged 'kit'/'kits' products.
       // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
       // so their vendors are identified by product_name only.
-      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; });
+      var rawNameLower = (p.name || '').toLowerCase();
+      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; }) || rawNameLower.includes('kit') || rawNameLower.includes('pack') || rawNameLower.includes('bulk');
       function stampVendor(v) {
         // Preserve _is_kit injected by REST endpoint at the vendor level so only
         // the specific vendor's entries are flagged, not all vendors on the product.
-        return Object.assign({}, v, { _is_kit: v._is_kit === true || srcIsKit || (v.product_name || '').toLowerCase().includes('kit') });
+        var pn = (v.product_name || '').toLowerCase(); return Object.assign({}, v, { _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk') });
       }
       if (!map[key]) {
         var pKey0 = (pd.base || '').toLowerCase().trim();
@@ -163,7 +164,7 @@
           min_price: p.min_price,
           vendor_count: p.vendor_count,
           tags: p.tags || [],
-          _is_kit_product: p._is_kit_product || false,
+          _is_kit_product: p._is_kit_product || srcIsKit || false,
           available_dosages: (function() {
             var initDosages = [];
             (p.available_dosages || []).forEach(function(d) {
@@ -189,7 +190,7 @@
       }
       var grp = map[key];
       // Propagate kit designation — once any variant is marked as a kit, the group is a kit.
-      if (p._is_kit_product) grp._is_kit_product = true;
+      if (p._is_kit_product || srcIsKit) grp._is_kit_product = true;
       // Merge tags from all variants into the group
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
       // Merge available_dosages (objects with {label, vendors})
@@ -368,7 +369,16 @@
         var rawMq = (Array.isArray(raw) ? raw : []).filter(function(p){ return (p.name||'').toLowerCase().includes('1mq'); });
         console.log('[PA-DEBUG] raw 1MQ entries:', JSON.stringify(rawMq.map(function(p){return {name:p.name,top_vendors:(p.top_vendors||[]).map(function(v){return v.vendor;})};})));
       }
-      // Debug: log any products that have non-empty tags so kit filter issues are visible.
+      // Debug: log DSIP raw grouped product in full
+      var dsip = state.allProducts.find(function(p) { return (p.name||'').toLowerCase() === 'dsip'; });
+      if (dsip) {
+        console.log('[PA-DSIP] name:', dsip.name, '_is_kit_product:', dsip._is_kit_product, 'tags:', dsip.tags);
+        console.log('[PA-DSIP] top_vendors:', JSON.stringify(dsip.top_vendors));
+        console.log('[PA-DSIP] dosages:', JSON.stringify(dsip.dosages));
+        console.log('[PA-DSIP] available_dosages:', JSON.stringify(dsip.available_dosages));
+      } else {
+        console.log('[PA-DSIP] not found in allProducts — names:', state.allProducts.map(function(p){return p.name;}).filter(function(n){return (n||'').toLowerCase().includes('dsip');}));
+      }
       var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
       if (tagged.length) console.log('[PA] products with tags:', tagged.map(function(p) { return p.name + ': ' + JSON.stringify(p.tags); }));
       else console.log('[PA] no products have tags in this response');
@@ -404,16 +414,20 @@
       list = list.filter(function (p) {
         // Admin-designated kit (explicit flag set by pa_kit_product_ids in REST response).
         if (p._is_kit_product) return true;
-        // Most reliable: at least one vendor's product_name contains 'kit' (mirrors detail-mode button logic).
+        // Product name itself contains 'kit' or 'pack'.
+        var pnl = (p.name || '').toLowerCase();
+        if (pnl.includes('kit') || pnl.includes('pack') || pnl.includes('bulk')) return true;
+        // Most reliable: at least one vendor's product_name contains 'kit'/'pack'/'bulk'.
         var allVendors = [];
         (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
+        (p.dosages || []).forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allVendors.push(v); }); });
         (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { return v._is_kit === true || (v.product_name || '').toLowerCase().includes('kit'); })) return true;
+        if (allVendors.some(function(v) { var pn = (v.product_name || '').toLowerCase(); return v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'); })) return true;
         // Fallback: admin/server tag ('kit', 'kits', or PHP auto-detected 'kit_auto').
         if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto'; })) return true;
         // Last resort: available_dosages label.
         return (p.available_dosages || []).some(function (d) {
-          return (d.label || d || '').toString().toLowerCase().includes('kit');
+          return (d.label || d || '').toString().toLowerCase().includes('kit') || (d.label || d || '').toString().toLowerCase().includes('pack') || (d.label || d || '').toString().toLowerCase().includes('bulk');
         });
       });
     }
@@ -477,10 +491,10 @@
         return true;
       });
     }
-    if (dosage && (dosage.label || '').toLowerCase().includes('kit')) return vendors || [];
-    // Primary: product_name contains "kit"
+    if (dosage && ((dosage.label || '').toLowerCase().includes('kit') || (dosage.label || '').toLowerCase().includes('pack') || (dosage.label || '').toLowerCase().includes('bulk'))) return vendors || [];
+    // Primary: product_name contains "kit" or "pack"
     var byName = (vendors || []).filter(function(v) {
-      return (v.product_name || '').toLowerCase().includes('kit');
+      var pn = (v.product_name || '').toLowerCase(); return pn.includes('kit') || pn.includes('pack') || pn.includes('bulk');
     });
     // DEBUG — remove once prices are correct
     console.log('[PA kit] vendors in:', (vendors||[]).map(function(v){return{vendor:v.vendor,product_name:v.product_name,price:v.price,_is_kit:v._is_kit};}));
@@ -1688,8 +1702,10 @@
     const modal = document.getElementById('pa-filter-modal');
     if (!modal) return;
     state.draft = copyDraft(state.applied || state.draft);
-    modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
+    // Force a reflow so the translateY(100%) starting state is painted before we add is-open
+    modal.offsetHeight; // eslint-disable-line no-unused-expressions
+    modal.classList.add('is-open');
     document.body.classList.add('pa-modal-open');
     state.modalOpen = true;
     syncDraftToControls(); renderCategoryList(); renderSupplierList(); renderPriceRanges(); renderSortOptions();
@@ -1700,9 +1716,18 @@
     if (!modal) return;
     if (revert && state.applied) state.draft = copyDraft(state.applied);
     modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('pa-modal-open');
     state.modalOpen = false;
+    document.body.classList.remove('pa-modal-open');
+    var card = modal.querySelector('.pa-modal-card');
+    var onEnd = function() {
+      modal.setAttribute('aria-hidden', 'true');
+      if (card) card.removeEventListener('transitionend', onEnd);
+    };
+    if (card) {
+      card.addEventListener('transitionend', onEnd);
+    } else {
+      modal.setAttribute('aria-hidden', 'true');
+    }
   }
 
   function applyModal() {
@@ -1909,3 +1934,4 @@
     loadAllProducts();
   });
 })();
+
