@@ -240,6 +240,16 @@ class PA_Shortcodes {
             foreach ( (array) $dose_labels_raw as $k => $v ) {
                 $dose_labels[ strtolower( trim( $k ) ) ] = $v;
             }
+            $default_doses_raw = get_option('pa_default_doses', array());
+            $default_doses = array();
+            foreach ( (array) $default_doses_raw as $k => $v ) {
+                $default_doses[ strtolower( trim( $k ) ) ] = $v;
+            }
+            $dose_remaps_raw = get_option('pa_dose_remaps', array());
+            $dose_remaps = array();
+            foreach ( (array) $dose_remaps_raw as $k => $v ) {
+                $dose_remaps[ strtolower( trim( $k ) ) ] = $v;
+            }
             wp_add_inline_script('pa-dashboard-js',
                 'window.PA_UI = {' .
                     'api_base:'     . json_encode($this->api->base_url()) . ',' .
@@ -253,7 +263,9 @@ class PA_Shortcodes {
                     ]) . ',' .
                     'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
                     'sort_options:' . json_encode(['Popularity','Price: Low to High','Price: High to Low','Newest']) . ',' .
-                    'dose_labels:'   . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) .
+                    'dose_labels:'   . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) . ',' .
+                    'default_doses:' . json_encode( empty($default_doses) ? new stdClass() : $default_doses ) . ',' .
+                    'dose_remaps:'   . json_encode( empty($dose_remaps) ? new stdClass() : $dose_remaps ) .
                 '};',
                 'before'
             );
@@ -280,6 +292,16 @@ class PA_Shortcodes {
         foreach ( (array) $sc_dose_labels_raw as $k => $v ) {
             $sc_dose_labels[ strtolower( trim( $k ) ) ] = $v;
         }
+        $sc_default_doses_raw = get_option('pa_default_doses', array());
+        $sc_default_doses = array();
+        foreach ( (array) $sc_default_doses_raw as $k => $v ) {
+            $sc_default_doses[ strtolower( trim( $k ) ) ] = $v;
+        }
+        $sc_dose_remaps_raw = get_option('pa_dose_remaps', array());
+        $sc_dose_remaps = array();
+        foreach ( (array) $sc_dose_remaps_raw as $k => $v ) {
+            $sc_dose_remaps[ strtolower( trim( $k ) ) ] = $v;
+        }
         ob_start();
         ?>
         <script>
@@ -290,6 +312,8 @@ class PA_Shortcodes {
         window.PA_UI.rest_base = <?php echo json_encode(rest_url('pa/v1')); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
         window.PA_UI.dose_labels  = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
+        window.PA_UI.default_doses = <?php echo json_encode( empty($sc_default_doses) ? new stdClass() : $sc_default_doses ); ?>;
+        window.PA_UI.dose_remaps  = <?php echo json_encode( empty($sc_dose_remaps) ? new stdClass() : $sc_dose_remaps ); ?>;
         </script>
         <div class="pa-shell">
                 <section class="pa-search-panel">
