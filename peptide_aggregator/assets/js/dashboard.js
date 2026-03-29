@@ -153,9 +153,8 @@
       // field lacks spray/etc keywords still get correctly classified.
       var srcFormulation = getFormulationKey(p.name || '');
       function stampVendor(v) {
-        // Preserve _is_kit injected by REST endpoint at the vendor level so only
-        // the specific vendor's entries are flagged, not all vendors on the product.
-        var pn = (v.product_name || '').toLowerCase();
+        // Mirror detail view: use product_name || product as the listing name.
+        var pn = (v.product_name || v.product || '').toLowerCase();
         var formulation = getFormulationKey(pn) || srcFormulation || null;
         return Object.assign({}, v, {
           _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
@@ -741,7 +740,7 @@
     // but uses this card's product tags instead of state.detailProductTags.
     var cardTags = (p.tags || []);
     function getCardFormulationKey(v) {
-      var k = getFormulationKey(v.product_name || '');
+      var k = getFormulationKey(v.product_name || v.product || '');
       if (k !== null) return k;
       if (v._formulation) return v._formulation;
       for (var fi = 0; fi < FORMULATIONS.length; fi++) {
