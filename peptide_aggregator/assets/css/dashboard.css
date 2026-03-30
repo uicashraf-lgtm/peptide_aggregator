@@ -414,7 +414,7 @@
 
 /* Card header */
 .pa-shell .pa-pcard-name {
-    font-size: 15px !important;
+    font-size: 14px !important;
     font-weight: 700 !important;
     color: var(--text) !important;
     line-height: 1.3 !important;
@@ -433,7 +433,7 @@
     background: var(--panel-soft) !important;
     border: 1px solid var(--line) !important;
     color: var(--muted) !important;
-    font-size: 10px !important;
+    font-size: 9px !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
@@ -442,7 +442,7 @@
 
 /* Dosage label */
 .pa-shell .pa-dosage-label {
-    font-size: 10px !important;
+    font-size: 9px !important;
     font-weight: 600 !important;
     color: var(--muted) !important;
     white-space: nowrap !important;
@@ -458,7 +458,7 @@
     background: var(--panel-soft) !important;
     border: 1.5px solid var(--line) !important;
     color: var(--muted) !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
     transition: all 0.15s ease !important;
     white-space: nowrap !important;
@@ -533,7 +533,7 @@
 
 .pa-shell .pa-pcard-vname,
 .pa-shell .pa-pcard-vendor-name {
-    font-size: 15px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     color: var(--text) !important;
     line-height: 1.3 !important;
@@ -544,7 +544,7 @@
 }
 
 .pa-shell .pa-pcard-stock {
-    font-size: 10px !important;
+    font-size: 9px !important;
     font-weight: 600 !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -570,7 +570,7 @@
 
 /* JS-rendered card status classes (pa-pcard-status is-instock / is-oos) */
 .pa-shell .pa-pcard-status {
-    font-size: 10px !important;
+    font-size: 9px !important;
     font-weight: 600 !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -586,20 +586,25 @@
 }
 
 .pa-shell .pa-pcard-price {
-    font-size: 14px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
     color: var(--text) !important;
     letter-spacing: -0.01em !important;
 }
 
 .pa-shell .pa-pcard-permg {
-    font-size: 10px !important;
+    font-size: 9px !important;
     color: var(--muted) !important;
     font-weight: 500 !important;
 }
 
 .pa-shell .pa-pcard-vprod {
-    display: none !important;
+    font-size: 9px !important;
+    color: var(--muted) !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 .pa-shell .pa-pcard-extlink {
@@ -635,7 +640,7 @@
     border: 1px dashed var(--line-soft) !important;
     border-radius: var(--radius-sm) !important;
     color: var(--accent) !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 500 !important;
     cursor: pointer !important;
     text-align: center !important;
