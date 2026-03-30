@@ -171,7 +171,7 @@
 
 .pa-shell .pa-active-tag {
     height: 26px !important;
-    padding: 0 10px !important;
+    padding: 0 6px 0 10px !important;
     border-radius: 99px !important;
     background: var(--accent-soft) !important;
     border: 1px solid rgba(37,99,235,0.2) !important;
@@ -180,8 +180,30 @@
     font-weight: 600 !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
+    cursor: default !important;
+}
+
+.pa-shell .pa-active-tag-remove {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: rgba(37,99,235,0.15) !important;
+    color: var(--accent) !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
     cursor: pointer !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+    transition: background 0.12s ease !important;
+}
+
+.pa-shell .pa-active-tag-remove:hover {
+    background: rgba(37,99,235,0.3) !important;
 }
 
 .pa-shell .pa-active-chip {
