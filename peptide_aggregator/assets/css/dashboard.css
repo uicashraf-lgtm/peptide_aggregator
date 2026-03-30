@@ -1736,4 +1736,46 @@
         padding: 0 8px !important;
         font-size: 10px !important;
     }
+
+    /* Results bar right: keep everything on one row */
+    .pa-shell .pa-results-right {
+        flex-wrap: nowrap !important;
+        align-items: flex-end !important;
+        gap: 6px !important;
+    }
+
+    /* Price toggle: label above buttons */
+    .pa-shell .pa-price-toggle {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 3px !important;
+    }
+
+    .pa-shell .pa-price-toggle .pa-price-toggle-label {
+        width: 100% !important;
+        font-size: 10px !important;
+        line-height: 1 !important;
+    }
+
+    .pa-shell .pa-ptoggle {
+        height: 26px !important;
+        padding: 0 7px !important;
+        font-size: 11px !important;
+    }
+
+    /* Sort: label above dropdown */
+    .pa-shell .pa-sort-label {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 3px !important;
+        font-size: 10px !important;
+    }
+
+    .pa-shell .pa-grid-sort-select {
+        width: 90px !important;
+        height: 26px !important;
+        font-size: 11px !important;
+        padding: 0 18px 0 6px !important;
+    }
 }
