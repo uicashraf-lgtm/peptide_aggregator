@@ -1293,6 +1293,54 @@
     transform: translateY(-2px) !important;
 }
 
+/* ─── PAYMENT METHOD LOGO BADGES ─── */
+.pas-pm-logo {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 5px !important;
+    min-width: 34px !important;
+    height: 24px !important;
+    padding: 0 3px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    flex-shrink: 0 !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18) !important;
+    vertical-align: middle !important;
+}
+
+.pas-pm-logo svg {
+    display: block !important;
+    flex-shrink: 0 !important;
+}
+
+.pas-pm-logo--fallback {
+    background: #64748b !important;
+    color: #fff !important;
+    font-size: 10px !important;
+    letter-spacing: 0.02em !important;
+}
+
+.pa-shell .pa-scard-pm-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    margin-right: 2px !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-scard-payment-row {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+}
+
+.pa-shell .pa-scard-payment-row:hover .pas-pm-logo {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.26) !important;
+}
+
 /* ─── ABOUT PAGE ─── */
 .pa-about-stat {
     background: var(--panel) !important;

@@ -71,19 +71,19 @@
     'Check': 'check',
     'check': 'check'
   };
-  // Payment badge icons (match admin/vendors)
+  // Payment logo badges — brand-coloured pills shown on supplier cards
   var PM_ICONS = {
-    credit_card: '<span class="pas-pm-badge" title="Credit Card"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15" stroke-linecap="round"/></svg></span>',
-    crypto: '<span class="pas-pm-badge" title="Crypto"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h5a2 2 0 0 1 0 4H8m5 0h1a2 2 0 0 1 0 4H8M8 7V5m0 2v10m0 0v2m3-14v2m2 8v2"/></svg></span>',
-    apple_pay: '<span class="pas-pm-badge" title="Apple Pay"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span>',
-    bank_ach: '<span class="pas-pm-badge" title="Bank / ACH"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M3 21h18M3 10h18M5 6l7-3 7 3"/><rect x="5" y="10" width="3" height="8"/><rect x="10.5" y="10" width="3" height="8"/><rect x="16" y="10" width="3" height="8"/></svg></span>',
-    cash_app: '<span class="pas-pm-badge" title="Cash App"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><path stroke-linecap="round" d="M12 7v10M9.5 9.5A2.5 2.5 0 0 1 12 8a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 0 0 5 2.5 2.5 0 0 0 2.5-1.5"/></svg></span>',
-    zelle: '<span class="pas-pm-badge" title="Zelle"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 8h8l-8 8h8"/></svg></span>',
-    paypal: '<span class="pas-pm-badge" title="PayPal"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6.5 20H4l2-13h6c3 0 5 1.5 4.5 4.5-.5 3-3 4.5-6 4.5H8L6.5 20z"/><path stroke-linecap="round" d="M9.5 16H7.2l1.5-9h5c2.5 0 4 1.2 3.8 3.8-.4 2.5-2.5 3.7-5 3.7H10L9.5 16z" opacity=".5"/></svg></span>',
-    venmo: '<span class="pas-pm-badge" title="Venmo"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 8c.5 1.5 1 4 1.5 5.5L13 8"/></svg></span>',
-    google_pay: '<span class="pas-pm-badge" title="Google Pay"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M20.5 12.2H13v2.6h4.3c-.4 2-2.1 3.2-4.3 3.2a5 5 0 0 1 0-10c1.3 0 2.4.5 3.3 1.2l1.9-1.9A8 8 0 1 0 12 20c4.4 0 8-3.2 8-8 0-.6-.07-1.2-.2-1.8H20.5"/></svg></span>',
-    ach_bank: '<span class="pas-pm-badge" title="ACH/Bank Transfer"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M3 12h18M3 6h18M3 18h18"/><path stroke-linecap="round" d="M17 9l3 3-3 3"/><path stroke-linecap="round" d="M7 9l-3 3 3 3"/></svg></span>',
-    check: '<span class="pas-pm-badge" title="Check"><svg class="pas-pm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>'
+    credit_card: '<span class="pas-pm-logo" style="background:#1a1f71;" title="Credit Card"><svg viewBox="0 0 32 22" width="32" height="22"><rect width="32" height="22" rx="3" fill="#1a1f71"/><rect y="6" width="32" height="6" fill="#e8b84b"/><rect x="3" y="16" width="8" height="2" rx="1" fill="rgba(255,255,255,0.55)"/><circle cx="25" cy="17" r="3" fill="rgba(235,80,50,0.75)"/><circle cx="27.5" cy="17" r="3" fill="rgba(255,180,0,0.75)"/></svg></span>',
+    crypto: '<span class="pas-pm-logo" style="background:#f7931a;" title="Crypto"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M11.5 2v2.1C8.4 4.6 6 7 6 10c0 2 1 3.7 2.5 4.8V17H6v2h5.5v3h3v-3H17v-2h-2.5v-2.4c1.4-.9 2.5-2.4 2.5-4.1 0-2.2-1.4-4.1-3.5-4.8V2h-2zM12 7c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3z"/></svg></span>',
+    apple_pay: '<span class="pas-pm-logo" style="background:#000;" title="Apple Pay"><svg viewBox="0 0 38 16" width="38" height="16"><text x="2" y="12" font-family="-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif" font-size="10" font-weight="600" fill="white"> Pay</text><path d="M5 3.5c.35-.42.82-.72 1.35-.7.06.57-.22 1.14-.56 1.52-.34.4-.8.68-1.3.65-.06-.57.23-1.15.51-1.47zm1.35 1.82c.75 0 1.37.43 1.72.43.36 0 .97-.43 1.72-.43 1.3 0 2.28.86 2.82 2.18-2.48 1.38-2.08 4.99.42 5.83-.4.9-.82 1.72-1.46 2.32-.55.72-1.14 1.3-1.94 1.3-.81 0-1.04-.5-2.03-.5-.9 0-1.2.5-1.93.5-.82 0-1.45-.65-2.04-1.4C2.74 13.78 2 11.7 2 9.68c0-3.04 1.96-4.64 3.82-4.64.74 0 1.38.48 2.03.48.3 0 .38-.5.38-.5h.06c.15 0 .4.5.58.5.15 0 .04-.7.04-.7z" fill="white" transform="scale(1.1) translate(-1,-1)"/></svg></span>',
+    bank_ach: '<span class="pas-pm-logo" style="background:#1d4ed8;" title="Bank / ACH"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M3 21h18M3 10h18M12 3 3 9h18L12 3z"/><rect x="5" y="10" width="3" height="8"/><rect x="10.5" y="10" width="3" height="8"/><rect x="16" y="10" width="3" height="8"/></svg></span>',
+    cash_app: '<span class="pas-pm-logo" style="background:#00d54b;" title="Cash App"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M12.75 4v1.28c1.96.36 3.25 1.6 3.25 3.22h-2c0-.84-.6-1.5-1.25-1.5v3.05l.83.22c1.68.44 2.42 1.53 2.42 2.96C16 14.77 14.68 16 12.75 16.22V18h-1.5v-1.77C9.26 15.87 8 14.57 8 12.93h2c0 .87.6 1.57 1.25 1.57V11.4l-.77-.2C8.8 10.74 8 9.7 8 8.33 8 6.79 9.26 5.55 11.25 5.27V4h1.5z"/></svg></span>',
+    zelle: '<span class="pas-pm-logo" style="background:#6d1ed4;" title="Zelle"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M6 7h12l-9 10h9M6 17h0" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>',
+    paypal: '<span class="pas-pm-logo" style="background:#003087;" title="PayPal"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 18.5H4.5l1.7-11h5.1c2.6 0 4.2 1.2 3.7 3.7-.5 2.5-2.5 3.7-5 3.7H8.3L7 18.5z" fill="#009cde"/><path d="M9.5 14.5H7.3l1.4-8h4.6c2.2 0 3.5 1 3.3 3.2-.4 2.2-2.2 3.3-4.4 3.3H10L9.5 14.5z" fill="white" opacity="0.8"/></svg></span>',
+    venmo: '<span class="pas-pm-logo" style="background:#3d95ce;" title="Venmo"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M5 5.5c.5 1.5 1.5 5 2.5 8L11.5 5.5h6L10 19h-5L4 5.5h1z"/></svg></span>',
+    google_pay: '<span class="pas-pm-logo" style="background:#fff;border:1px solid #e0e0e0;" title="Google Pay"><svg viewBox="0 0 40 16" width="40" height="16"><text x="2" y="12" font-family="Arial,sans-serif" font-size="9.5" font-weight="700"><tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">o</tspan><tspan fill="#FBBC05">o</tspan><tspan fill="#34A853">g</tspan><tspan fill="#EA4335">l</tspan><tspan fill="#4285F4">e</tspan><tspan fill="#5f6368" font-weight="400"> Pay</tspan></text></svg></span>',
+    ach_bank: '<span class="pas-pm-logo" style="background:#1d4ed8;" title="ACH / Bank Transfer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/><path d="M17 9l3 3-3 3M7 9l-3 3 3 3"/></svg></span>',
+    check: '<span class="pas-pm-logo" style="background:#6b7280;" title="Check"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>'
   };
   var PM_DESCS = {
     credit_card: 'Visa, Mastercard, American Express',
@@ -176,7 +176,7 @@
           var desc = pmDesc(key);
           var item = el('div', 'pa-pm-modal-item');
           var iconWrap = el('div', 'pa-pm-modal-icon');
-          iconWrap.innerHTML = PM_ICONS[key] || ('<span class="pas-pm-badge">' + escHtml(String(label).slice(0,3)) + '</span>');
+          iconWrap.innerHTML = PM_ICONS[key] || ('<span class="pas-pm-logo pas-pm-logo--fallback">' + escHtml(String(label).slice(0,3)) + '</span>');
           var textWrap = el('div', 'pa-pm-modal-text');
           textWrap.appendChild(el('div', 'pa-pm-modal-name', escHtml(label)));
           if (desc) textWrap.appendChild(el('div', 'pa-pm-modal-desc', escHtml(desc)));
@@ -333,8 +333,8 @@
       pmRow.setAttribute('aria-label', 'View payment methods');
       pmRow.addEventListener('click', function(e) { e.stopPropagation(); openPaymentModal(v); });
       pmRow.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPaymentModal(v); } });
-      var pmInner = '<svg class="pa-scard-row-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#4caf82" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
-      var shown = pms.slice(0, 4);
+      var pmInner = '<svg class="pa-scard-row-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#4caf82" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="pa-scard-pm-label">Payments</span>';
+      var shown = pms.slice(0, 5);
       var extra = pms.length - shown.length;
       shown.forEach(function(pm) {
         var key = pmKey(pm);
@@ -343,7 +343,7 @@
           pmInner += icon;
         } else {
           var label = PM_LABELS[key] || PM_LABELS[pm] || pm;
-          pmInner += '<span class="pas-pm-other" title="' + escHtml(label) + '">' + escHtml(String(label).slice(0,3)) + '</span>';
+          pmInner += '<span class="pas-pm-logo pas-pm-logo--fallback" title="' + escHtml(label) + '">' + escHtml(String(label).slice(0,3)) + '</span>';
         }
       });
       if (extra > 0) pmInner += '<span class="pas-pm-more">+' + extra + '</span>';
