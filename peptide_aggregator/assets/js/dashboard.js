@@ -26,18 +26,39 @@
 
   function getFormulationKey(str) {
     var s = (str || '').toLowerCase();
+    
+    // DEBUG: Log formulation detection for DSIP products
+    if (s.includes('dsip') || s.includes('dispersal')) {
+      console.log('[FORMULATION DEBUG] Input:', str, 'Lowercase:', s);
+    }
+    
     for (var i = 0; i < FORMULATIONS.length; i++) {
       var f = FORMULATIONS[i];
       for (var j = 0; j < f.terms.length; j++) {
-        if (s.includes(f.terms[j])) return f.key;
+        if (s.includes(f.terms[j])) {
+          // DEBUG: Log successful detection
+          if (s.includes('dsip') || s.includes('dispersal')) {
+            console.log('[FORMULATION DEBUG] MATCH found! Term:', f.terms[j], 'Key:', f.key);
+          }
+          return f.key;
+        }
       }
     }
+    
+    // DEBUG: Log no match
+    if (s.includes('dsip') || s.includes('dispersal')) {
+      console.log('[FORMULATION DEBUG] NO MATCH for:', s);
+    }
+    
     return null;
   }
   // Resolve formulation key for a vendor: name-detection wins, product tags as fallback.
   function vendorFormulationKey(v) {
-    var k = getFormulationKey(v.product_name);
+    var k = getFormulationKey(v.product_name || v.product || '');
     if (k !== null) return k;
+    if (v._formulation) return v._formulation;
+    if (v.formulation) return v.formulation;
+    if (v.formulation_key) return v.formulation_key;
     var tags = state.detailProductTags || [];
     for (var fi = 0; fi < FORMULATIONS.length; fi++) {
       if (tags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
@@ -141,6 +162,16 @@
   function groupByDosage(products) {
     var map = {};
     var order = [];
+    
+    // DEBUG: Log DSIP products being processed
+    var dsipProducts = products.filter(function(p) { return (p.name || '').toLowerCase().includes('dsip'); });
+    if (dsipProducts.length > 0) {
+      console.log('[DSIP GROUPING] Processing DSIP products:', dsipProducts.map(function(p) { 
+        var pd = parseDosage(p.name);
+        return { name: p.name, base: pd.base, dosage: pd.dosage, key: pd.base.toLowerCase() }; 
+      }));
+    }
+    
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
       var key = pd.base.toLowerCase();
@@ -157,7 +188,13 @@
         // so all downstream code (formulation detection, kit detection) has the best name.
         var effectiveName = v.product_name || v.product || '';
         var pn = effectiveName.toLowerCase();
-        var formulation = getFormulationKey(pn) || srcFormulation || v._formulation || null;
+        var formulation = getFormulationKey(pn) || srcFormulation || v.formulation || v.formulation_key || v._formulation || null;
+        
+        // DEBUG: Log DSIP vendors
+        if ((pd.name || '').toLowerCase().includes('dsip') && v.vendor && (v.vendor.toLowerCase().includes('atomik') || v.vendor.toLowerCase().includes('genetic'))) {
+          console.log('[DSIP DEBUG] Vendor:', v.vendor, 'Product:', effectiveName, 'Formulation detected:', formulation, 'Original _formulation:', v._formulation);
+        }
+        
         return Object.assign({}, v, {
           product_name: effectiveName,
           _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
@@ -237,7 +274,7 @@
         grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
-        // Deduplicate by vendor+product_name+formulation so distinct listings (vial vs spray) survive.
+        // Deduplicate by vendor+product_name so distinct listings (vial vs spray) survive.
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
@@ -251,7 +288,7 @@
           // alongside dosage-specific vendors on the card.
           grp.dosages.forEach(function(dos) {
             if (!dos.top_vendors.some(function(ev) {
-              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit;
+              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit && (ev._formulation || null) === (stamped._formulation || null);
             })) {
               dos.top_vendors.push(stamped);
               dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
@@ -277,7 +314,7 @@
         // Save any null-dosage vendors accumulated into top_vendors before overwriting
         var nullDosageVendors = (map[k].top_vendors || []).filter(function(v) {
           return !map[k].dosages.some(function(d) {
-            return d.top_vendors.some(function(dv) { return dv.vendor === v.vendor && !!dv._is_kit === !!v._is_kit; });
+            return d.top_vendors.some(function(dv) { return dv.vendor === v.vendor && !!dv._is_kit === !!v._is_kit && (dv._formulation || null) === (v._formulation || null); });
           });
         });
         map[k].id = first.id;
@@ -286,17 +323,27 @@
         map[k].vendor_count = first.vendor_count;
         // Merge null-dosage vendors into every dosage so they appear on all pills
         if (nullDosageVendors.length > 0) {
+          // DEBUG: Log null-dosage vendors for DSIP
+          if ((map[k].name || '').toLowerCase().includes('dsip')) {
+            console.log('[DSIP NULL-DOSAGE] Found null-dosage vendors:', nullDosageVendors.map(function(v) { return {vendor: v.vendor, formulation: v._formulation, product: v.product_name}; }));
+          }
+          
           map[k].dosages.forEach(function(dos) {
             nullDosageVendors.forEach(function(v) {
-              if (!dos.top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+              if (!dos.top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
                 dos.top_vendors.push(v);
+                
+                // DEBUG: Log successful merge
+                if ((map[k].name || '').toLowerCase().includes('dsip') && (dos.label || '').includes('10mg') && v.vendor && v.vendor.toLowerCase().includes('atomik')) {
+                  console.log('[DSIP 10mg] Added null-dosage vendor:', v.vendor, 'formulation:', v._formulation, 'to dosage:', dos.label);
+                }
               }
             });
             dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
           });
           // Also reflect in the root top_vendors (now pointing to first dosage)
           nullDosageVendors.forEach(function(v) {
-            if (!map[k].top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+            if (!map[k].top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
               map[k].top_vendors.push(v);
             }
           });
@@ -343,7 +390,7 @@
             destDosage = { label: displayLabel, vendors: [] };
             map[k].available_dosages.push(destDosage);
           }
-          if (!destDosage.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+          if (!destDosage.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
             destDosage.vendors.push(v);
           }
         });
@@ -490,12 +537,14 @@
   // label itself contains "kit" all its vendors are implicitly kit vendors.
   function kitFilterVendors(vendors, dosage) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) {
-      // Deduplicate by vendor name (keep first = lowest price) since the same vendor may appear
-      // with both kit and non-kit entries after groupByDosage merges same-named products.
+      // Deduplicate conservatively: keep multiple listings for the same vendor when they
+      // differ by formulation (e.g. vial vs spray) so the Formulation toggle can work.
       var seen = {};
       return (vendors || []).filter(function(v) {
-        if (seen[v.vendor]) return false;
-        seen[v.vendor] = true;
+        var f = (v._formulation || v.formulation || v.formulation_key || '') + '';
+        var key = (v.vendor || '') + '::' + f;
+        if (seen[key]) return false;
+        seen[key] = true;
         return true;
       });
     }
@@ -731,6 +780,61 @@
       }
     }
 
+    // Card view uses the lightweight /products endpoint which may not include all listings
+    // for a vendor (e.g. Atomik vial + "Air Dispersal" listing). When the user switches
+    // to a non-vial formulation (Spray/etc), we lazily enrich the card with the full
+    // /products/{id}/prices payload and merge those listings into the existing dosage buckets.
+    function ensureCardAllPricesLoaded() {
+      if (p._cardAllPricesLoaded) return Promise.resolve();
+      p._cardAllPricesLoaded = true;
+      return fetch((REST || API + '/api') + '/products/' + p.id + '/prices', { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(allPrices) {
+          if (!Array.isArray(allPrices)) return;
+
+          var dosageByNorm = {};
+          dosages.forEach(function(d) {
+            var norm = (d.label || '').toLowerCase().replace(/\s+/g, '');
+            dosageByNorm[norm] = d;
+          });
+
+          allPrices.forEach(function(v) {
+            if (v.amount_mg == null || !v.amount_unit) return;
+            var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+            var key = (amt + (v.amount_unit || 'mg')).toLowerCase().replace(/\s+/g, '');
+            var dest = dosageByNorm[key];
+            if (!dest) return;
+
+            var effectiveName = v.product_name || v.product || '';
+            var pn = (effectiveName || '').toLowerCase();
+            var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
+            var stamped = Object.assign({}, v, {
+              product_name: effectiveName,
+              price: v.price != null ? v.price : v.effective_price,
+              _formulation: formulation,
+              _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk')
+            });
+
+            dest.top_vendors = dest.top_vendors || [];
+            var exists = dest.top_vendors.some(function(ev) {
+              if (stamped.listing_id && ev.listing_id) {
+                return ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null);
+              }
+              return (ev.vendor || '') === (stamped.vendor || '') && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
+            });
+            if (!exists) dest.top_vendors.push(stamped);
+          });
+
+          // Sort merged vendor lists by price.
+          dosages.forEach(function(d) {
+            (d.top_vendors || []).sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+          });
+        })
+        .catch(function() {
+          // If enrichment fails, keep the card functional with the original /products data.
+        });
+    }
+
     // Compute which non-vial formulations exist for this product (needed before pill render)
     var allCardVendors = [];
     dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
@@ -743,9 +847,17 @@
       var k = getFormulationKey(v.product_name || v.product || '');
       if (k !== null) return k;
       if (v._formulation) return v._formulation;
+      if (v.formulation) return v.formulation;
+      if (v.formulation_key) return v.formulation_key;
       for (var fi = 0; fi < FORMULATIONS.length; fi++) {
         if (cardTags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
       }
+      
+      // DEBUG: Log DSIP vendors in compact view
+      if ((p.name || '').toLowerCase().includes('dsip') && v.vendor && (v.vendor.toLowerCase().includes('atomik') || v.vendor.toLowerCase().includes('genetic'))) {
+        console.log('[DSIP COMPACT DEBUG] Vendor:', v.vendor, 'Product:', v.product_name || v.product, 'Card formulation key:', null, 'v._formulation:', v._formulation, 'cardTags:', cardTags);
+      }
+      
       return null;
     }
 
@@ -755,6 +867,13 @@
       if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
     });
     var hasFormulationRow = cardFormKeys.length >= 1;
+
+    // DEBUG: Log DSIP card setup
+    if ((p.name || '').toLowerCase().includes('dsip')) {
+      console.log('[DSIP COMPACT] Product:', p.name, 'allCardVendors:', allCardVendors.map(function(v) { 
+        return { vendor: v.vendor, product: v.product_name || v.product, _formulation: v._formulation, cardFormKey: getCardFormulationKey(v) }; 
+      }), 'cardFormKeys:', cardFormKeys);
+    }
 
     // Check if any dosage actually has vial vendors (used to hide the Vials button and auto-select)
     var hasVialVendors = false;
@@ -866,53 +985,71 @@
         btn.type = 'button';
         btn.addEventListener('click', (function(fKey, fBtn) { return function(e) {
           e.stopPropagation();
-          activeFormulation = fKey;
-          formBtns.forEach(function(b) { b.classList.remove('is-active'); });
-          fBtn.classList.add('is-active');
-          // Re-render dosage pills: show only those that have vendors for the selected formulation
-          pillsContainer.innerHTML = '';
-          var newActiveIdx = -1;
-          var savedIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : 0;
-          dosages.forEach(function(d2, idx2) {
-            var dl2 = getDoseLabel(p.name, d2.label);
-            if (dl2 === null) return;
-            if (!dosageHasFormulation(d2, fKey)) return;
-            var isAct = (newActiveIdx === -1 && (idx2 === savedIdx || savedIdx < idx2)) || false;
-            if (newActiveIdx === -1 && dosageHasFormulation(d2, fKey)) {
-              if (idx2 === savedIdx || newActiveIdx === -1) {
-                // prefer saved index if it has vendors, else first available
+
+          var proceed = function() {
+            activeFormulation = fKey;
+            formBtns.forEach(function(b) { b.classList.remove('is-active'); });
+            fBtn.classList.add('is-active');
+            // Re-render dosage pills: show only those that have vendors for the selected formulation
+            pillsContainer.innerHTML = '';
+            var newActiveIdx = -1;
+            var savedIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : 0;
+            dosages.forEach(function(d2, idx2) {
+              var dl2 = getDoseLabel(p.name, d2.label);
+              if (dl2 === null) return;
+              if (!dosageHasFormulation(d2, fKey)) return;
+              if (newActiveIdx === -1 && dosageHasFormulation(d2, fKey)) {
                 if (idx2 === savedIdx) { newActiveIdx = idx2; }
                 else if (newActiveIdx === -1) { newActiveIdx = idx2; }
               }
+              var ph = escHtml(dl2);
+              var p2 = el('button', 'pa-dosage-pill', ph);
+              p2.type = 'button';
+              p2.addEventListener('click', (function(d3, i3, p3) { return function(ev) {
+                ev.stopPropagation();
+                state.activeDosages[p.id] = i3;
+                pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) {
+                  x.classList.remove('is-active');
+                  x.querySelector('.pa-pill-star') && x.querySelector('.pa-pill-star').remove();
+                });
+                p3.classList.add('is-active');
+                renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(d3.top_vendors, activeFormulation), d3));
+              }; })(d2, idx2, p2));
+              pillsContainer.appendChild(p2);
+            });
+            // Activate first visible pill
+            var firstPill = pillsContainer.querySelector('.pa-dosage-pill');
+            if (firstPill) { firstPill.classList.add('is-active'); }
+            // Find the first visible dosage and render its vendors
+            var visibleDosage = null;
+            for (var vi = 0; vi < dosages.length; vi++) {
+              if (getDoseLabel(p.name, dosages[vi].label) !== null && dosageHasFormulation(dosages[vi], fKey)) {
+                if (visibleDosage === null || vi === savedIdx) visibleDosage = dosages[vi];
+                if (vi === savedIdx) break;
+              }
             }
-            var ph = escHtml(dl2);
-            var p2 = el('button', 'pa-dosage-pill', ph);
-            p2.type = 'button';
-            p2.addEventListener('click', (function(d3, i3, p3) { return function(ev) {
-              ev.stopPropagation();
-              state.activeDosages[p.id] = i3;
-              pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) {
-                x.classList.remove('is-active');
-                x.querySelector('.pa-pill-star') && x.querySelector('.pa-pill-star').remove();
+            var vds = visibleDosage ? visibleDosage.top_vendors : (p.top_vendors || []);
+            renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage));
+          };
+
+          // If switching to a non-vial formulation, ensure we have all listings first.
+          if (fKey !== 'vial') {
+            ensureCardAllPricesLoaded().then(function() {
+              // Recompute keys because enrichment can add non-vial listings.
+              cardFormKeys = [];
+              allCardVendors = [];
+              dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
+              if (allCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { allCardVendors.push(v); });
+              allCardVendors.forEach(function(v) {
+                var fk = getCardFormulationKey(v);
+                if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
               });
-              p3.classList.add('is-active');
-              renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(d3.top_vendors, activeFormulation), d3));
-            }; })(d2, idx2, p2));
-            pillsContainer.appendChild(p2);
-          });
-          // Activate first visible pill
-          var firstPill = pillsContainer.querySelector('.pa-dosage-pill');
-          if (firstPill) { firstPill.classList.add('is-active'); }
-          // Find the first visible dosage and render its vendors
-          var visibleDosage = null;
-          for (var vi = 0; vi < dosages.length; vi++) {
-            if (getDoseLabel(p.name, dosages[vi].label) !== null && dosageHasFormulation(dosages[vi], fKey)) {
-              if (visibleDosage === null || vi === savedIdx) visibleDosage = dosages[vi];
-              if (vi === savedIdx) break;
-            }
+              proceed();
+            });
+            return;
           }
-          var vds = visibleDosage ? visibleDosage.top_vendors : (p.top_vendors || []);
-          renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage));
+
+          proceed();
         }; })(f.key, btn));
         formBtns.push(btn);
         formRow.appendChild(btn);
@@ -1948,4 +2085,3 @@
     loadAllProducts();
   });
 })();
-
