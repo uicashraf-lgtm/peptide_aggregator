@@ -207,6 +207,10 @@ class PA_Shortcodes {
 .pa-shell .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
 .pa-shell .pa-pcard-vright .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
 .pa-shell .pa-detail-vrow-right .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
+.pa-shell .pa-results-right{flex-wrap:nowrap!important;align-items:flex-end!important;gap:6px!important}
+.pa-shell .pa-price-toggle{flex-wrap:wrap!important;align-items:center!important;gap:3px!important}
+.pa-shell .pa-price-toggle .pa-price-toggle-label{width:100%!important;font-size:10px!important}
+.pa-shell .pa-sort-label{flex-direction:column!important;align-items:flex-start!important;gap:3px!important;white-space:normal!important;font-size:10px!important}
 }
 ';
     }
