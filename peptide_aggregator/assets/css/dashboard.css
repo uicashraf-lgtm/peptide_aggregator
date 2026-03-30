@@ -1293,60 +1293,186 @@
     transform: translateY(-2px) !important;
 }
 
-/* ─── PAYMENT METHOD LOGO BADGES ─── */
-.pas-pm-logo {
+/* Supplier card — head row */
+.pa-shell .pa-scard-head {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+/* Logo / avatar */
+.pa-shell .pa-scard-logo {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--line) !important;
+    background: var(--panel-soft) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-scard-logo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+/* Name + fav area */
+.pa-shell .pa-scard-head-info {
+    flex: 1 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+}
+
+.pa-shell .pa-scard-name {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.25 !important;
+}
+
+/* Favourite button */
+.pa-shell .pa-scard-fav {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 5px !important;
-    width: 26px !important;
-    height: 26px !important;
-    padding: 0 !important;
-    flex-shrink: 0 !important;
-    overflow: hidden !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.20) !important;
-    vertical-align: middle !important;
-}
-
-.pas-pm-logo svg {
-    display: block !important;
-    flex-shrink: 0 !important;
-}
-
-/* Google Pay needs slightly wider width to fit the 4-letter mark */
-.pas-pm-logo--gpay {
-    width: 34px !important;
-    border: 1px solid #e0e0e0 !important;
-    background: #fff !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.10) !important;
-}
-
-.pas-pm-logo--fallback {
-    background: #64748b !important;
-    color: #fff !important;
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.02em !important;
-}
-
-.pa-shell .pa-scard-pm-label {
-    font-size: 11px !important;
-    font-weight: 600 !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: none !important;
     color: var(--muted) !important;
-    white-space: nowrap !important;
-    margin-right: 2px !important;
+    cursor: pointer !important;
     flex-shrink: 0 !important;
+    transition: color 0.15s ease, background 0.15s ease !important;
+    padding: 0 !important;
 }
 
+.pa-shell .pa-scard-fav:hover {
+    color: #e53e3e !important;
+    background: var(--danger-soft) !important;
+}
+
+.pa-shell .pa-scard-fav.is-active {
+    color: #e53e3e !important;
+}
+
+/* Stats row (product count, est. year) */
+.pa-shell .pa-scard-stats {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+.pa-shell .pa-scard-stat {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--muted) !important;
+    background: var(--panel-soft) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    padding: 3px 8px !important;
+    line-height: 1.4 !important;
+}
+
+/* Info rows (shipping, payment, coupon) */
+.pa-shell .pa-scard-info-row {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    background: var(--panel-soft) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--line-soft) !important;
+}
+
+.pa-shell .pa-scard-row-icon {
+    flex-shrink: 0 !important;
+    margin-top: 1px !important;
+}
+
+.pa-shell .pa-scard-row-text {
+    font-size: 12px !important;
+    color: var(--text-soft) !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+}
+
+/* Payment row */
 .pa-shell .pa-scard-payment-row {
     flex-wrap: wrap !important;
-    gap: 5px !important;
-    cursor: pointer !important;
-    align-items: center !important;
+    gap: 8px !important;
 }
 
-.pa-shell .pa-scard-payment-row:hover .pas-pm-logo {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.28) !important;
+/* Coupon row */
+.pa-shell .pa-scard-coupon-row {
+    background: rgba(244, 169, 74, 0.06) !important;
+    border-color: rgba(244, 169, 74, 0.2) !important;
+}
+
+.pa-shell .pa-scard-coupon-text {
+    font-size: 12px !important;
+    color: var(--text-soft) !important;
+    font-weight: 500 !important;
+}
+
+/* Action buttons */
+.pa-shell .pa-scard-btns {
+    display: flex !important;
+    gap: 8px !important;
+    margin-top: auto !important;
+}
+
+.pa-shell .pa-scard-btn {
+    flex: 1 !important;
+    height: 36px !important;
+    padding: 0 14px !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    border: 1.5px solid transparent !important;
+    transition: all 0.15s ease !important;
+    white-space: nowrap !important;
+}
+
+.pa-shell .pa-scard-btn.is-outline {
+    background: var(--panel) !important;
+    border-color: var(--line) !important;
+    color: var(--text-soft) !important;
+}
+
+.pa-shell .pa-scard-btn.is-outline:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: var(--accent-soft) !important;
+}
+
+.pa-shell .pa-scard-btn.is-primary {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #ffffff !important;
+}
+
+.pa-shell .pa-scard-btn.is-primary:hover {
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
 }
 
 /* ─── ABOUT PAGE ─── */
