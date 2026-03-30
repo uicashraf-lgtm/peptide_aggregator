@@ -771,10 +771,24 @@
     dosages = dosages.filter(function(d) { return getDoseLabel(p.name, d.label) !== null; });
     const vendorList = el('div', 'pa-pcard-vendors');
 
+    var CARD_VENDOR_LIMIT = 4;
+
     function renderVendorRows(vList, vendors) {
       vList.innerHTML = '';
       if (vendors && vendors.length > 0) {
-        vendors.forEach(function (v, i) { vList.appendChild(buildVendorRow(v, i === 0)); });
+        var shown = vendors.slice(0, CARD_VENDOR_LIMIT);
+        var hidden = vendors.slice(CARD_VENDOR_LIMIT);
+        shown.forEach(function (v, i) { vList.appendChild(buildVendorRow(v, i === 0)); });
+        if (hidden.length > 0) {
+          var expandBtn = el('button', 'pa-vendors-expand', 'Show ' + hidden.length + ' more vendor' + (hidden.length !== 1 ? 's' : ''));
+          expandBtn.type = 'button';
+          expandBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            hidden.forEach(function (v) { vList.insertBefore(buildVendorRow(v, false), expandBtn); });
+            expandBtn.remove();
+          });
+          vList.appendChild(expandBtn);
+        }
       } else {
         vList.appendChild(el('p', 'pa-pcard-empty', 'No prices scraped yet'));
       }
