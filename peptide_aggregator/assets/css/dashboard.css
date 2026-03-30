@@ -1412,7 +1412,75 @@
 /* Payment row */
 .pa-shell .pa-scard-payment-row {
     flex-wrap: wrap !important;
-    gap: 8px !important;
+    gap: 6px !important;
+    align-items: center !important;
+    cursor: pointer !important;
+}
+
+.pa-shell .pa-scard-payment-row:hover .pas-pm-logo {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.30) !important;
+}
+
+.pa-shell .pa-scard-pm-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    margin-right: 2px !important;
+    flex-shrink: 0 !important;
+    align-self: center !important;
+}
+
+/* ─── PAYMENT METHOD LOGO BADGES ─── */
+.pas-pm-logo {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    padding: 0 5px !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25) !important;
+    transition: box-shadow 0.15s ease !important;
+}
+
+.pas-pm-logo svg {
+    display: block !important;
+    flex-shrink: 0 !important;
+}
+
+.pas-pm-logo--gpay {
+    border: 1px solid #dadce0 !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12) !important;
+    padding: 0 4px !important;
+}
+
+.pas-pm-logo-text {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em !important;
+    color: white !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+}
+
+.pas-pm-more {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    padding: 0 6px !important;
+    border-radius: 6px !important;
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: var(--muted) !important;
+    flex-shrink: 0 !important;
 }
 
 /* Coupon row */
