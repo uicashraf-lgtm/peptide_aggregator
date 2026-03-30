@@ -157,7 +157,7 @@
         // so all downstream code (formulation detection, kit detection) has the best name.
         var effectiveName = v.product_name || v.product || '';
         var pn = effectiveName.toLowerCase();
-        var formulation = getFormulationKey(pn) || srcFormulation || null;
+        var formulation = getFormulationKey(pn) || srcFormulation || v._formulation || null;
         return Object.assign({}, v, {
           product_name: effectiveName,
           _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
@@ -222,7 +222,7 @@
           (d.vendors || []).forEach(function(v) {
             var stamped = stampVendor(v);
             if (!existing.vendors.some(function(ev) {
-              return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
+              return stamped.listing_id && ev.listing_id ? (ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null)) : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
             })) {
               existing.vendors.push(stamped);
             }
@@ -241,7 +241,7 @@
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
-            return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
+            return stamped.listing_id && ev.listing_id ? (ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null)) : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
@@ -314,7 +314,7 @@
         });
         if (avail) {
           (dos.top_vendors || []).forEach(function(v) {
-            if (!avail.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit; })) {
+            if (!avail.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
               avail.vendors.push(v);
             }
           });
