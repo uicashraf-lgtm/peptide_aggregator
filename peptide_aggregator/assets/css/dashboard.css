@@ -625,6 +625,26 @@
     background: var(--accent-soft) !important;
 }
 
+/* Vendor expand button */
+.pa-shell .pa-vendors-expand {
+    display: block !important;
+    width: 100% !important;
+    margin-top: 4px !important;
+    padding: 5px 0 !important;
+    background: none !important;
+    border: 1px dashed var(--line-soft) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--accent) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    text-align: center !important;
+    transition: background 0.15s !important;
+}
+.pa-shell .pa-vendors-expand:hover {
+    background: var(--accent-soft) !important;
+}
+
 /* Card footer */
 .pa-shell .pa-pcard-foot {
     padding-top: 8px !important;
