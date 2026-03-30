@@ -222,7 +222,7 @@
           (d.vendors || []).forEach(function(v) {
             var stamped = stampVendor(v);
             if (!existing.vendors.some(function(ev) {
-              return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '');
+              return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
             })) {
               existing.vendors.push(stamped);
             }
@@ -237,11 +237,11 @@
         grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
-        // Deduplicate by vendor+product_name so distinct listings (vial vs spray) survive.
+        // Deduplicate by vendor+product_name+formulation so distinct listings (vial vs spray) survive.
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
           if (!(grp.top_vendors || []).some(function(ev) {
-            return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '');
+            return stamped.listing_id && ev.listing_id ? ev.listing_id === stamped.listing_id : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
           })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
