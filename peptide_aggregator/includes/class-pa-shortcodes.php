@@ -213,10 +213,10 @@ class PA_Shortcodes {
 .pa-shell .pa-price-toggle .pa-price-toggle-label{width:100%!important;font-size:10px!important}
 .pa-shell .pa-ptoggle{height:24px!important;padding:0 6px!important;font-size:11px!important}
 .pa-shell .pa-sort-label{order:0!important;flex-direction:column!important;align-items:flex-start!important;gap:3px!important;white-space:normal!important;font-size:10px!important}
+.pa-shell .pa-filter-btn{display:none!important}
 .pa-shell .pa-bar-icons{order:2!important;gap:2px!important}
 .pa-shell .pa-bar-icon{width:26px!important;height:26px!important}
-.pa-shell .pa-view-toggle{order:2!important;gap:2px!important}
-.pa-shell .pa-view-btn{width:22px!important;height:22px!important}
+.pa-shell .pa-view-toggle{display:none!important}
 }
 ';
     }

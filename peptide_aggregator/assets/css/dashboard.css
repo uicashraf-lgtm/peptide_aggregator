@@ -1774,8 +1774,8 @@
 
     .pa-shell .pa-grid-sort-select {
         width: 140px !important;
-        height: 26px !important;
+        height: 24px !important;
         font-size: 11px !important;
-        padding: 0 18px 0 6px !important;
+        padding: 0 6px !important;
     }
 }
