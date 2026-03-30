@@ -467,23 +467,12 @@
     }
     if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
       list = list.filter(function (p) {
-        // Admin-designated kit (explicit flag set by pa_kit_product_ids in REST response).
+        // Only 2 sources of truth for Kits:
+        //  1) Admin-enabled kit products (p._is_kit_product)
+        //  2) Product name contains kit/bulk/pack
         if (p._is_kit_product) return true;
-        // Product name itself contains 'kit' or 'pack'.
         var pnl = (p.name || '').toLowerCase();
-        if (pnl.includes('kit') || pnl.includes('pack') || pnl.includes('bulk')) return true;
-        // Most reliable: at least one vendor's product_name contains 'kit'/'pack'/'bulk'.
-        var allVendors = [];
-        (p.available_dosages || []).forEach(function(d) { (d.vendors || []).forEach(function(v) { allVendors.push(v); }); });
-        (p.dosages || []).forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allVendors.push(v); }); });
-        (p.top_vendors || []).forEach(function(v) { allVendors.push(v); });
-        if (allVendors.some(function(v) { var pn = (v.product_name || '').toLowerCase(); return v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'); })) return true;
-        // Fallback: admin/server tag ('kit', 'kits', or PHP auto-detected 'kit_auto').
-        if ((p.tags || []).some(function (t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto'; })) return true;
-        // Last resort: available_dosages label.
-        return (p.available_dosages || []).some(function (d) {
-          return (d.label || d || '').toString().toLowerCase().includes('kit') || (d.label || d || '').toString().toLowerCase().includes('pack') || (d.label || d || '').toString().toLowerCase().includes('bulk');
-        });
+        return pnl.includes('kit') || pnl.includes('pack') || pnl.includes('bulk');
       });
     }
     if (state.applied && state.applied.toggles.blends) {
@@ -535,7 +524,7 @@
   // Uses the same principle as the detail view's Kits button: a vendor entry is
   // a kit if its product_name contains "kit" (case-insensitive). If the dosage
   // label itself contains "kit" all its vendors are implicitly kit vendors.
-  function kitFilterVendors(vendors, dosage) {
+  function kitFilterVendors(vendors, dosage, isKitProduct) {
     if (!(state.barFilters.kits || (state.applied && state.applied.toggles.kits))) {
       // Deduplicate conservatively: keep multiple listings for the same vendor when they
       // differ by formulation (e.g. vial vs spray) so the Formulation toggle can work.
@@ -548,6 +537,15 @@
         return true;
       });
     }
+
+    // For admin-designated kit products, prefer the explicit _is_kit flag injected by the backend.
+    // This lets kit-only mode show the correct kit listings even when the vendor product_name
+    // doesn't contain the word "kit".
+    if (isKitProduct) {
+      var byFlag = (vendors || []).filter(function(v) { return v._is_kit === true; });
+      if (byFlag.length > 0) return byFlag;
+    }
+
     if (dosage && ((dosage.label || '').toLowerCase().includes('kit') || (dosage.label || '').toLowerCase().includes('pack') || (dosage.label || '').toLowerCase().includes('bulk'))) return vendors || [];
     // Primary: product_name contains "kit" or "pack"
     var byName = (vendors || []).filter(function(v) {
@@ -771,24 +769,10 @@
     dosages = dosages.filter(function(d) { return getDoseLabel(p.name, d.label) !== null; });
     const vendorList = el('div', 'pa-pcard-vendors');
 
-    var CARD_VENDOR_LIMIT = 4;
-
     function renderVendorRows(vList, vendors) {
       vList.innerHTML = '';
       if (vendors && vendors.length > 0) {
-        var shown = vendors.slice(0, CARD_VENDOR_LIMIT);
-        var hidden = vendors.slice(CARD_VENDOR_LIMIT);
-        shown.forEach(function (v, i) { vList.appendChild(buildVendorRow(v, i === 0)); });
-        if (hidden.length > 0) {
-          var expandBtn = el('button', 'pa-vendors-expand', 'Show ' + hidden.length + ' more vendor' + (hidden.length !== 1 ? 's' : ''));
-          expandBtn.type = 'button';
-          expandBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            hidden.forEach(function (v) { vList.insertBefore(buildVendorRow(v, false), expandBtn); });
-            expandBtn.remove();
-          });
-          vList.appendChild(expandBtn);
-        }
+        vendors.forEach(function (v, i) { vList.appendChild(buildVendorRow(v, i === 0)); });
       } else {
         vList.appendChild(el('p', 'pa-pcard-empty', 'No prices scraped yet'));
       }
@@ -799,9 +783,8 @@
     // to a non-vial formulation (Spray/etc), we lazily enrich the card with the full
     // /products/{id}/prices payload and merge those listings into the existing dosage buckets.
     function ensureCardAllPricesLoaded() {
-      if (p._cardAllPricesLoaded) return Promise.resolve();
-      p._cardAllPricesLoaded = true;
-      return fetch((REST || API + '/api') + '/products/' + p.id + '/prices', { cache: 'no-store' })
+      if (p._cardAllPricesPromise) return p._cardAllPricesPromise;
+      p._cardAllPricesPromise = fetch((REST || API + '/api') + '/products/' + p.id + '/prices', { cache: 'no-store' })
         .then(function(r) { return r.json(); })
         .then(function(allPrices) {
           if (!Array.isArray(allPrices)) return;
@@ -843,10 +826,13 @@
           dosages.forEach(function(d) {
             (d.top_vendors || []).sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
           });
+
+          p._cardAllPricesReady = true;
         })
         .catch(function() {
           // If enrichment fails, keep the card functional with the original /products data.
         });
+      return p._cardAllPricesPromise;
     }
 
     // Compute which non-vial formulations exist for this product (needed before pill render)
@@ -922,8 +908,16 @@
     }
 
     // Returns true if a dosage has at least one vendor visible under the given formulation.
+    // When Kits Only is active, only count kit listings (to avoid showing dosage/formulation
+    // options that would render an empty vendor list).
+    var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
     function dosageHasFormulation(d, fKey) {
-      return filterByFormulation(d.top_vendors || [], fKey).length > 0;
+      var byForm = filterByFormulation(d.top_vendors || [], fKey);
+      if (!kitsActive) return byForm.length > 0;
+      // While the card is not enriched yet, don't hide pills/options aggressively
+      // (otherwise the UI can render empty until the async merge completes).
+      if (!p._cardAllPricesReady) return byForm.length > 0;
+      return kitFilterVendors(byForm, d, isKitProduct).length > 0;
     }
 
     if (dosages.length >= 1) {
@@ -941,6 +935,13 @@
 
       var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
       if (activeIdx >= dosages.length) activeIdx = 0;
+      // If Kits Only is active, ensure the active dosage has at least one kit listing.
+      // Only do this after enrichment has run; otherwise we may choose incorrectly.
+      if (kitsActive && p._cardAllPricesReady && dosages.length > 0 && !dosageHasFormulation(dosages[activeIdx], activeFormulation)) {
+        for (var kdi = 0; kdi < dosages.length; kdi++) {
+          if (dosageHasFormulation(dosages[kdi], activeFormulation)) { activeIdx = kdi; break; }
+        }
+      }
 
       dosages.forEach(function (d, idx) {
         var isActive = idx === activeIdx;
@@ -967,8 +968,15 @@
             pill.insertBefore(star, pill.firstChild);
           }
           p._activeId = d.id;
-          var filteredByForm = filterByFormulation(d.top_vendors, activeFormulation);
-          renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d));
+          var doRender = function() {
+            var filteredByForm = filterByFormulation(d.top_vendors, activeFormulation);
+            renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d, isKitProduct));
+          };
+          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+            ensureCardAllPricesLoaded().then(doRender);
+          } else {
+            doRender();
+          }
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -994,6 +1002,13 @@
       formRow.appendChild(el('span', 'pa-dosage-label', 'Formulation:'));
       var formBtns = [];
       var formOptions = (hasVialVendors ? [{ key: 'vial', label: 'Vials' }] : []).concat(FORMULATIONS.filter(function(f) { return cardFormKeys.indexOf(f.key) !== -1; }));
+      // In Kits Only mode, hide formulation buttons that would show no kit listings.
+      // Only apply after enrichment has run; otherwise the async merge may add kit listings.
+      if (kitsActive && p._cardAllPricesLoaded) {
+        formOptions = formOptions.filter(function(opt) {
+          return dosages.some(function(d) { return dosageHasFormulation(d, opt.key); });
+        });
+      }
       formOptions.forEach(function(f) {
         var btn = el('button', 'pa-dosage-pill' + (f.key === activeFormulation ? ' is-active' : ''), f.label);
         btn.type = 'button';
@@ -1027,7 +1042,14 @@
                   x.querySelector('.pa-pill-star') && x.querySelector('.pa-pill-star').remove();
                 });
                 p3.classList.add('is-active');
-                renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(d3.top_vendors, activeFormulation), d3));
+                var doRender = function() {
+                  renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(d3.top_vendors, activeFormulation), d3, isKitProduct));
+                };
+                if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+                  ensureCardAllPricesLoaded().then(doRender);
+                } else {
+                  doRender();
+                }
               }; })(d2, idx2, p2));
               pillsContainer.appendChild(p2);
             });
@@ -1043,7 +1065,14 @@
               }
             }
             var vds = visibleDosage ? visibleDosage.top_vendors : (p.top_vendors || []);
-            renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage));
+            var doRenderV = function() {
+              renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage, isKitProduct));
+            };
+            if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+              ensureCardAllPricesLoaded().then(doRenderV);
+            } else {
+              doRenderV();
+            }
           };
 
           // If switching to a non-vial formulation, ensure we have all listings first.
@@ -1077,7 +1106,31 @@
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors
       : p.top_vendors;
-    renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(defaultVendors, activeFormulation), activeDosage));
+    var renderInitial = function() {
+      renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(defaultVendors, activeFormulation), activeDosage, isKitProduct));
+    };
+    if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+      ensureCardAllPricesLoaded().then(function() {
+        // After enrichment, auto-select the first dosage that actually has kit listings.
+        // This prevents the card from sticking on a saved non-kit dosage (e.g. DSIP 5mg)
+        // when only another dosage has kits (e.g. DSIP 10mg).
+        if (!p._kitsAutoSelected && p._cardAllPricesReady) {
+          for (var ai = 0; ai < dosages.length; ai++) {
+            var byForm = filterByFormulation(dosages[ai].top_vendors || [], activeFormulation);
+            if (kitFilterVendors(byForm, dosages[ai], isKitProduct).length > 0) {
+              state.activeDosages[p.id] = ai;
+              p._kitsAutoSelected = true;
+              renderProductGrid(filteredProducts());
+              return;
+            }
+          }
+          p._kitsAutoSelected = true;
+        }
+        renderInitial();
+      });
+    } else {
+      renderInitial();
+    }
     card.appendChild(vendorList);
 
     // Footer
