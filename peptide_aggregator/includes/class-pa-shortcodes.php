@@ -79,6 +79,7 @@ class PA_Shortcodes {
 .pa-shell .pa-pcard-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;flex-shrink:0!important;overflow:hidden!important}
 .pa-shell .pa-pcard-avatar img{display:block!important;width:100%!important;height:100%!important;max-width:36px!important;max-height:36px!important;object-fit:contain!important}
 .pa-shell .pa-pcard-vinfo{display:flex!important;flex-direction:column!important;min-width:0!important}
+.pa-shell .pa-pcard-status-row{display:flex!important;align-items:center!important;gap:6px!important;flex-wrap:wrap!important}
 .pa-shell .pa-pcard-vright{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;min-width:0!important;overflow:hidden!important;flex-shrink:0!important}
 .pa-shell .pa-pcard-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important;flex-shrink:0!important}
 .pa-shell .pa-coupon-badge{display:inline-flex!important;align-items:center!important;gap:3px!important;max-width:100%!important;overflow:hidden!important;min-width:0!important}

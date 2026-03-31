@@ -568,6 +568,14 @@
     color: #ef4444 !important;
 }
 
+/* Status + coupon inline row */
+.pa-shell .pa-pcard-status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+}
+
 /* JS-rendered card status classes (pa-pcard-status is-instock / is-oos) */
 .pa-shell .pa-pcard-status {
     font-size: 9px !important;
