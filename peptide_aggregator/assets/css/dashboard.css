@@ -696,6 +696,12 @@
     border-style: solid !important;
 }
 
+/* Lowest price highlight */
+.pa-shell .pa-price--best {
+    color: #16a34a !important;
+    font-weight: 700 !important;
+}
+
 /* Coupon copied toast */
 .pa-coupon-toast {
     position: fixed !important;

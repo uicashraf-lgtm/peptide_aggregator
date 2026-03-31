@@ -677,7 +677,7 @@
     const displayPrice = showPerMg
       ? '$' + Number(pricePer).toFixed(1) + '/' + (v.amount_unit || 'mg')
       : fmt(v.price, v.currency);
-    priceWrap.appendChild(el('span', 'pa-pcard-price', escHtml(displayPrice)));
+    priceWrap.appendChild(el('span', 'pa-pcard-price' + (isBest ? ' pa-price--best' : ''), escHtml(displayPrice)));
     // Show previous price (crossed out) when it differs from current
     if (v.previous_price != null && v.previous_price !== v.price) {
       var prevPer = v.amount_mg ? v.previous_price / v.amount_mg : null;
@@ -1651,7 +1651,7 @@
       var displayPrice = showPer ? ('$' + Number(pricePer).toFixed(1) + '/' + (v.amount_unit || 'mg')) : fmt(v.price, v.currency);
       var hasPrev = v.previous_price != null && v.previous_price !== v.price;
       var priceWrap = el('div', 'pa-detail-price-wrap');
-      var priceEl = el('span', 'pa-detail-price', escHtml(displayPrice) + (hasPrev ? '<sup>*</sup>' : ''));
+      var priceEl = el('span', 'pa-detail-price' + (i === 0 ? ' pa-price--best' : ''), escHtml(displayPrice) + (hasPrev ? '<sup>*</sup>' : ''));
       if (v.listing_id) priceEl.setAttribute('data-listing-id', v.listing_id);
       priceWrap.appendChild(priceEl);
       if (hasPrev) {
