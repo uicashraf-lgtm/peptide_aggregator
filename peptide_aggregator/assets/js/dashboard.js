@@ -908,7 +908,9 @@
           var pKeyRM = (p.name || '').toLowerCase().trim();
           var remapMapRM = (UI.dose_remaps && UI.dose_remaps[pKeyRM]) || {};
           if (remapMapRM['default']) {
-            var remappedDefaultNorm = remapMapRM['default'].toLowerCase().replace(/\s+/g, '');
+            var remappedDefaultLabel = remapMapRM['default'];
+            var remappedDefaultNorm = remappedDefaultLabel.toLowerCase().replace(/\s+/g, '');
+            var remapDoseMRM = remappedDefaultLabel.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
             var destDefaultDosage = dosageByNorm[remappedDefaultNorm];
             if (destDefaultDosage) {
               allPrices.forEach(function(v) {
@@ -920,7 +922,9 @@
                   product_name: effectiveName,
                   price: v.price != null ? v.price : v.effective_price,
                   _formulation: formulation,
-                  _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk')
+                  _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
+                  amount_mg: remapDoseMRM ? parseFloat(remapDoseMRM[1]) : v.amount_mg,
+                  amount_unit: remapDoseMRM ? remapDoseMRM[2].toLowerCase() : v.amount_unit
                 });
                 var exists = destDefaultDosage.top_vendors.some(function(ev) {
                   if (stamped.listing_id && ev.listing_id) {
