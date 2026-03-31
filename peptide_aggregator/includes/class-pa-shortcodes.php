@@ -111,8 +111,7 @@ class PA_Shortcodes {
 .pa-shell .pa-vendor-info{display:flex!important;flex-direction:column!important;gap:2px!important;min-width:0!important}
 .pa-shell .pa-detail-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important}
 .pa-shell .pa-detail-link-icon{display:inline-flex!important;align-items:center!important;text-decoration:none!important}
-.pa-shell .pa-coupon-wrap{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:2px!important}
-.pa-shell .pa-coupon-badge-row{display:flex!important;align-items:center!important;gap:4px!important}
+.pa-shell .pa-coupon-wrap{display:flex!important;align-items:center!important;gap:4px!important}
 .pa-shell .pa-coupon-copy-btn{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:0 2px!important}
 .pa-shell .pa-ddosage-btn{display:flex!important;flex-direction:column!important;align-items:center!important;gap:3px!important;cursor:pointer!important}
 .pa-shell .pa-ddosage-label{display:flex!important;align-items:center!important;gap:3px!important}
@@ -330,7 +329,7 @@ class PA_Shortcodes {
         window.PA_UI.dose_remaps    = <?php echo json_encode( empty($sc_dose_remaps) ? new stdClass() : $sc_dose_remaps ); ?>;
         window.PA_UI.coupon_savings = <?php echo wp_json_encode( (object) get_option('pa_coupon_savings', array()) ); ?>;
         </script>
-        <div class="pa-shell" data-coupon-savings="<?php echo esc_attr( wp_json_encode( get_option('pa_coupon_savings', array()) ) ); ?>">
+        <div class="pa-shell">
                 <section class="pa-search-panel">
                     <div class="pa-search-row">
                         <div class="pa-search-input-wrap">

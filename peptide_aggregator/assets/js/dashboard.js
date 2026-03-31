@@ -621,13 +621,8 @@
     const right = el('div', 'pa-pcard-vright');
     if (v.coupon_code) {
       const vendorSavings = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
-      const couponWrap = el('div', 'pa-coupon-wrap');
-      if (vendorSavings) {
-        const saveLabel = el('span', 'pa-coupon-save-label', 'Save ' + escHtml(vendorSavings));
-        couponWrap.appendChild(saveLabel);
-      }
       const coupon = el('span', 'pa-coupon-badge');
-      coupon.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>';
+      coupon.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>' + (vendorSavings ? '<span class="pa-coupon-save-inline">\u00b7 Save ' + escHtml(vendorSavings) + '</span>' : '');
       const copyBtn = el('button', 'pa-coupon-copy', '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>');
       copyBtn.title = 'Copy code';
       copyBtn.addEventListener('click', function (e) {
@@ -638,8 +633,7 @@
         setTimeout(function () { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
       });
       coupon.appendChild(copyBtn);
-      couponWrap.appendChild(coupon);
-      right.appendChild(couponWrap);
+      right.appendChild(coupon);
     }
     const priceWrap = el('div', 'pa-pcard-price-wrap');
     const pricePer = v.price_per_mg != null ? v.price_per_mg
@@ -1647,12 +1641,9 @@
 
       if (v.coupon_code) {
         var detailVendorSavings = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
-        var cbWrap = el('div', 'pa-coupon-wrap');
-        if (detailVendorSavings) {
-          cbWrap.appendChild(el('span', 'pa-coupon-save-label', 'Save ' + escHtml(detailVendorSavings)));
-        }
-        var cbBadgeRow = el('span', 'pa-coupon-badge-row');
-        cbBadgeRow.appendChild(el('span', 'pa-coupon-badge', '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>'));
+        var cbWrap = el('span', 'pa-coupon-wrap');
+        var badgeInner = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>' + (detailVendorSavings ? '<span class="pa-coupon-save-inline">\u00b7 Save ' + escHtml(detailVendorSavings) + '</span>' : '');
+        cbWrap.appendChild(el('span', 'pa-coupon-badge', badgeInner));
         var copyBtn = el('button', 'pa-coupon-copy-btn', '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>');
         copyBtn.type = 'button'; copyBtn.title = 'Copy coupon';
         (function(code, btn) {
@@ -1664,8 +1655,7 @@
             setTimeout(function() { btn.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
           });
         })(v.coupon_code, copyBtn);
-        cbBadgeRow.appendChild(copyBtn);
-        cbWrap.appendChild(cbBadgeRow);
+        cbWrap.appendChild(copyBtn);
         right.appendChild(cbWrap);
       }
 
