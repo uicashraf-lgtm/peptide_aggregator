@@ -243,7 +243,16 @@
             var initDosages = [];
             (p.available_dosages || []).forEach(function(d) {
               var normRaw0 = (d.label || '').toLowerCase().replace(/\s+/g, '');
-              var remapped = remapMap0[normRaw0] ? Object.assign({}, d, { label: remapMap0[normRaw0] }) : d;
+              var remapped = d;
+              if (remapMap0[normRaw0]) {
+                var newLabel0 = remapMap0[normRaw0];
+                var doseM0 = newLabel0.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+                var newVendors0 = doseM0 ? (d.vendors || []).map(function(v) {
+                  if (v.amount_mg != null) return v;
+                  return Object.assign({}, v, { amount_mg: parseFloat(doseM0[1]), amount_unit: doseM0[2].toLowerCase() });
+                }) : d.vendors;
+                remapped = Object.assign({}, d, { label: newLabel0, vendors: newVendors0 });
+              }
               var entry = Object.assign({}, remapped, { vendors: (remapped.vendors || []).map(stampVendor) });
               var normLbl0 = (entry.label || '').toLowerCase().replace(/\s+/g, '');
               var existingInit = initDosages.find(function(x) { return (x.label || '').toLowerCase().replace(/\s+/g, '') === normLbl0; });
@@ -275,7 +284,13 @@
         var remapMap = (UI.dose_remaps && UI.dose_remaps[pKey]) || {};
         var normRaw = rawLabel.toLowerCase().replace(/\s+/g, '');
         if (remapMap[normRaw]) {
-          d = Object.assign({}, d, { label: remapMap[normRaw] });
+          var newLabel = remapMap[normRaw];
+          var doseM = newLabel.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+          var newVendors = doseM ? (d.vendors || []).map(function(v) {
+            if (v.amount_mg != null) return v;
+            return Object.assign({}, v, { amount_mg: parseFloat(doseM[1]), amount_unit: doseM[2].toLowerCase() });
+          }) : d.vendors;
+          d = Object.assign({}, d, { label: newLabel, vendors: newVendors });
         }
         var lbl = (d.label || d).toLowerCase().replace(/\s+/g, '');
         var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase().replace(/\s+/g, '') === lbl; });
@@ -1294,6 +1309,10 @@
         if (detailRemapMap[normLbl]) {
           lbl = detailRemapMap[normLbl];
           normLbl = lbl.toLowerCase().replace(/\s+/g, '');
+          var remapDoseM = lbl.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+          if (remapDoseM && v.amount_mg == null) {
+            v = Object.assign({}, v, { amount_mg: parseFloat(remapDoseM[1]), amount_unit: remapDoseM[2].toLowerCase() });
+          }
         }
         // Use normKey for bucket identity so "6 mg" and "6mg" always merge.
         if (!dosageMap[normLbl]) { dosageMap[normLbl] = []; dosageLabelMap[normLbl] = lbl; dosageOrder.push(normLbl); }
