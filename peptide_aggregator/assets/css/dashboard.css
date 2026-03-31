@@ -699,9 +699,7 @@
 /* Coupon copied toast */
 .pa-coupon-toast {
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) scale(0.95) !important;
+    transform: scale(0.95) !important;
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
@@ -717,7 +715,7 @@
 }
 .pa-coupon-toast--visible {
     opacity: 1 !important;
-    transform: translate(-50%, -50%) scale(1) !important;
+    transform: scale(1) !important;
 }
 .pa-coupon-toast-icon {
     flex-shrink: 0 !important;
