@@ -107,6 +107,7 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:14px 10px!important;border-radius:0!important;border-bottom:1px solid var(--line)!important}
 .pa-shell .pa-detail-vrow:last-child{border-bottom:none!important}
 .pa-shell .pa-detail-vrow-right{display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important;flex-shrink:0!important}
+.pa-shell .pa-detail-price-link-row{display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important}
 .pa-shell .pa-vendor-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;min-width:40px!important;flex-shrink:0!important;overflow:hidden!important;border-radius:50%!important}
 .pa-shell .pa-vendor-avatar img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
 .pa-shell .pa-vendor-info{display:flex!important;flex-direction:column!important;gap:2px!important;min-width:0!important}

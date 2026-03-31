@@ -1665,6 +1665,7 @@
       var showPer = state.detailPriceMode === 'mgml' && pricePer != null;
       var displayPrice = showPer ? ('$' + Number(pricePer).toFixed(1) + '/' + (v.amount_unit || 'mg')) : fmt(v.price, v.currency);
       var hasPrev = v.previous_price != null && v.previous_price !== v.price;
+      var priceLinkRow = el('div', 'pa-detail-price-link-row');
       var priceWrap = el('div', 'pa-detail-price-wrap');
       var priceEl = el('span', 'pa-detail-price' + (i === 0 ? ' pa-price--best' : ''), escHtml(displayPrice) + (hasPrev ? '<sup>*</sup>' : ''));
       if (v.listing_id) priceEl.setAttribute('data-listing-id', v.listing_id);
@@ -1672,16 +1673,16 @@
       if (hasPrev) {
         priceWrap.appendChild(el('span', 'pa-detail-prev-price', escHtml(fmt(v.previous_price, v.currency))));
       }
-      right.appendChild(priceWrap);
-
+      priceLinkRow.appendChild(priceWrap);
       if (v.link) {
         var a = document.createElement('a');
         a.href = v.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
         a.className = 'pa-detail-link-icon';
         a.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
         a.addEventListener('click', function(e) { e.stopPropagation(); });
-        right.appendChild(a);
+        priceLinkRow.appendChild(a);
       }
+      right.appendChild(priceLinkRow);
 
       row.appendChild(avatar); row.appendChild(info); row.appendChild(right);
       wrap.appendChild(row);
