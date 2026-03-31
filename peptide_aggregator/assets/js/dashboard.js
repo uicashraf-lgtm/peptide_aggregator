@@ -26,28 +26,14 @@
 
   function getFormulationKey(str) {
     var s = (str || '').toLowerCase();
-    
-    // DEBUG: Log formulation detection for DSIP products
-    if (s.includes('dsip') || s.includes('dispersal')) {
-      console.log('[FORMULATION DEBUG] Input:', str, 'Lowercase:', s);
-    }
-    
+
     for (var i = 0; i < FORMULATIONS.length; i++) {
       var f = FORMULATIONS[i];
       for (var j = 0; j < f.terms.length; j++) {
         if (s.includes(f.terms[j])) {
-          // DEBUG: Log successful detection
-          if (s.includes('dsip') || s.includes('dispersal')) {
-            console.log('[FORMULATION DEBUG] MATCH found! Term:', f.terms[j], 'Key:', f.key);
-          }
           return f.key;
         }
       }
-    }
-    
-    // DEBUG: Log no match
-    if (s.includes('dsip') || s.includes('dispersal')) {
-      console.log('[FORMULATION DEBUG] NO MATCH for:', s);
     }
     
     return null;
@@ -190,15 +176,6 @@
     var map = {};
     var order = [];
     
-    // DEBUG: Log DSIP products being processed
-    var dsipProducts = products.filter(function(p) { return (p.name || '').toLowerCase().includes('dsip'); });
-    if (dsipProducts.length > 0) {
-      console.log('[DSIP GROUPING] Processing DSIP products:', dsipProducts.map(function(p) { 
-        var pd = parseDosage(p.name);
-        return { name: p.name, base: pd.base, dosage: pd.dosage, key: pd.base.toLowerCase() }; 
-      }));
-    }
-    
     products.forEach(function (p) {
       var pd = parseDosage(p.name);
       var key = pd.base.toLowerCase();
@@ -216,12 +193,6 @@
         var effectiveName = v.product_name || v.product || '';
         var pn = effectiveName.toLowerCase();
         var formulation = getFormulationKey(pn) || srcFormulation || v.formulation || v.formulation_key || v._formulation || null;
-        
-        // DEBUG: Log DSIP vendors
-        if ((pd.name || '').toLowerCase().includes('dsip') && v.vendor && (v.vendor.toLowerCase().includes('atomik') || v.vendor.toLowerCase().includes('genetic'))) {
-          console.log('[DSIP DEBUG] Vendor:', v.vendor, 'Product:', effectiveName, 'Formulation detected:', formulation, 'Original _formulation:', v._formulation);
-        }
-        
         return Object.assign({}, v, {
           product_name: effectiveName,
           _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
@@ -365,20 +336,10 @@
         map[k].vendor_count = first.vendor_count;
         // Merge null-dosage vendors into every dosage so they appear on all pills
         if (nullDosageVendors.length > 0) {
-          // DEBUG: Log null-dosage vendors for DSIP
-          if ((map[k].name || '').toLowerCase().includes('dsip')) {
-            console.log('[DSIP NULL-DOSAGE] Found null-dosage vendors:', nullDosageVendors.map(function(v) { return {vendor: v.vendor, formulation: v._formulation, product: v.product_name}; }));
-          }
-          
           map[k].dosages.forEach(function(dos) {
             nullDosageVendors.forEach(function(v) {
               if (!dos.top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
                 dos.top_vendors.push(v);
-                
-                // DEBUG: Log successful merge
-                if ((map[k].name || '').toLowerCase().includes('dsip') && (dos.label || '').includes('10mg') && v.vendor && v.vendor.toLowerCase().includes('atomik')) {
-                  console.log('[DSIP 10mg] Added null-dosage vendor:', v.vendor, 'formulation:', v._formulation, 'to dosage:', dos.label);
-                }
               }
             });
             dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
@@ -467,35 +428,9 @@
   // ─── Product grid ─────────────────────────────────────────────────────────
   async function loadAllProducts() {
     try {
-      const res = await fetch((REST || API + '/api') + '/products', { cache: 'no-store' });
+      const res = await fetch((REST || API + '/api') + '/products');
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
-      // Debug: log 5-Amino-1MQ product data after grouping
-      var mq = state.allProducts.find(function(p) { return (p.name||'').toLowerCase().includes('amino') && (p.name||'').toLowerCase().includes('1mq'); });
-      if (mq) {
-        console.log('[PA-DEBUG] 1MQ grouped product:', mq.name);
-        console.log('[PA-DEBUG] top_vendors:', JSON.stringify((mq.top_vendors||[]).map(function(v){return {vendor:v.vendor,product_name:v.product_name};})));
-        console.log('[PA-DEBUG] dosages:', JSON.stringify((mq.dosages||[]).map(function(d){return {label:d.label,vendors:(d.top_vendors||[]).map(function(v){return v.vendor;})};})));
-        console.log('[PA-DEBUG] available_dosages:', JSON.stringify((mq.available_dosages||[]).map(function(d){return {label:d.label,vendors:(d.vendors||[]).map(function(v){return v.vendor;})};})));
-      } else {
-        console.log('[PA-DEBUG] 1MQ product not found in grouped products');
-        // Log raw entries that mention 1MQ
-        var rawMq = (Array.isArray(raw) ? raw : []).filter(function(p){ return (p.name||'').toLowerCase().includes('1mq'); });
-        console.log('[PA-DEBUG] raw 1MQ entries:', JSON.stringify(rawMq.map(function(p){return {name:p.name,top_vendors:(p.top_vendors||[]).map(function(v){return v.vendor;})};})));
-      }
-      // Debug: log DSIP raw grouped product in full
-      var dsip = state.allProducts.find(function(p) { return (p.name||'').toLowerCase() === 'dsip'; });
-      if (dsip) {
-        console.log('[PA-DSIP] name:', dsip.name, '_is_kit_product:', dsip._is_kit_product, 'tags:', dsip.tags);
-        console.log('[PA-DSIP] top_vendors:', JSON.stringify(dsip.top_vendors));
-        console.log('[PA-DSIP] dosages:', JSON.stringify(dsip.dosages));
-        console.log('[PA-DSIP] available_dosages:', JSON.stringify(dsip.available_dosages));
-      } else {
-        console.log('[PA-DSIP] not found in allProducts — names:', state.allProducts.map(function(p){return p.name;}).filter(function(n){return (n||'').toLowerCase().includes('dsip');}));
-      }
-      var tagged = state.allProducts.filter(function(p) { return (p.tags || []).length > 0; });
-      if (tagged.length) console.log('[PA] products with tags:', tagged.map(function(p) { return p.name + ': ' + JSON.stringify(p.tags); }));
-      else console.log('[PA] no products have tags in this response');
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
@@ -610,10 +545,6 @@
     var byName = (vendors || []).filter(function(v) {
       var pn = (v.product_name || '').toLowerCase(); return pn.includes('kit') || pn.includes('pack') || pn.includes('bulk');
     });
-    // DEBUG — remove once prices are correct
-    console.log('[PA kit] vendors in:', (vendors||[]).map(function(v){return{vendor:v.vendor,product_name:v.product_name,price:v.price,_is_kit:v._is_kit};}));
-    console.log('[PA kit] byName:', byName.map(function(v){return v.product_name;}));
-    console.log('[PA kit] _is_kit result:', (vendors||[]).filter(function(v){return v._is_kit===true;}).map(function(v){return{vendor:v.vendor,product_name:v.product_name,price:v.price};}));
     if (byName.length > 0) return byName;
     // Fallback: _is_kit flag
     return (vendors || []).filter(function(v) { return v._is_kit === true; });
@@ -735,14 +666,6 @@
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
 
-    // Debug logging for 5-Amino-1MQ
-    if ((p.name || '').toLowerCase().includes('amino') && (p.name || '').toLowerCase().includes('1mq')) {
-      console.log('[PA-DEBUG] buildProductCard:', p.name);
-      console.log('[PA-DEBUG] p.top_vendors:', JSON.stringify((p.top_vendors || []).map(function(v){ return {vendor: v.vendor, product_name: v.product_name}; })));
-      console.log('[PA-DEBUG] p.dosages:', JSON.stringify((p.dosages || []).map(function(d){ return {label: d.label, vendors: (d.top_vendors||[]).map(function(v){return v.vendor;})}; })));
-      console.log('[PA-DEBUG] p.available_dosages:', JSON.stringify((p.available_dosages || []).map(function(d){ return {label: d.label, vendors: (d.vendors||[]).map(function(v){return v.vendor;})}; })));
-    }
-
     // Header row: name + icons (no category badge here — moved to tag row below)
     const head = el('div', 'pa-pcard-head');
     const headLeft = el('div', 'pa-pcard-head-left');
@@ -858,7 +781,7 @@
     // /products/{id}/prices payload and merge those listings into the existing dosage buckets.
     function ensureCardAllPricesLoaded() {
       if (p._cardAllPricesPromise) return p._cardAllPricesPromise;
-      p._cardAllPricesPromise = fetch((REST || API + '/api') + '/products/' + p.id + '/prices', { cache: 'no-store' })
+      p._cardAllPricesPromise = fetch((REST || API + '/api') + '/products/' + p.id + '/prices')
         .then(function(r) { return r.json(); })
         .then(function(allPrices) {
           if (!Array.isArray(allPrices)) return;
@@ -968,11 +891,6 @@
         if (cardTags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
       }
       
-      // DEBUG: Log DSIP vendors in compact view
-      if ((p.name || '').toLowerCase().includes('dsip') && v.vendor && (v.vendor.toLowerCase().includes('atomik') || v.vendor.toLowerCase().includes('genetic'))) {
-        console.log('[DSIP COMPACT DEBUG] Vendor:', v.vendor, 'Product:', v.product_name || v.product, 'Card formulation key:', null, 'v._formulation:', v._formulation, 'cardTags:', cardTags);
-      }
-      
       return null;
     }
 
@@ -982,13 +900,6 @@
       if (fk && cardFormKeys.indexOf(fk) === -1) cardFormKeys.push(fk);
     });
     var hasFormulationRow = cardFormKeys.length >= 1;
-
-    // DEBUG: Log DSIP card setup
-    if ((p.name || '').toLowerCase().includes('dsip')) {
-      console.log('[DSIP COMPACT] Product:', p.name, 'allCardVendors:', allCardVendors.map(function(v) { 
-        return { vendor: v.vendor, product: v.product_name || v.product, _formulation: v._formulation, cardFormKey: getCardFormulationKey(v) }; 
-      }), 'cardFormKeys:', cardFormKeys);
-    }
 
     // Check if any dosage actually has vial vendors (used to hide the Vials button and auto-select)
     var hasVialVendors = false;
@@ -1374,8 +1285,6 @@
       var dosageOrder = [];  // normKeys in insertion order
       var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
       var detailRemapMap = (UI.dose_remaps && state.detailProductName && UI.dose_remaps[state.detailProductName.toLowerCase().trim()]) || {};
-      console.log('[PA debug] detailProductName:', state.detailProductName);
-      console.log('[PA debug] detailRemapMap:', JSON.stringify(detailRemapMap));
       allPrices.forEach(function(v) {
         var lbl = null;
         if (v.amount_mg != null && v.amount_unit) {
@@ -1388,7 +1297,6 @@
         }
         if (!lbl) lbl = 'default';
         var normLbl = lbl.toLowerCase().replace(/\s+/g, '');
-        console.log('[PA debug] vendor:', v.vendor, '| product:', v.product, '| amount_mg:', v.amount_mg, '| amount_unit:', v.amount_unit, '| raw lbl:', lbl, '| normLbl:', normLbl, '| remap->', detailRemapMap[normLbl] || '(none)');
         if (detailRemapMap[normLbl]) {
           lbl = detailRemapMap[normLbl];
           normLbl = lbl.toLowerCase().replace(/\s+/g, '');
@@ -1401,7 +1309,6 @@
         if (!dosageMap[normLbl]) { dosageMap[normLbl] = []; dosageLabelMap[normLbl] = lbl; dosageOrder.push(normLbl); }
         dosageMap[normLbl].push(v);
       });
-      console.log('[PA debug] final dosageOrder:', dosageOrder, '| dosageLabelMap:', JSON.stringify(dosageLabelMap));
       // Sort dosage labels numerically
       dosageOrder.sort(function(a, b) {
         var na = parseFloat(a) || 0, nb = parseFloat(b) || 0;
@@ -2242,11 +2149,6 @@
         } else if (title === 'Kits only') {
           state.barFilters.kits = !state.barFilters.kits;
           btn.classList.toggle('is-active', state.barFilters.kits);
-          if (state.barFilters.kits) {
-            var kitProducts = state.allProducts.filter(function(p) { return p._is_kit_product; });
-            var taggedKits  = state.allProducts.filter(function(p) { return (p.tags || []).some(function(t) { return t.toLowerCase() === 'kit' || t.toLowerCase() === 'kit_auto'; }); });
-            console.log('[PA] Kits filter ON — allProducts:', state.allProducts.length, '| _is_kit_product:', kitProducts.map(function(p){return p.name;}), '| kit/kit_auto tag:', taggedKits.map(function(p){return p.name + ':' + JSON.stringify(p.tags);}));
-          }
         }
         renderProductGrid(filteredProducts());
       });
