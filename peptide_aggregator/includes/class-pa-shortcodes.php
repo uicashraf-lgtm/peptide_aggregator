@@ -330,7 +330,7 @@ class PA_Shortcodes {
         window.PA_UI.dose_remaps    = <?php echo json_encode( empty($sc_dose_remaps) ? new stdClass() : $sc_dose_remaps ); ?>;
         window.PA_UI.coupon_savings = <?php echo wp_json_encode( (object) get_option('pa_coupon_savings', array()) ); ?>;
         </script>
-        <div class="pa-shell" data-coupon-savings="<?php echo esc_attr( wp_json_encode( get_option('pa_coupon_savings', array()) ) ); ?>">
+        <div class="pa-shell">
                 <section class="pa-search-panel">
                     <div class="pa-search-row">
                         <div class="pa-search-input-wrap">
