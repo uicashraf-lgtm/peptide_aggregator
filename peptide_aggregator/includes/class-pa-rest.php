@@ -44,6 +44,16 @@ class PA_Rest {
             'callback'            => array($this, 'save_affiliate_template_endpoint'),
             'permission_callback' => function() { return current_user_can('manage_options'); },
         ));
+        register_rest_route('pa/v1', '/coupon-savings', array(
+            'methods'             => 'GET',
+            'callback'            => array($this, 'get_coupon_savings_endpoint'),
+            'permission_callback' => function() { return current_user_can('manage_options'); },
+        ));
+        register_rest_route('pa/v1', '/coupon-savings', array(
+            'methods'             => 'POST',
+            'callback'            => array($this, 'save_coupon_savings_endpoint'),
+            'permission_callback' => function() { return current_user_can('manage_options'); },
+        ));
         register_rest_route('pa/v1', '/products/(?P<id>[^/]+)/prices', array(
             'methods'             => 'GET',
             'callback'            => array($this, 'get_prices'),
@@ -72,6 +82,26 @@ class PA_Rest {
         }
         update_option('pa_affiliate_templates', $templates);
         delete_transient('pa_products_cache');
+        return rest_ensure_response(array('ok' => true));
+    }
+
+    public function get_coupon_savings_endpoint() {
+        return rest_ensure_response((object) get_option('pa_coupon_savings', array()));
+    }
+
+    public function save_coupon_savings_endpoint(WP_REST_Request $req) {
+        $vendor_id = trim((string) $req->get_param('vendor_id'));
+        $savings   = trim((string) $req->get_param('savings'));
+        if ($vendor_id === '') {
+            return new WP_Error('invalid', 'vendor_id is required', array('status' => 400));
+        }
+        $map = (array) get_option('pa_coupon_savings', array());
+        if ($savings === '') {
+            unset($map[$vendor_id]);
+        } else {
+            $map[$vendor_id] = $savings;
+        }
+        update_option('pa_coupon_savings', $map);
         return rest_ensure_response(array('ok' => true));
     }
 

@@ -149,6 +149,7 @@ class PA_Admin {
                         <tr><th>Logo URL</th><td><input name="logo_url" id="pa_f_logo_url" type="url" class="regular-text" placeholder="https://example.com/logo.png" /></td></tr>
                         <tr><th>Country</th><td><input name="country" id="pa_f_country" class="small-text" placeholder="US" maxlength="8" /></td></tr>
                         <tr><th>Coupon Code</th><td><input name="coupon_code" id="pa_f_coupon_code" class="regular-text" placeholder="SAVE10" /></td></tr>
+                        <tr><th>Coupon Savings</th><td><input name="coupon_savings" id="pa_f_coupon_savings" class="small-text" placeholder="e.g. 10%" maxlength="20" /><p class="description">Shown as "Use coupon code to save ___"</p></td></tr>
                         <tr><th>Affiliate URL</th><td><input name="affiliate_template" id="pa_f_affiliate" class="regular-text" placeholder="/ref/your-id" /><p class="description">Enter a path suffix (e.g. <code>/ref/amino</code>) to append after the product URL, or a full redirect template using <code>{url}</code> as a placeholder for the encoded product URL.</p></td></tr>
                         <tr>
                             <th>Payment Methods</th>
@@ -212,6 +213,7 @@ class PA_Admin {
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
             var PA_DELETE_NONCE = '<?php echo wp_create_nonce('pa_vendor_delete_action'); ?>';
             var PA_AFFILIATE_TEMPLATES = <?php echo wp_json_encode((object) get_option('pa_affiliate_templates', array())); ?>;
+            var PA_COUPON_SAVINGS = <?php echo wp_json_encode((object) get_option('pa_coupon_savings', array())); ?>;
             var PA_WP_REST = '<?php echo esc_js(rest_url('pa/v1/')); ?>';
             var PA_WP_NONCE = '<?php echo wp_create_nonce('wp_rest'); ?>';
             var PM_ICONS = <?php echo wp_json_encode(array_map(function($svg) {
@@ -396,6 +398,7 @@ class PA_Admin {
                 setVal('pa_f_logo_url', v.logo_url);
                 setVal('pa_f_country', v.country);
                 setVal('pa_f_coupon_code', v.coupon_code);
+                setVal('pa_f_coupon_savings', PA_COUPON_SAVINGS[String(vid)] || '');
                 setVal('pa_f_affiliate', PA_AFFILIATE_TEMPLATES[v.name.toLowerCase()] || '');
                 setPM(v.payment_methods);
                 document.getElementById('pa_f_target_urls').value = '';
@@ -450,6 +453,7 @@ class PA_Admin {
                 var logoUrl = document.getElementById('pa_f_logo_url').value.trim();
                 var country = document.getElementById('pa_f_country').value.trim().toUpperCase();
                 var couponCode = document.getElementById('pa_f_coupon_code').value.trim();
+                var couponSavings = document.getElementById('pa_f_coupon_savings').value.trim();
                 var affiliate = document.getElementById('pa_f_affiliate').value.trim();
                 var paymentMethods = [];
                 document.querySelectorAll('.pa-pm-item input[type=checkbox]:checked').forEach(function(cb) {
@@ -511,6 +515,7 @@ class PA_Admin {
                         if (ok) {
                             saveAffiliateTemplate(name, affiliate);
                             var newVid = data && data.vendor_id ? data.vendor_id : null;
+                            if (newVid) saveCouponSavings(newVid, couponSavings);
                             var notice = data && data.crawl_error
                                 ? 'Vendor created, but crawl could not be queued (Redis error: ' + data.crawl_error + '). Click "Crawl Now" once Redis is available.'
                                 : 'Vendor created. Crawl queued.';
@@ -528,8 +533,9 @@ class PA_Admin {
                     var errors = [];
                     var pending = 3; // basic + meta + scrape config
 
-                    // Save affiliate template to WP options (fire-and-forget).
+                    // Save affiliate template and coupon savings to WP options (fire-and-forget).
                     saveAffiliateTemplate(name, affiliate);
+                    saveCouponSavings(vendorId, couponSavings);
 
                     function checkDone() {
                         pending--;
@@ -595,6 +601,20 @@ class PA_Admin {
                     }
                 }
             });
+
+            // ── WP coupon savings helper ────────────────────────────────────
+            function saveCouponSavings(vendorId, savings) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', PA_WP_REST + 'coupon-savings');
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-WP-Nonce', PA_WP_NONCE);
+                xhr.send(JSON.stringify({vendor_id: String(vendorId), savings: savings || ''}));
+                if (savings) {
+                    PA_COUPON_SAVINGS[String(vendorId)] = savings;
+                } else {
+                    delete PA_COUPON_SAVINGS[String(vendorId)];
+                }
+            }
 
             // ── WP affiliate template helper ────────────────────────────────
             function saveAffiliateTemplate(vendorName, tpl) {

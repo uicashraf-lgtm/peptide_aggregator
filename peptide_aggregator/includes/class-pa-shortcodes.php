@@ -282,7 +282,7 @@ class PA_Shortcodes {
                 'before'
             );
             wp_add_inline_script('pa-suppliers-js',
-                'window.PA_SUPPLIERS_UI = window.PA_SUPPLIERS_UI || {}; window.PA_SUPPLIERS_UI.api_base = ' . json_encode($this->api->base_url()) . ';',
+                'window.PA_SUPPLIERS_UI = window.PA_SUPPLIERS_UI || {}; window.PA_SUPPLIERS_UI.api_base = ' . json_encode($this->api->base_url()) . '; window.PA_SUPPLIERS_UI.coupon_savings = ' . wp_json_encode((object) get_option('pa_coupon_savings', array())) . ';',
                 'before'
             );
             wp_add_inline_script('pa-about-js',
