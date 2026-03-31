@@ -1,9 +1,10 @@
 (function () {
   'use strict';
  
-  const UI = window.PA_SUPPLIERS_UI || { api_base: '', prices_url: '' };
+  const UI = window.PA_SUPPLIERS_UI || { api_base: '', prices_url: '', coupon_savings: {} };
   const API = (UI.api_base || '').replace(/\/$/, '');
   const PRICES_URL = UI.prices_url || '';
+  const COUPON_SAVINGS = UI.coupon_savings || {};
  
   // ─── Utility ─────────────────────────────────────────────────────────────
   function escHtml(s) {
@@ -382,7 +383,9 @@
     // ── Coupon row ────────────────────────────────────────────────────────
     if (v.coupon_code) {
       var couponRow = el('div', 'pa-scard-info-row pa-scard-coupon-row');
-      couponRow.innerHTML = '<svg class="pa-scard-row-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f4a94a" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-scard-coupon-text">Use coupon code</span>';
+      var savings = COUPON_SAVINGS[String(v.id)] || '';
+      var couponLabel = savings ? 'Use coupon code to save ' + escHtml(savings) : 'Use coupon code';
+      couponRow.innerHTML = '<svg class="pa-scard-row-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f4a94a" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-scard-coupon-text">' + couponLabel + '</span>';
       var codeWrap = el('span', 'pa-coupon-wrap');
       codeWrap.appendChild(el('span', 'pa-coupon-badge', '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>'));
       var copyBtn = el('button', 'pa-coupon-copy-btn', '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>');
