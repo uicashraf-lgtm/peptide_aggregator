@@ -15,7 +15,26 @@
     if (html !== undefined) e.innerHTML = html;
     return e;
   }
- 
+
+  function showCouponToast(code) {
+    var existing = document.querySelector('.pa-coupon-toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.className = 'pa-coupon-toast';
+    toast.innerHTML =
+      '<span class="pa-coupon-toast-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#16a34a" stroke-width="2.5"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+      '<span class="pa-coupon-toast-body">' +
+        '<span class="pa-coupon-toast-title">Copied code: <span class="pa-coupon-toast-code">' + escHtml(code) + '</span></span>' +
+        '<span class="pa-coupon-toast-sub">10% off your order</span>' +
+      '</span>';
+    document.body.appendChild(toast);
+    requestAnimationFrame(function() { toast.classList.add('pa-coupon-toast--visible'); });
+    setTimeout(function() {
+      toast.classList.remove('pa-coupon-toast--visible');
+      setTimeout(function() { toast.remove(); }, 300);
+    }, 2500);
+  }
+
   // ─── State ────────────────────────────────────────────────────────────────
   var allVendors = [];
   var state = {
@@ -364,6 +383,7 @@
         btn.addEventListener('click', function(e) {
           e.stopPropagation();
           navigator.clipboard && navigator.clipboard.writeText(code);
+          showCouponToast(code);
           btn.textContent = '\u2713';
           setTimeout(function() { btn.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
         });
