@@ -90,16 +90,16 @@ class PA_Rest {
     }
 
     public function save_coupon_savings_endpoint(WP_REST_Request $req) {
-        $vendor_id = trim((string) $req->get_param('vendor_id'));
-        $savings   = trim((string) $req->get_param('savings'));
-        if ($vendor_id === '') {
-            return new WP_Error('invalid', 'vendor_id is required', array('status' => 400));
+        $vendor_name = strtolower(trim((string) $req->get_param('vendor_name')));
+        $savings     = trim((string) $req->get_param('savings'));
+        if ($vendor_name === '') {
+            return new WP_Error('invalid', 'vendor_name is required', array('status' => 400));
         }
         $map = (array) get_option('pa_coupon_savings', array());
         if ($savings === '') {
-            unset($map[$vendor_id]);
+            unset($map[$vendor_name]);
         } else {
-            $map[$vendor_id] = $savings;
+            $map[$vendor_name] = $savings;
         }
         update_option('pa_coupon_savings', $map);
         return rest_ensure_response(array('ok' => true));

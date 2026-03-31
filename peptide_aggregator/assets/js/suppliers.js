@@ -383,7 +383,7 @@
     // ── Coupon row ────────────────────────────────────────────────────────
     if (v.coupon_code) {
       var couponRow = el('div', 'pa-scard-info-row pa-scard-coupon-row');
-      var savings = COUPON_SAVINGS[String(v.id)] || '';
+      var savings = COUPON_SAVINGS[(v.name || '').toLowerCase()] || '';
       var couponLabel = savings ? 'Use coupon code to save ' + escHtml(savings) : 'Use coupon code';
       couponRow.innerHTML = '<svg class="pa-scard-row-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f4a94a" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-scard-coupon-text">' + couponLabel + '</span>';
       var codeWrap = el('span', 'pa-coupon-wrap');

@@ -275,9 +275,10 @@ class PA_Shortcodes {
                     ]) . ',' .
                     'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
                     'sort_options:' . json_encode(['Popularity','Price: Low to High','Price: High to Low','Newest']) . ',' .
-                    'dose_labels:'   . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) . ',' .
-                    'default_doses:' . json_encode( empty($default_doses) ? new stdClass() : $default_doses ) . ',' .
-                    'dose_remaps:'   . json_encode( empty($dose_remaps) ? new stdClass() : $dose_remaps ) .
+                    'dose_labels:'     . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) . ',' .
+                    'default_doses:'   . json_encode( empty($default_doses) ? new stdClass() : $default_doses ) . ',' .
+                    'dose_remaps:'     . json_encode( empty($dose_remaps) ? new stdClass() : $dose_remaps ) . ',' .
+                    'coupon_savings:'  . wp_json_encode( (object) get_option('pa_coupon_savings', array()) ) .
                 '};',
                 'before'
             );
