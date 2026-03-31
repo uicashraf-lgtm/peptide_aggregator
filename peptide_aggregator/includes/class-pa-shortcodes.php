@@ -325,9 +325,10 @@ class PA_Shortcodes {
         window.PA_UI.api_base = <?php echo json_encode($this->api->base_url()); ?>;
         window.PA_UI.rest_base = <?php echo json_encode(rest_url('pa/v1')); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
-        window.PA_UI.dose_labels  = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
-        window.PA_UI.default_doses = <?php echo json_encode( empty($sc_default_doses) ? new stdClass() : $sc_default_doses ); ?>;
-        window.PA_UI.dose_remaps  = <?php echo json_encode( empty($sc_dose_remaps) ? new stdClass() : $sc_dose_remaps ); ?>;
+        window.PA_UI.dose_labels    = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
+        window.PA_UI.default_doses  = <?php echo json_encode( empty($sc_default_doses) ? new stdClass() : $sc_default_doses ); ?>;
+        window.PA_UI.dose_remaps    = <?php echo json_encode( empty($sc_dose_remaps) ? new stdClass() : $sc_dose_remaps ); ?>;
+        window.PA_UI.coupon_savings = <?php echo wp_json_encode( (object) get_option('pa_coupon_savings', array()) ); ?>;
         </script>
         <div class="pa-shell">
                 <section class="pa-search-panel">
