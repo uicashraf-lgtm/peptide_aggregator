@@ -901,6 +901,43 @@
             (d.top_vendors || []).sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
           });
 
+          // Route vendors without amount_mg into a remapped "default" bucket (if configured).
+          // The /products endpoint often omits formulation_key from lightweight vendor objects;
+          // the /prices endpoint includes it. Pulling them in here lets the rebuilt card detect
+          // formulations for the default-remap bucket.
+          var pKeyRM = (p.name || '').toLowerCase().trim();
+          var remapMapRM = (UI.dose_remaps && UI.dose_remaps[pKeyRM]) || {};
+          if (remapMapRM['default']) {
+            var remappedDefaultNorm = remapMapRM['default'].toLowerCase().replace(/\s+/g, '');
+            var destDefaultDosage = dosageByNorm[remappedDefaultNorm];
+            if (destDefaultDosage) {
+              allPrices.forEach(function(v) {
+                if (v.amount_mg != null) return;
+                var effectiveName = v.product_name || v.product || '';
+                var pn = (effectiveName || '').toLowerCase();
+                var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
+                var stamped = Object.assign({}, v, {
+                  product_name: effectiveName,
+                  price: v.price != null ? v.price : v.effective_price,
+                  _formulation: formulation,
+                  _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk')
+                });
+                var exists = destDefaultDosage.top_vendors.some(function(ev) {
+                  if (stamped.listing_id && ev.listing_id) {
+                    return ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null);
+                  }
+                  return (ev.vendor || '') === (stamped.vendor || '') &&
+                         (ev.product_name || '') === (stamped.product_name || '') &&
+                         (ev._formulation || null) === (stamped._formulation || null);
+                });
+                if (!exists) destDefaultDosage.top_vendors.push(stamped);
+              });
+              destDefaultDosage.top_vendors.sort(function(a, b) {
+                return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
+              });
+            }
+          }
+
           p._cardAllPricesReady = true;
         })
         .catch(function() {
@@ -1219,6 +1256,31 @@
     arrow.title = 'View all prices';
     foot.appendChild(arrow);
     card.appendChild(foot);
+
+    // If this product has a "default" remap but we couldn't detect formulations from the
+    // lightweight /products data, eagerly load full prices so the rebuilt card can show
+    // the formulation row. Rebuilds the grid once after enrichment; guarded by _formRowAdded
+    // so it doesn't loop.
+    if (!hasFormulationRow && !p._formRowAdded) {
+      var pKeyEager = (p.name || '').toLowerCase().trim();
+      var remapMapEager = (UI.dose_remaps && UI.dose_remaps[pKeyEager]) || {};
+      if (remapMapEager['default']) {
+        p._formRowAdded = true;
+        ensureCardAllPricesLoaded().then(function() {
+          var newCardFormKeys = [];
+          var newAllCardVendors = [];
+          dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); }); });
+          if (newAllCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); });
+          newAllCardVendors.forEach(function(v) {
+            var fk = getCardFormulationKey(v);
+            if (fk && newCardFormKeys.indexOf(fk) === -1) newCardFormKeys.push(fk);
+          });
+          if (newCardFormKeys.length >= 1) {
+            renderProductGrid(filteredProducts());
+          }
+        });
+      }
+    }
 
     card.addEventListener('click', function () { loadProductDetail(p._activeId || p.id, p.name); });
     return card;
