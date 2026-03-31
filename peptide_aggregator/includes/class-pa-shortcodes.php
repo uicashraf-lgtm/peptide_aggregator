@@ -267,7 +267,7 @@ class PA_Shortcodes {
                     'api_base:'     . json_encode($this->api->base_url()) . ',' .
                     'rest_base:'    . json_encode(rest_url('pa/v1'))      . ',' .
                     'sse_url:'      . json_encode($this->api->sse_url())  . ',' .
-                    'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','CJC-1295 (No DAC) + Ipamorelin Blend','BPC-157 / TB4 Blend','MOTS-c','BPC-157']) . ',' .
+                    'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','Glow','BPC-157 / TB4 Blend','MOTS-c','BPC-157']) . ',' .
                     'categories:'   . json_encode([
                         ['name'=>'GLP-1','count'=>9],['name'=>'Healing','count'=>7],['name'=>'Blends','count'=>9],
                         ['name'=>'Growth Hormones','count'=>10],['name'=>'Hormones & Reproductive','count'=>4],
