@@ -1741,17 +1741,8 @@
     }
 
     .pa-shell .pa-detail-vrow-right {
-        flex-direction: column !important;
-        align-items: flex-end !important;
-        gap: 4px !important;
-    }
-
-    .pa-shell .pa-detail-vrow-right .pa-detail-price-link-row {
-        order: 1 !important;
-    }
-
-    .pa-shell .pa-detail-vrow-right .pa-coupon-wrap {
-        order: 2 !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
     }
 
     /* Compact card margins */
