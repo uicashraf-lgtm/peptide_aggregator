@@ -672,6 +672,17 @@
     color: #f97316 !important;
 }
 
+/* Coupon save label (shown above the coupon badge) */
+.pa-shell .pa-coupon-save-label {
+    display: block !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    color: #16a34a !important;
+    text-transform: uppercase !important;
+    margin-bottom: 2px !important;
+}
+
 /* Coupon badges */
 .pa-shell .pa-coupon-badge {
     display: inline-flex !important;

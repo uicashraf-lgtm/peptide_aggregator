@@ -398,7 +398,7 @@ class PA_Admin {
                 setVal('pa_f_logo_url', v.logo_url);
                 setVal('pa_f_country', v.country);
                 setVal('pa_f_coupon_code', v.coupon_code);
-                setVal('pa_f_coupon_savings', PA_COUPON_SAVINGS[String(vid)] || '');
+                setVal('pa_f_coupon_savings', PA_COUPON_SAVINGS[v.name.toLowerCase()] || '');
                 setVal('pa_f_affiliate', PA_AFFILIATE_TEMPLATES[v.name.toLowerCase()] || '');
                 setPM(v.payment_methods);
                 document.getElementById('pa_f_target_urls').value = '';
@@ -515,7 +515,7 @@ class PA_Admin {
                         if (ok) {
                             saveAffiliateTemplate(name, affiliate);
                             var newVid = data && data.vendor_id ? data.vendor_id : null;
-                            if (newVid) saveCouponSavings(newVid, couponSavings);
+                            saveCouponSavings(name, couponSavings);
                             var notice = data && data.crawl_error
                                 ? 'Vendor created, but crawl could not be queued (Redis error: ' + data.crawl_error + '). Click "Crawl Now" once Redis is available.'
                                 : 'Vendor created. Crawl queued.';
@@ -535,7 +535,7 @@ class PA_Admin {
 
                     // Save affiliate template and coupon savings to WP options (fire-and-forget).
                     saveAffiliateTemplate(name, affiliate);
-                    saveCouponSavings(vendorId, couponSavings);
+                    saveCouponSavings(name, couponSavings);
 
                     function checkDone() {
                         pending--;
@@ -603,16 +603,17 @@ class PA_Admin {
             });
 
             // ── WP coupon savings helper ────────────────────────────────────
-            function saveCouponSavings(vendorId, savings) {
+            function saveCouponSavings(vendorName, savings) {
+                var key = vendorName.toLowerCase();
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', PA_WP_REST + 'coupon-savings');
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.setRequestHeader('X-WP-Nonce', PA_WP_NONCE);
-                xhr.send(JSON.stringify({vendor_id: String(vendorId), savings: savings || ''}));
+                xhr.send(JSON.stringify({vendor_name: key, savings: savings || ''}));
                 if (savings) {
-                    PA_COUPON_SAVINGS[String(vendorId)] = savings;
+                    PA_COUPON_SAVINGS[key] = savings;
                 } else {
-                    delete PA_COUPON_SAVINGS[String(vendorId)];
+                    delete PA_COUPON_SAVINGS[key];
                 }
             }
 
