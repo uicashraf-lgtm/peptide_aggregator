@@ -606,19 +606,16 @@
     }
     row.appendChild(avatar);
 
-    // Name + product name + status
+    // Name + product name + status (+ coupon inline with status)
     const info = el('div', 'pa-pcard-vinfo');
     info.appendChild(el('span', 'pa-pcard-vname', escHtml(v.vendor)));
     if (v.product_name) {
       info.appendChild(el('span', 'pa-pcard-vprod', escHtml(v.product_name)));
     }
+    const statusRow = el('div', 'pa-pcard-status-row');
     const status = el('span', 'pa-pcard-status' + (v.in_stock !== false ? ' is-instock' : ' is-oos'));
     status.textContent = v.in_stock !== false ? '\u25cf In Stock' : '\u25cf Out of Stock';
-    info.appendChild(status);
-    row.appendChild(info);
-
-    // Right side: coupon + price + link
-    const right = el('div', 'pa-pcard-vright');
+    statusRow.appendChild(status);
     if (v.coupon_code) {
       const vendorSavings = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
       const coupon = el('span', 'pa-coupon-badge');
@@ -633,8 +630,13 @@
         setTimeout(function () { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
       });
       coupon.appendChild(copyBtn);
-      right.appendChild(coupon);
+      statusRow.appendChild(coupon);
     }
+    info.appendChild(statusRow);
+    row.appendChild(info);
+
+    // Right side: price + link
+    const right = el('div', 'pa-pcard-vright');
     const priceWrap = el('div', 'pa-pcard-price-wrap');
     const pricePer = v.price_per_mg != null ? v.price_per_mg
       : (v.price != null && v.amount_mg ? v.price / v.amount_mg : null);
