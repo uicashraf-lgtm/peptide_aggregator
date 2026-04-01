@@ -994,6 +994,21 @@
     font-weight: 500 !important;
 }
 
+.pa-shell .pa-detail-vrow-right {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 3px !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-detail-price-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
 .pa-shell .pa-dpbar-stock-btn.is-active,
 .pa-shell .pa-dpbar-supplier-btn.is-active {
     background: var(--accent) !important;
@@ -1015,19 +1030,22 @@
 }
 
 .pa-shell .pa-detail-link-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     width: 34px !important;
     height: 34px !important;
     border-radius: var(--radius-sm) !important;
-    background: var(--panel-soft) !important;
-    border: 1px solid var(--line) !important;
+    background: none !important;
+    border: none !important;
     color: var(--muted) !important;
     transition: all 0.15s ease !important;
     flex-shrink: 0 !important;
 }
 
 .pa-shell .pa-detail-link-icon:hover {
-    background: var(--accent-soft) !important;
-    border-color: var(--accent) !important;
+    background: none !important;
+    border-color: transparent !important;
     color: var(--accent) !important;
 }
 
@@ -1740,11 +1758,6 @@
         padding: 10px 8px !important;
     }
 
-    .pa-shell .pa-detail-vrow-right {
-        flex-wrap: nowrap !important;
-        gap: 6px !important;
-    }
-
     /* Compact card margins */
     .pa-shell .pa-search-panel {
         padding: 10px 12px !important;
@@ -1795,6 +1808,13 @@
         padding: 2px 5px !important;
         gap: 2px !important;
     }
+
+    /* Detail view mobile: smaller price + coupon below price */
+    .pa-shell .pa-detail-price {
+        font-size: 13px !important;
+    }
+
+
 
     /* Smaller filter/sort buttons in detail view */
     .pa-shell .pa-dpbar-stock-btn,
