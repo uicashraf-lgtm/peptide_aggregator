@@ -1638,28 +1638,10 @@
       info.appendChild(el('span', 'pa-vendor-stock ' + (inStock ? 'is-in-stock' : 'is-out-of-stock'), (inStock ? 'In Stock' : 'Out of Stock')));
 
 
-      // Right: coupon + price + link
+      // Right: price+link row, coupon row below
       var right = el('div', 'pa-detail-vrow-right');
 
-      if (v.coupon_code) {
-        var detailVendorSavings = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
-        var cbWrap = el('span', 'pa-coupon-wrap');
-        var badgeInner = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>' + (detailVendorSavings ? '<span class="pa-coupon-save-inline">\u00b7 Save ' + escHtml(detailVendorSavings) + '</span>' : '');
-        cbWrap.appendChild(el('span', 'pa-coupon-badge', badgeInner));
-        var copyBtn = el('button', 'pa-coupon-copy-btn', '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>');
-        copyBtn.type = 'button'; copyBtn.title = 'Copy coupon';
-        (function(code, btn) {
-          btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            navigator.clipboard && navigator.clipboard.writeText(code);
-            showCouponToast(code, e.clientX, e.clientY);
-            btn.textContent = '\u2713';
-            setTimeout(function() { btn.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
-          });
-        })(v.coupon_code, copyBtn);
-        cbWrap.appendChild(copyBtn);
-        right.appendChild(cbWrap);
-      }
+      var priceRow = el('div', 'pa-detail-price-row');
 
       var pricePer = v.price_per_mg != null ? v.price_per_mg : (v.price != null && v.amount_mg ? v.price / v.amount_mg : null);
       var showPer = state.detailPriceMode === 'mgml' && pricePer != null;
@@ -1672,7 +1654,7 @@
       if (hasPrev) {
         priceWrap.appendChild(el('span', 'pa-detail-prev-price', escHtml(fmt(v.previous_price, v.currency))));
       }
-      right.appendChild(priceWrap);
+      priceRow.appendChild(priceWrap);
 
       if (v.link) {
         var a = document.createElement('a');
@@ -1680,7 +1662,29 @@
         a.className = 'pa-detail-link-icon';
         a.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
         a.addEventListener('click', function(e) { e.stopPropagation(); });
-        right.appendChild(a);
+        priceRow.appendChild(a);
+      }
+      right.appendChild(priceRow);
+
+      if (v.coupon_code) {
+        var detailVendorSavings = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
+        var cbWrap = el('span', 'pa-coupon-wrap');
+        var badgeInner = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>' + (detailVendorSavings ? '<span class="pa-coupon-save-inline">\u00b7 Save ' + escHtml(detailVendorSavings) + '</span>' : '');
+        var badge = el('span', 'pa-coupon-badge', badgeInner);
+        var copyBtn = el('button', 'pa-coupon-copy-btn', '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>');
+        copyBtn.type = 'button'; copyBtn.title = 'Copy coupon';
+        (function(code, btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            navigator.clipboard && navigator.clipboard.writeText(code);
+            showCouponToast(code, e.clientX, e.clientY);
+            btn.textContent = '\u2713';
+            setTimeout(function() { btn.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
+          });
+        })(v.coupon_code, copyBtn);
+        badge.appendChild(copyBtn);
+        cbWrap.appendChild(badge);
+        right.appendChild(cbWrap);
       }
 
       row.appendChild(avatar); row.appendChild(info); row.appendChild(right);
