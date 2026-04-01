@@ -636,7 +636,8 @@
     margin-top: 2px !important;
 }
 
-.pa-shell .pa-pcard-vendor-row:hover .pa-price-coupon-tip {
+.pa-shell .pa-pcard-vendor-row:hover .pa-price-coupon-tip,
+.pa-shell .pa-detail-vrow:hover .pa-price-coupon-tip {
     display: block !important;
 }
 
@@ -1048,6 +1049,10 @@
     align-items: flex-end !important;
     gap: 3px !important;
     flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-detail-price-wrap {
+    position: relative !important;
 }
 
 .pa-shell .pa-detail-price-row {

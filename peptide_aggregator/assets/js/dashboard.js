@@ -1699,6 +1699,26 @@
       if (hasPrev) {
         priceWrap.appendChild(el('span', 'pa-detail-prev-price', escHtml(fmt(v.previous_price, v.currency))));
       }
+      // Coupon price tooltip — shown on row hover when a savings value is configured
+      if (v.coupon_code && v.price != null) {
+        var _dSav = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
+        if (_dSav) {
+          var _dSavStr = String(_dSav).trim();
+          var _dPctM = _dSavStr.match(/(\d+(?:\.\d+)?)\s*%/);
+          var _dFixM = !_dPctM ? _dSavStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
+          var _dCouponPrice = _dPctM
+            ? v.price * (1 - parseFloat(_dPctM[1]) / 100)
+            : (_dFixM ? Math.max(0, v.price - parseFloat(_dFixM[1])) : null);
+          if (_dCouponPrice != null) {
+            var _dCpDisp = showPer && v.amount_mg
+              ? '$' + Number(_dCouponPrice / v.amount_mg).toFixed(1) + '/' + (v.amount_unit || 'mg')
+              : fmt(_dCouponPrice, v.currency);
+            var _dTip = el('span', 'pa-price-coupon-tip');
+            _dTip.innerHTML = 'Price after coupon<br><strong>' + escHtml(_dCpDisp) + '</strong>';
+            priceWrap.appendChild(_dTip);
+          }
+        }
+      }
       priceRow.appendChild(priceWrap);
 
       if (v.link) {
