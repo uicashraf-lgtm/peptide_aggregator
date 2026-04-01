@@ -606,6 +606,40 @@
     font-weight: 500 !important;
 }
 
+.pa-shell .pa-pcard-price-wrap {
+    position: relative !important;
+}
+
+.pa-shell .pa-price-coupon-tip {
+    display: none !important;
+    position: absolute !important;
+    bottom: calc(100% + 6px) !important;
+    right: 0 !important;
+    background: var(--accent) !important;
+    color: rgba(255,255,255,0.85) !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+    padding: 6px 9px !important;
+    border-radius: 6px !important;
+    white-space: nowrap !important;
+    z-index: 20 !important;
+    pointer-events: none !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important;
+}
+
+.pa-shell .pa-price-coupon-tip strong {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    margin-top: 2px !important;
+}
+
+.pa-shell .pa-pcard-vendor-row:hover .pa-price-coupon-tip {
+    display: block !important;
+}
+
 .pa-shell .pa-pcard-vprod {
     font-size: 9px !important;
     color: var(--muted) !important;
