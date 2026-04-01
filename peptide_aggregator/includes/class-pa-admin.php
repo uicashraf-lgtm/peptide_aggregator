@@ -998,6 +998,33 @@ class PA_Admin {
             var currentDoseLabels = {};
             var currentDefaultDose = '';
             var currentDoseRemaps = {};
+            // Formulation keys present among null-dose vendors for the currently-edited product.
+            // Populated by the prices fetch; used to split the "default" remap row per formulation.
+            var currentNullDoseFormulations = [];
+            // Must match FORMULATIONS in dashboard.js (most-specific first).
+            var ADMIN_FORMULATIONS = [
+                { key: 'tablet',  label: 'Capsules/Tablets', terms: ['tablet', 'tab', 'capsule', 'caps'] },
+                { key: 'liquid',  label: 'Liquid',           terms: ['liquid', 'solution', 'dropper'] },
+                { key: 'topical', label: 'Topical',          terms: ['topical', 'cream', 'gel', 'patch', 'lotion'] },
+                { key: 'spray',   label: 'Spray',            terms: ['spray', 'nasal', 'aerosol', 'dispersal', 'air dispersal'] },
+            ];
+            function adminGetFormulationKey(str) {
+                var s = (str || '').toLowerCase();
+                for (var _fi = 0; _fi < ADMIN_FORMULATIONS.length; _fi++) {
+                    var _f = ADMIN_FORMULATIONS[_fi];
+                    for (var _fj = 0; _fj < _f.terms.length; _fj++) {
+                        if (s.indexOf(_f.terms[_fj]) !== -1) return _f.key;
+                    }
+                }
+                return null;
+            }
+            function adminFormulationLabel(key) {
+                if (!key) return 'Vials';
+                for (var _fi = 0; _fi < ADMIN_FORMULATIONS.length; _fi++) {
+                    if (ADMIN_FORMULATIONS[_fi].key === key) return ADMIN_FORMULATIONS[_fi].label;
+                }
+                return key;
+            }
             // Must match the DOSAGE_RE in dashboard.js so admin keys align with frontend keys
             var ADMIN_DOSAGE_RE = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)$/i;
             function stripDosageSuffix(name) {
@@ -1505,31 +1532,52 @@ class PA_Admin {
                 header.appendChild(hSpacer); header.appendChild(hArrow); header.appendChild(hRemap); header.appendChild(hSep); header.appendChild(hLabel);
                 section.appendChild(header);
 
+                // Build the final list of rows, expanding 'default' into per-formulation rows
+                // when multiple null-dose formulations are present (e.g. capsule + vial).
+                var expandedDosages = [];
                 dosages.forEach(function(dose) {
+                    if (dose === 'default' && currentNullDoseFormulations.length > 1) {
+                        // Emit one row per detected formulation.
+                        // Vials (null formulation) keep the plain "default" key for back-compat.
+                        // Other formulations use "default|{key}" (e.g. "default|tablet").
+                        currentNullDoseFormulations.forEach(function(fk) {
+                            var remapKey = fk ? ('default|' + fk) : 'default';
+                            expandedDosages.push({ dose: dose, remapKey: remapKey, formLabel: adminFormulationLabel(fk) });
+                        });
+                    } else {
+                        expandedDosages.push({ dose: dose, remapKey: dose, formLabel: null });
+                    }
+                });
+
+                expandedDosages.forEach(function(entry) {
+                    var dose = entry.dose;
+                    var remapKey = entry.remapKey;
+                    var formLabel = entry.formLabel;
                     var normKey = (dose || '').toLowerCase().replace(/\s+/g, '');
                     var customLabel = currentDoseLabels[normKey] || currentDoseLabels[dose] || '';
                     var isHidden = customLabel === '__exclude__';
-                    var remapVal = currentDoseRemaps[normKey] || '';
+                    // Load remap value: try the (possibly compound) remapKey first
+                    var remapVal = currentDoseRemaps[remapKey] || (remapKey !== normKey ? currentDoseRemaps[normKey] : '') || '';
 
                     var row = document.createElement('div');
                     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
 
-                    // Scraped value
+                    // Scraped value — append formulation label when splitting a 'default' row
                     var origSpan = document.createElement('span');
                     origSpan.style.cssText = 'min-width:90px;font-size:13px;color:#444;font-weight:600';
-                    origSpan.textContent = dose;
+                    origSpan.textContent = formLabel ? (dose + ' (' + formLabel + ')') : dose;
 
                     var arrow = document.createElement('span');
                     arrow.textContent = '\u2192';
                     arrow.style.color = '#888';
 
-                    // Remap input
+                    // Remap input — data-dose-remap carries the (possibly compound) key
                     var remapInput = document.createElement('input');
                     remapInput.type = 'text';
                     remapInput.className = 'regular-text';
                     remapInput.placeholder = 'e.g. 6mg';
                     remapInput.value = remapVal;
-                    remapInput.setAttribute('data-dose-remap', dose);
+                    remapInput.setAttribute('data-dose-remap', remapKey);
                     remapInput.style.cssText = 'width:150px';
                     remapInput.title = 'Remap this scraped dose to a canonical value so it merges with other vendors (e.g. reta6mg \u2192 6mg)';
 
@@ -1786,6 +1834,7 @@ class PA_Admin {
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
                 currentDefaultDose = PA_DEFAULT_DOSES[currentDoseLabelProductName] || '';
                 currentDoseRemaps = PA_DOSE_REMAPS[currentDoseLabelProductName] || {};
+                currentNullDoseFormulations = [];
                 // Collect available_dosages labels from ALL variants in this
                 // product's group, mirroring groupByDosage() on the frontend.
                 // The individual product may have no dosages while a sibling
@@ -1818,21 +1867,26 @@ class PA_Admin {
                 var _dllSnapshot = doseLabelList.slice();
                 var _pidForDose  = pid;
                 var _pNameForDose = currentDoseLabelProductName;
+                currentNullDoseFormulations = [];
                 fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products/' + encodeURIComponent(_pidForDose) + '/prices')
                     .then(function(r) { return r.json(); })
                     .then(function(prices) {
                         var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
-                        var hasDefault = prices.some(function(v) {
-                            if (v.amount_mg != null && v.amount_unit) return false;
-                            if ((v.product || '').match(DOSAGE_RE)) return false;
-                            return true; // null dose → would become 'default'
+                        var hasDefault = false;
+                        var detectedFormulations = [];
+                        prices.forEach(function(v) {
+                            if (v.amount_mg != null && v.amount_unit) return;
+                            if ((v.product || '').match(DOSAGE_RE)) return;
+                            hasDefault = true;
+                            // Detect formulation from the vendor's product name
+                            var fk = adminGetFormulationKey(v.product || v.product_name || '');
+                            // null = vial; stored as null in the array
+                            if (detectedFormulations.indexOf(fk) === -1) detectedFormulations.push(fk);
                         });
-                        if (hasDefault && _dllSnapshot.indexOf('default') === -1) {
-                            // Only re-render if we're still editing the same product
-                            if (currentDoseLabelProductName === _pNameForDose) {
-                                _dllSnapshot.push('default');
-                                renderDoseLabelsSection(_dllSnapshot);
-                            }
+                        if (hasDefault && currentDoseLabelProductName === _pNameForDose) {
+                            currentNullDoseFormulations = detectedFormulations;
+                            if (_dllSnapshot.indexOf('default') === -1) _dllSnapshot.push('default');
+                            renderDoseLabelsSection(_dllSnapshot);
                         }
                     })
                     .catch(function() { /* silently ignore */ });
