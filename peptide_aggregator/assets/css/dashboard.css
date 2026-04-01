@@ -858,40 +858,51 @@
 
 /* Detail dosage buttons */
 .pa-shell .pa-ddosage-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
     padding: 0 14px !important;
     height: 34px !important;
     border-radius: var(--radius-sm) !important;
-    background: var(--panel-soft) !important;
+    background: var(--panel) !important;
     border: 1.5px solid var(--line) !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
+    color: var(--muted) !important;
     font-size: 12px !important;
     font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
 }
 
 .pa-shell .pa-ddosage-btn.is-active {
-    background: var(--accent-soft) !important;
+    background: var(--accent) !important;
+    color: #ffffff !important;
     border-color: var(--accent) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25) !important;
 }
 
 .pa-shell .pa-ddosage-btn:hover:not(.is-active) {
     border-color: var(--accent) !important;
+    color: var(--accent) !important;
 }
 
 .pa-shell .pa-ddosage-label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
     font-size: 12px !important;
     font-weight: 600 !important;
-    color: var(--text) !important;
-}
-
-.pa-shell .pa-ddosage-btn.is-active .pa-ddosage-label {
-    color: var(--accent) !important;
+    color: inherit !important;
 }
 
 .pa-shell .pa-ddosage-count {
     font-size: 10px !important;
-    color: var(--muted) !important;
     font-weight: 500 !important;
+    color: var(--muted) !important;
+}
+
+.pa-shell .pa-ddosage-btn.is-active .pa-ddosage-count {
+    color: rgba(255,255,255,0.75) !important;
 }
 
 /* Detail prices section */
