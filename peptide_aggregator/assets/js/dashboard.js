@@ -580,6 +580,16 @@
     // Check for an admin-set default dose for this product.
     if (productName && UI.default_doses) {
       var pKey = productName.toLowerCase().trim();
+      // 1. Per-variant keys (new format): "bpc-157 5mg", "bpc-157 10mg", etc.
+      //    Each admin product entry stores its own default under its full name.
+      for (var j = 0; j < dosages.length; j++) {
+        var rawLabel = (dosages[j].label || '').trim();
+        var variantKey = pKey + ' ' + rawLabel.toLowerCase();
+        var variantDefault = (UI.default_doses[variantKey] || '').toLowerCase().replace(/\s+/g, '');
+        var normDosLabel = rawLabel.toLowerCase().replace(/\s+/g, '');
+        if (variantDefault && variantDefault === normDosLabel) return j;
+      }
+      // 2. Legacy base-name key (old format): "bpc-157" covers the whole group.
       var savedDefault = (UI.default_doses[pKey] || '').toLowerCase().replace(/\s+/g, '');
       if (savedDefault) {
         for (var j = 0; j < dosages.length; j++) {
