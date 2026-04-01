@@ -426,6 +426,7 @@
               return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
             });
             map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
+            map[k].available_dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
           }
         }
       }
@@ -869,6 +870,7 @@
             if (!destDefaultDosage) {
               destDefaultDosage = { label: remappedDefaultLabel, top_vendors: [], vendors: [] };
               dosages.push(destDefaultDosage);
+              dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
               dosageByNorm[remappedDefaultNorm] = destDefaultDosage;
             }
             if (destDefaultDosage) {
