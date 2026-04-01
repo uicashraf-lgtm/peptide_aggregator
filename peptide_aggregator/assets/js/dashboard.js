@@ -637,6 +637,26 @@
         : fmt(v.previous_price, v.currency);
       priceWrap.appendChild(el('span', 'pa-pcard-price-prev', escHtml(prevDisplay)));
     }
+    // Coupon price tooltip — visible on row hover when a parseable discount is configured
+    if (v.coupon_code && v.price != null) {
+      var _sav = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
+      if (_sav) {
+        var _savStr = String(_sav).trim();
+        var _pctM = _savStr.match(/(\d+(?:\.\d+)?)\s*%/);
+        var _fixM = !_pctM ? _savStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
+        var _couponPrice = _pctM
+          ? v.price * (1 - parseFloat(_pctM[1]) / 100)
+          : (_fixM ? Math.max(0, v.price - parseFloat(_fixM[1])) : null);
+        if (_couponPrice != null) {
+          var _cpDisp = showPerMg && v.amount_mg
+            ? '$' + Number(_couponPrice / v.amount_mg).toFixed(1) + '/' + (v.amount_unit || 'mg')
+            : fmt(_couponPrice, v.currency);
+          var _tip = el('span', 'pa-price-coupon-tip');
+          _tip.innerHTML = 'This is the price after the coupon<br><strong>' + escHtml(_cpDisp) + '</strong>';
+          priceWrap.appendChild(_tip);
+        }
+      }
+    }
     priceLinkRow.appendChild(priceWrap);
     if (v.link) {
       const a = document.createElement('a');
