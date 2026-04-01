@@ -573,7 +573,7 @@
     // Check for an admin-set default dose for this product.
     if (productName && UI.default_doses) {
       var pKey = productName.toLowerCase().trim();
-      var savedDefault = UI.default_doses[pKey] || '';
+      var savedDefault = (UI.default_doses[pKey] || '').toLowerCase().replace(/\s+/g, '');
       if (savedDefault) {
         for (var j = 0; j < dosages.length; j++) {
           var normLabel = (dosages[j].label || '').toLowerCase().replace(/\s+/g, '');
@@ -1003,7 +1003,9 @@
             var filteredByForm = filterByFormulation(d.top_vendors, activeFormulation);
             renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d, isKitProduct));
           };
-          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
+          var pKeyDR = (p.name || '').toLowerCase().trim();
+          var hasDefaultRemap = !!(UI.dose_remaps && UI.dose_remaps[pKeyDR] && UI.dose_remaps[pKeyDR]['default']);
+          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits) || hasDefaultRemap) {
             ensureCardAllPricesLoaded().then(doRender);
           } else {
             doRender();
@@ -1160,7 +1162,16 @@
         renderInitial();
       });
     } else {
-      renderInitial();
+      var pKeyIR = (p.name || '').toLowerCase().trim();
+      var hasDefaultRemapIR = !!(UI.dose_remaps && UI.dose_remaps[pKeyIR] && UI.dose_remaps[pKeyIR]['default']);
+      if (hasDefaultRemapIR) {
+        // Render immediately with available data, then re-render once enrichment
+        // adds the default-remap vendor (which the lightweight /products data omits).
+        renderInitial();
+        ensureCardAllPricesLoaded().then(renderInitial);
+      } else {
+        renderInitial();
+      }
     }
     card.appendChild(vendorList);
 
