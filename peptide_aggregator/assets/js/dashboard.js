@@ -203,10 +203,9 @@
       }
       if (!map[key]) {
         var pKey0 = (pd.base || '').toLowerCase().trim();
-        // Per-product-ID remap takes priority; fall back to legacy base-name remap.
-        var remapMap0 = (UI.dose_remaps && (UI.dose_remaps[String(p.id)] || UI.dose_remaps[pKey0])) || {};
+        var remapMap0 = (UI.dose_remaps && UI.dose_remaps[pKey0]) || {};
         map[key] = {
-          id: p.id, _ids: [p.id], name: pd.base, category: p.category,
+          id: p.id, name: pd.base, category: p.category,
           description: p.description, dosages: [],
           top_vendors: (p.top_vendors || []).map(stampVendor),
           min_price: p.min_price,
@@ -245,8 +244,6 @@
         order.push(key);
       }
       var grp = map[key];
-      // Track all product IDs in this group for per-ID settings lookup.
-      if (grp._ids.indexOf(p.id) === -1) grp._ids.push(p.id);
       // Propagate kit designation — once any variant is marked as a kit, the group is a kit.
       if (p._is_kit_product || srcIsKit) grp._is_kit_product = true;
       // Merge tags from all variants into the group
@@ -256,9 +253,8 @@
         var rawLabel = (d.label || d);
         // Apply dose remap: if this product has a remap for this scraped label,
         // rewrite the label so it merges into the correct canonical bucket.
-        // Per-product-ID remap takes priority; fall back to legacy base-name remap.
         var pKey = (pd.base || '').toLowerCase().trim();
-        var remapMap = (UI.dose_remaps && (UI.dose_remaps[String(p.id)] || UI.dose_remaps[pKey])) || {};
+        var remapMap = (UI.dose_remaps && UI.dose_remaps[pKey]) || {};
         var normRaw = rawLabel.toLowerCase().replace(/\s+/g, '');
         if (remapMap[normRaw]) {
           var newLabel = remapMap[normRaw];
@@ -574,7 +570,7 @@
   // When the kits filter is active, pick the first kit dosage index; otherwise pick the dosage
   // with the most vendors. If an admin default dose is set for this product, honour it first.
   // Returns the best index from the dosages array.
-  function bestDosageIdx(dosages, productName, productIds) {
+  function bestDosageIdx(dosages, productName) {
     var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
     if (kitsActive) {
       for (var i = 0; i < dosages.length; i++) {
@@ -584,21 +580,11 @@
     // Check for an admin-set default dose for this product.
     if (productName && UI.default_doses) {
       var pKey = productName.toLowerCase().trim();
-      // 1. Per-product-ID keys (new format): first match across all group IDs wins.
-      var ids = productIds || [];
-      for (var k = 0; k < ids.length; k++) {
-        var idDefault = (UI.default_doses[String(ids[k])] || '').toLowerCase().replace(/\s+/g, '');
-        if (idDefault) {
-          for (var j = 0; j < dosages.length; j++) {
-            if ((dosages[j].label || '').toLowerCase().replace(/\s+/g, '') === idDefault) return j;
-          }
-        }
-      }
-      // 2. Legacy base-name key (old format): "bpc-157" covers the whole group.
       var savedDefault = (UI.default_doses[pKey] || '').toLowerCase().replace(/\s+/g, '');
       if (savedDefault) {
         for (var j = 0; j < dosages.length; j++) {
-          if ((dosages[j].label || '').toLowerCase().replace(/\s+/g, '') === savedDefault) return j;
+          var normLabel = (dosages[j].label || '').toLowerCase().replace(/\s+/g, '');
+          if (normLabel === savedDefault) return j;
         }
       }
     }
@@ -1011,7 +997,7 @@
       rightBtn.type = 'button'; rightBtn.title = 'Scroll right';
       rightBtn.addEventListener('click', function(e) { e.stopPropagation(); pillsContainer.scrollLeft += 130; });
 
-      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name, p._ids);
+      var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
       if (activeIdx >= dosages.length) activeIdx = 0;
       // If Kits Only is active, ensure the active dosage has at least one kit listing.
       // Only do this after enrichment has run; otherwise we may choose incorrectly.
@@ -1181,7 +1167,7 @@
     }
 
     // Vendor rows — use active dosage's vendors if available, else top_vendors, filtered by formulation
-    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name, p._ids);
+    var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
     var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
       ? activeDosage.top_vendors

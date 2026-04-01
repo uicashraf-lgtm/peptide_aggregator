@@ -1632,7 +1632,7 @@ class PA_Admin {
                     } catch(e) {}
                 };
                 xhrD.send('action=pa_save_default_dose&_wpnonce=' + PA_DEFAULT_DOSE_NONCE
-                    + '&product_id=' + encodeURIComponent(currentDoseLabelProductName)
+                    + '&product_name=' + encodeURIComponent(currentDoseLabelProductName)
                     + '&default_dose=' + encodeURIComponent(normDefaultDose));
 
                 // --- Save labels + remaps together ---
@@ -1661,7 +1661,7 @@ class PA_Admin {
                     showNotice('error', 'Network error');
                 };
                 xhr.send('action=pa_save_dose_labels&_wpnonce=' + PA_DOSE_LABELS_NONCE
-                    + '&product_id=' + encodeURIComponent(currentDoseLabelProductName)
+                    + '&product_name=' + encodeURIComponent(currentDoseLabelProductName)
                     + '&labels=' + encodeURIComponent(JSON.stringify(labels))
                     + '&remaps=' + encodeURIComponent(JSON.stringify(remaps)));
             });
@@ -1780,15 +1780,12 @@ class PA_Admin {
                 setVal('pa_pf_url', p.product_url);
 
                 // ── Dose labels ─────────────────────────────────────────────
-                // Use the product ID as the storage key so each product entry
-                // has its own independent dose labels/remaps/default — even when
-                // two entries share the same name.  Legacy data keyed by base name
-                // is still read as a fallback.
-                currentDoseLabelProductName = String(p.id);
-                var _legacyKey = stripDosageSuffix(p.name || '').toLowerCase().trim();
-                currentDoseLabels  = PA_DOSE_LABELS[currentDoseLabelProductName]  || PA_DOSE_LABELS[_legacyKey]  || {};
-                currentDefaultDose = PA_DEFAULT_DOSES[currentDoseLabelProductName] || PA_DEFAULT_DOSES[_legacyKey] || '';
-                currentDoseRemaps  = PA_DOSE_REMAPS[currentDoseLabelProductName]   || PA_DOSE_REMAPS[_legacyKey]  || {};
+                // Strip dosage suffix from product name so the key matches the
+                // base-name key that groupByDosage() produces on the frontend.
+                currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
+                currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
+                currentDefaultDose = PA_DEFAULT_DOSES[currentDoseLabelProductName] || '';
+                currentDoseRemaps = PA_DOSE_REMAPS[currentDoseLabelProductName] || {};
                 // Collect available_dosages labels from ALL variants in this
                 // product's group, mirroring groupByDosage() on the frontend.
                 // The individual product may have no dosages while a sibling
@@ -2133,17 +2130,11 @@ class PA_Admin {
             wp_send_json_error('Unauthorized');
         }
         check_ajax_referer('pa_dose_labels_action', '_wpnonce');
-        // Prefer the numeric product-ID key (new format) so each product entry
-        // gets its own settings even when two share the same name.
-        // Fall back to the legacy base-name key for old requests.
-        $product_id   = sanitize_text_field(wp_unslash($_POST['product_id'] ?? ''));
-        if ($product_id !== '') {
-            $product_name = $product_id;
-        } else {
-            $product_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
-            $product_name = preg_replace('/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $product_name);
-            $product_name = trim($product_name);
-        }
+        $product_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        // Strip dosage suffix (e.g. " 5mg") so the key matches the base-name
+        // key that groupByDosage() produces on the frontend dashboard.
+        $product_name = preg_replace('/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $product_name);
+        $product_name = trim($product_name);
         $labels_json  = wp_unslash($_POST['labels'] ?? '{}');
         $labels       = json_decode($labels_json, true);
         if (!is_array($labels)) {
@@ -2189,13 +2180,9 @@ class PA_Admin {
             wp_send_json_error('Unauthorized');
         }
         check_ajax_referer('pa_default_dose_action', '_wpnonce');
-        // Prefer numeric product-ID key; fall back to legacy name-based key.
-        $product_id = sanitize_text_field(wp_unslash($_POST['product_id'] ?? ''));
-        if ($product_id !== '') {
-            $product_name = $product_id;
-        } else {
-            $product_name = strtolower(trim(sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''))));
-        }
+        $product_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
+        $product_name = preg_replace('/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $product_name);
+        $product_name = trim($product_name);
         $default_dose = sanitize_text_field(wp_unslash($_POST['default_dose'] ?? ''));
 
         $all_defaults = get_option('pa_default_doses', array());
