@@ -410,24 +410,46 @@
       // exist in available_dosages, create a synthetic one so the compact card can
       // honour the remap. Previously this only ran when available_dosages was empty,
       // but the remapped target may also be absent when the product has other doses.
+      // Formulation-specific remaps use compound keys ("default|tablet", "default|liquid"
+      // etc.) so capsule and vial null-dose vendors can be remapped independently.
+      // A plain "default" key acts as the global fallback (used for vials / null formulation).
       if ((map[k].top_vendors || []).length > 0) {
         var pKeyD = (map[k].name || '').toLowerCase().trim();
         var remapMapD = (UI.dose_remaps && UI.dose_remaps[pKeyD]) || {};
-        if (remapMapD['default']) {
-          var newLabelD = remapMapD['default'];
-          var newNormD = newLabelD.toLowerCase().replace(/\s+/g, '');
-          var bucketExists = map[k].available_dosages.some(function(d) {
-            return (d.label || '').toLowerCase().replace(/\s+/g, '') === newNormD;
+        // Collect formulation-specific default remaps: keys like "default|tablet"
+        var formRemapsD = {};
+        Object.keys(remapMapD).forEach(function(rk) {
+          var fm = rk.match(/^default\|(.+)$/);
+          if (fm) formRemapsD[fm[1]] = remapMapD[rk];
+        });
+        var hasFormRemapsD = Object.keys(formRemapsD).length > 0;
+        if (hasFormRemapsD || remapMapD['default']) {
+          // Group null-dose vendors by the remap label they resolve to
+          var remapBucketsD = {};
+          (map[k].top_vendors || []).forEach(function(v) {
+            var vForm = v._formulation || null;
+            var newLabelD = (hasFormRemapsD && vForm && formRemapsD[vForm])
+              ? formRemapsD[vForm]
+              : remapMapD['default'] || null;
+            if (!newLabelD) return;
+            if (!remapBucketsD[newLabelD]) remapBucketsD[newLabelD] = [];
+            remapBucketsD[newLabelD].push(v);
           });
-          if (!bucketExists) {
-            var doseMD = newLabelD.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
-            var synthVendorsD = (map[k].top_vendors || []).map(function(v) {
-              if (!doseMD || v.amount_mg != null) return v;
-              return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
+          Object.keys(remapBucketsD).forEach(function(newLabelD) {
+            var newNormD = newLabelD.toLowerCase().replace(/\s+/g, '');
+            var bucketExists = map[k].available_dosages.some(function(d) {
+              return (d.label || '').toLowerCase().replace(/\s+/g, '') === newNormD;
             });
-            map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
-            map[k].available_dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
-          }
+            if (!bucketExists) {
+              var doseMD = newLabelD.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+              var synthVendorsD = remapBucketsD[newLabelD].map(function(v) {
+                if (!doseMD || v.amount_mg != null) return v;
+                return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
+              });
+              map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
+              map[k].available_dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
+            }
+          });
         }
       }
     });
@@ -860,47 +882,61 @@
           // The /products endpoint often omits formulation_key from lightweight vendor objects;
           // the /prices endpoint includes it. Pulling them in here lets the rebuilt card detect
           // formulations for the default-remap bucket.
+          // Formulation-specific remaps use compound keys ("default|tablet" etc.) so capsule
+          // and vial null-dose vendors can be remapped independently.
           var pKeyRM = (p.name || '').toLowerCase().trim();
           var remapMapRM = (UI.dose_remaps && UI.dose_remaps[pKeyRM]) || {};
-          if (remapMapRM['default']) {
-            var remappedDefaultLabel = remapMapRM['default'];
-            var remappedDefaultNorm = remappedDefaultLabel.toLowerCase().replace(/\s+/g, '');
-            var remapDoseMRM = remappedDefaultLabel.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
-            var destDefaultDosage = dosageByNorm[remappedDefaultNorm];
-            if (!destDefaultDosage) {
-              destDefaultDosage = { label: remappedDefaultLabel, top_vendors: [], vendors: [] };
-              dosages.push(destDefaultDosage);
-              dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
-              dosageByNorm[remappedDefaultNorm] = destDefaultDosage;
-            }
-            if (destDefaultDosage) {
-              allPrices.forEach(function(v) {
-                if (v.amount_mg != null) return;
-                var effectiveName = v.product_name || v.product || '';
-                var pn = (effectiveName || '').toLowerCase();
-                var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
-                var stamped = Object.assign({}, v, {
-                  product_name: effectiveName,
-                  price: v.price != null ? v.price : v.effective_price,
-                  _formulation: formulation,
-                  _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
-                  amount_mg: remapDoseMRM ? parseFloat(remapDoseMRM[1]) : v.amount_mg,
-                  amount_unit: remapDoseMRM ? remapDoseMRM[2].toLowerCase() : v.amount_unit
-                });
-                var exists = destDefaultDosage.top_vendors.some(function(ev) {
-                  if (stamped.listing_id && ev.listing_id) {
-                    return ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null);
-                  }
-                  return (ev.vendor || '') === (stamped.vendor || '') &&
-                         (ev.product_name || '') === (stamped.product_name || '') &&
-                         (ev._formulation || null) === (stamped._formulation || null);
-                });
-                if (!exists) destDefaultDosage.top_vendors.push(stamped);
+          // Collect formulation-specific default remaps: keys like "default|tablet"
+          var formRemapsRM = {};
+          Object.keys(remapMapRM).forEach(function(rk) {
+            var fm = rk.match(/^default\|(.+)$/);
+            if (fm) formRemapsRM[fm[1]] = remapMapRM[rk];
+          });
+          var hasFormRemapsRM = Object.keys(formRemapsRM).length > 0;
+          if (hasFormRemapsRM || remapMapRM['default']) {
+            allPrices.forEach(function(v) {
+              if (v.amount_mg != null) return;
+              var effectiveName = v.product_name || v.product || '';
+              var pn = (effectiveName || '').toLowerCase();
+              var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
+              // Resolve which remap label applies to this vendor based on its formulation
+              var remappedDefaultLabel = (hasFormRemapsRM && formulation && formRemapsRM[formulation])
+                ? formRemapsRM[formulation]
+                : remapMapRM['default'] || null;
+              if (!remappedDefaultLabel) return;
+              var remappedDefaultNorm = remappedDefaultLabel.toLowerCase().replace(/\s+/g, '');
+              var remapDoseMRM = remappedDefaultLabel.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+              var destDefaultDosage = dosageByNorm[remappedDefaultNorm];
+              if (!destDefaultDosage) {
+                destDefaultDosage = { label: remappedDefaultLabel, top_vendors: [], vendors: [] };
+                dosages.push(destDefaultDosage);
+                dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
+                dosageByNorm[remappedDefaultNorm] = destDefaultDosage;
+              }
+              var stamped = Object.assign({}, v, {
+                product_name: effectiveName,
+                price: v.price != null ? v.price : v.effective_price,
+                _formulation: formulation,
+                _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
+                amount_mg: remapDoseMRM ? parseFloat(remapDoseMRM[1]) : v.amount_mg,
+                amount_unit: remapDoseMRM ? remapDoseMRM[2].toLowerCase() : v.amount_unit
               });
-              destDefaultDosage.top_vendors.sort(function(a, b) {
+              var exists = destDefaultDosage.top_vendors.some(function(ev) {
+                if (stamped.listing_id && ev.listing_id) {
+                  return ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null);
+                }
+                return (ev.vendor || '') === (stamped.vendor || '') &&
+                       (ev.product_name || '') === (stamped.product_name || '') &&
+                       (ev._formulation || null) === (stamped._formulation || null);
+              });
+              if (!exists) destDefaultDosage.top_vendors.push(stamped);
+            });
+            // Re-sort all dosage buckets that received new vendors
+            dosages.forEach(function(d) {
+              d.top_vendors.sort(function(a, b) {
                 return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
               });
-            }
+            });
           }
 
           p._cardAllPricesReady = true;
