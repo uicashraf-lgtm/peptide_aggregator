@@ -860,6 +860,11 @@
             var remappedDefaultNorm = remappedDefaultLabel.toLowerCase().replace(/\s+/g, '');
             var remapDoseMRM = remappedDefaultLabel.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
             var destDefaultDosage = dosageByNorm[remappedDefaultNorm];
+            if (!destDefaultDosage) {
+              destDefaultDosage = { label: remappedDefaultLabel, top_vendors: [], vendors: [] };
+              dosages.push(destDefaultDosage);
+              dosageByNorm[remappedDefaultNorm] = destDefaultDosage;
+            }
             if (destDefaultDosage) {
               allPrices.forEach(function(v) {
                 if (v.amount_mg != null) return;
