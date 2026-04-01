@@ -406,21 +406,27 @@
           d.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
         }
       });
-      // If no available_dosages exist but there is a "default" remap configured,
-      // create a synthetic bucket so the compact card can honour the remap.
-      // The detail view builds a "default" bucket on the fly from /prices; the
-      // compact card only has what groupByDosage produces, so we need to mirror that here.
-      if (map[k].available_dosages.length === 0 && (map[k].top_vendors || []).length > 0) {
+      // If a "default" remap is configured and the target dose bucket doesn't already
+      // exist in available_dosages, create a synthetic one so the compact card can
+      // honour the remap. Previously this only ran when available_dosages was empty,
+      // but the remapped target may also be absent when the product has other doses.
+      if ((map[k].top_vendors || []).length > 0) {
         var pKeyD = (map[k].name || '').toLowerCase().trim();
         var remapMapD = (UI.dose_remaps && UI.dose_remaps[pKeyD]) || {};
         if (remapMapD['default']) {
           var newLabelD = remapMapD['default'];
-          var doseMD = newLabelD.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
-          var synthVendorsD = (map[k].top_vendors || []).map(function(v) {
-            if (!doseMD || v.amount_mg != null) return v;
-            return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
+          var newNormD = newLabelD.toLowerCase().replace(/\s+/g, '');
+          var bucketExists = map[k].available_dosages.some(function(d) {
+            return (d.label || '').toLowerCase().replace(/\s+/g, '') === newNormD;
           });
-          map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
+          if (!bucketExists) {
+            var doseMD = newLabelD.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+            var synthVendorsD = (map[k].top_vendors || []).map(function(v) {
+              if (!doseMD || v.amount_mg != null) return v;
+              return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
+            });
+            map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
+          }
         }
       }
     });
