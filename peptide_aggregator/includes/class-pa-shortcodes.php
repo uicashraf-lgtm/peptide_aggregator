@@ -81,10 +81,7 @@ class PA_Shortcodes {
 .pa-shell .pa-pcard-vinfo{display:flex!important;flex-direction:column!important;min-width:0!important}
 .pa-shell .pa-pcard-vright{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:3px!important;min-width:0!important;flex-shrink:0!important}
 .pa-shell .pa-pcard-price-link-row{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important}
-.pa-shell .pa-pcard-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important;flex-shrink:0!important;position:relative!important}
-.pa-shell .pa-price-coupon-tip{display:none!important;position:absolute!important;bottom:calc(100% + 6px)!important;right:0!important;background:var(--accent)!important;color:rgba(255,255,255,0.85)!important;font-size:11px!important;font-weight:400!important;line-height:1.4!important;padding:6px 9px!important;border-radius:6px!important;white-space:nowrap!important;z-index:20!important;pointer-events:none!important;box-shadow:0 2px 8px rgba(37,99,235,0.35)!important}
-.pa-shell .pa-price-coupon-tip strong{display:block!important;font-size:13px!important;font-weight:700!important;color:#fff!important;margin-top:2px!important}
-.pa-shell .pa-pcard-vendor-row:hover .pa-price-coupon-tip{display:block!important}
+.pa-shell .pa-pcard-price-wrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important;flex-shrink:0!important}
 .pa-shell .pa-coupon-badge{display:inline-flex!important;align-items:center!important;gap:3px!important;max-width:100%!important;overflow:hidden!important;min-width:0!important}
 .pa-shell .pa-coupon-text{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;min-width:0!important}
 .pa-shell .pa-coupon-copy{display:inline-flex!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:0 2px!important}
