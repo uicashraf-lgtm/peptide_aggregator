@@ -609,8 +609,8 @@
     position: absolute !important;
     bottom: calc(100% + 6px) !important;
     right: 0 !important;
-    background: #1e293b !important;
-    color: #cbd5e1 !important;
+    background: var(--accent) !important;
+    color: rgba(255,255,255,0.85) !important;
     font-size: 11px !important;
     font-weight: 400 !important;
     line-height: 1.4 !important;
@@ -619,7 +619,7 @@
     white-space: nowrap !important;
     z-index: 20 !important;
     pointer-events: none !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.22) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important;
 }
 .pa-shell .pa-price-coupon-tip strong {
     display: block !important;
