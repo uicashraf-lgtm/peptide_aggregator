@@ -1780,9 +1780,9 @@ class PA_Admin {
                 setVal('pa_pf_url', p.product_url);
 
                 // ── Dose labels ─────────────────────────────────────────────
-                // Strip dosage suffix from product name so the key matches the
-                // base-name key that groupByDosage() produces on the frontend.
-                currentDoseLabelProductName = stripDosageSuffix(p.name || '').toLowerCase().trim();
+                // Use the full product name (including dosage suffix) as the key
+                // so each product variant has its own independent default-dose setting.
+                currentDoseLabelProductName = (p.name || '').toLowerCase().trim();
                 currentDoseLabels = PA_DOSE_LABELS[currentDoseLabelProductName] || {};
                 currentDefaultDose = PA_DEFAULT_DOSES[currentDoseLabelProductName] || '';
                 currentDoseRemaps = PA_DOSE_REMAPS[currentDoseLabelProductName] || {};
@@ -2180,9 +2180,7 @@ class PA_Admin {
             wp_send_json_error('Unauthorized');
         }
         check_ajax_referer('pa_default_dose_action', '_wpnonce');
-        $product_name = sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''));
-        $product_name = preg_replace('/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i', '', $product_name);
-        $product_name = trim($product_name);
+        $product_name = strtolower(trim(sanitize_text_field(wp_unslash($_POST['product_name'] ?? ''))));
         $default_dose = sanitize_text_field(wp_unslash($_POST['default_dose'] ?? ''));
 
         $all_defaults = get_option('pa_default_doses', array());
