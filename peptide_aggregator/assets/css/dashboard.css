@@ -856,15 +856,20 @@
 
 /* Detail dosage buttons */
 .pa-shell .pa-ddosage-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
     padding: 0 14px !important;
     height: 34px !important;
     border-radius: var(--radius-sm) !important;
     background: var(--panel) !important;
     border: 1.5px solid var(--line) !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
+    color: var(--muted) !important;
     font-size: 12px !important;
     font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
 }
 
 .pa-shell .pa-ddosage-btn.is-active {
@@ -880,19 +885,18 @@
 }
 
 .pa-shell .pa-ddosage-label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
     font-size: 12px !important;
     font-weight: 600 !important;
-    color: var(--text) !important;
-}
-
-.pa-shell .pa-ddosage-btn.is-active .pa-ddosage-label {
-    color: #ffffff !important;
+    color: inherit !important;
 }
 
 .pa-shell .pa-ddosage-count {
     font-size: 10px !important;
-    color: var(--muted) !important;
     font-weight: 500 !important;
+    color: var(--muted) !important;
 }
 
 .pa-shell .pa-ddosage-btn.is-active .pa-ddosage-count {
