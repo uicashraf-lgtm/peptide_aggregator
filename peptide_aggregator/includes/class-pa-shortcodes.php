@@ -106,7 +106,7 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-vendor-list{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important}
 .pa-shell .pa-detail-vrow{display:grid!important;grid-template-columns:40px 1fr auto!important;gap:12px!important;align-items:center!important;padding:14px 10px!important;border-radius:0!important;border-bottom:1px solid var(--line)!important}
 .pa-shell .pa-detail-vrow:last-child{border-bottom:none!important}
-.pa-shell .pa-detail-vrow-right{display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important;flex-shrink:0!important}
+.pa-shell .pa-detail-vrow-right{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:3px!important;flex-shrink:0!important}.pa-shell .pa-detail-price-row{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important}
 .pa-shell .pa-vendor-avatar{display:flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;min-width:40px!important;flex-shrink:0!important;overflow:hidden!important;border-radius:50%!important}
 .pa-shell .pa-vendor-avatar img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
 .pa-shell .pa-vendor-info{display:flex!important;flex-direction:column!important;gap:2px!important;min-width:0!important}
@@ -199,15 +199,14 @@ class PA_Shortcodes {
 .pa-shell .pa-detail-sidebar{width:100%!important}
 .pa-shell .pa-detail-prices-bar{flex-direction:column!important;align-items:flex-start!important}
 .pa-shell .pa-detail-dosage-head{flex-direction:column!important;align-items:flex-start!important}
-.pa-shell .pa-detail-vrow{grid-template-columns:40px 1fr auto!important;gap:8px!important;padding:10px 8px!important}
-.pa-shell .pa-detail-vrow-right{flex-wrap:nowrap!important;gap:6px!important}
+.pa-shell .pa-detail-vrow{grid-template-columns:40px minmax(0,1fr) auto!important;gap:8px!important;padding:10px 8px!important}.pa-shell .pa-detail-link-icon{width:20px!important;height:20px!important}.pa-shell .pa-detail-link-icon svg{width:12px!important;height:12px!important}
 .pa-shell .pa-pcard{padding:10px 8px 6px!important}
 .pa-shell .pa-pcard-vendor-row{padding:8px 4px 8px 8px!important}
 .pa-shell .pa-pcard-vright{gap:3px!important}
 .pa-shell .pa-pcard-extlink{width:20px!important;height:20px!important}
 .pa-shell .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
 .pa-shell .pa-pcard-vright .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
-.pa-shell .pa-detail-vrow-right .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
+.pa-shell .pa-detail-vrow-right .pa-coupon-badge{padding:2px 5px!important;gap:2px!important;font-size:8px!important;letter-spacing:0!important}.pa-shell .pa-detail-vrow-right .pa-coupon-save-inline{font-size:8px!important}
 .pa-shell .pa-results-right{flex-wrap:wrap!important;align-items:flex-start!important;gap:4px 8px!important}
 .pa-shell .pa-results-right::after{content:""!important;flex-basis:100%!important;height:0!important;order:1!important}
 .pa-shell .pa-price-toggle{order:0!important;flex:0 0 auto!important;flex-wrap:wrap!important;align-items:center!important;gap:3px!important}
@@ -883,26 +882,6 @@ class PA_Shortcodes {
         return ob_get_clean();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
