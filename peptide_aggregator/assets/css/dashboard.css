@@ -824,12 +824,15 @@
 
 /* Detail dosage buttons */
 .pa-shell .pa-ddosage-btn {
-    padding: 6px 10px !important;
-    border-radius: var(--radius-md) !important;
+    padding: 0 14px !important;
+    height: 34px !important;
+    border-radius: var(--radius-sm) !important;
     background: var(--panel-soft) !important;
     border: 1.5px solid var(--line) !important;
     cursor: pointer !important;
     transition: all 0.15s ease !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
 }
 
 .pa-shell .pa-ddosage-btn.is-active {
@@ -842,8 +845,8 @@
 }
 
 .pa-shell .pa-ddosage-label {
-    font-size: 13px !important;
-    font-weight: 700 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
     color: var(--text) !important;
 }
 
