@@ -25,6 +25,13 @@
   // Keys that are NOT vials — used to exclude non-vial vendors when Vials is selected
   var NON_VIAL_KEYS = FORMULATIONS.map(function(f) { return f.key; });
 
+  // Returns true if a lowercase product/dosage name matches any kit term:
+  // "kit", "pack", "bulk", or a numeric vials pattern like "3 vials", "10vials".
+  var KIT_VIALS_RE = /\d+\s*vials?/;
+  function isKitTerm(s) {
+    return s.includes('kit') || s.includes('pack') || s.includes('bulk') || KIT_VIALS_RE.test(s);
+  }
+
   function getFormulationKey(str) {
     var s = (str || '').toLowerCase();
 
@@ -51,6 +58,26 @@
       if (tags.some(function(t) { return t.toLowerCase() === FORMULATIONS[fi].key; })) return FORMULATIONS[fi].key;
     }
     return null;
+  }
+
+  function vendorListingKey(v) {
+    var amountKey = '';
+    if (v && v.amount_mg != null) {
+      amountKey = String(v.amount_mg) + String(v.amount_unit || '').toLowerCase();
+    }
+    return [
+      String((v && v.vendor) || '').toLowerCase().trim(),
+      String((v && (v.product_name || v.product)) || '').toLowerCase().trim(),
+      String((v && (v._formulation || v.formulation || v.formulation_key)) || '').toLowerCase().trim(),
+      amountKey,
+      (v && v._is_kit) ? 'kit' : 'nonkit'
+    ].join('::');
+  }
+
+  function sameVendorListing(a, b) {
+    if (!a || !b) return false;
+    if (a.listing_id && b.listing_id) return String(a.listing_id) === String(b.listing_id);
+    return vendorListingKey(a) === vendorListingKey(b);
   }
 
   function escHtml(str) {
@@ -185,7 +212,7 @@
       // PHP auto-detected kits use 'kit_auto' tag and do NOT set srcIsKit,
       // so their vendors are identified by product_name only.
       var rawNameLower = (p.name || '').toLowerCase();
-      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; }) || rawNameLower.includes('kit') || rawNameLower.includes('pack') || rawNameLower.includes('bulk');
+      var srcIsKit = (p.tags || []).some(function(t) { var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits'; }) || isKitTerm(rawNameLower);
       // Derive formulation from the product name itself so vendors whose product_name
       // field lacks spray/etc keywords still get correctly classified.
       var srcFormulation = getFormulationKey(p.name || '');
@@ -197,7 +224,7 @@
         var formulation = getFormulationKey(pn) || srcFormulation || v.formulation || v.formulation_key || v._formulation || null;
         return Object.assign({}, v, {
           product_name: effectiveName,
-          _is_kit: v._is_kit === true || srcIsKit || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
+          _is_kit: v._is_kit === true || srcIsKit || isKitTerm(pn),
           _formulation: formulation
         });
       }
@@ -269,13 +296,11 @@
         var existing = grp.available_dosages.find(function(x) { return (x.label || x).toLowerCase().replace(/\s+/g, '') === lbl; });
         if (existing) {
           // Merge vendors from duplicate dosage, skip vendors already present.
-          // Use vendor+_is_kit+formulation as the key so a vendor can appear once as kit
-          // and once as non-kit, and also once per formulation (e.g. vial vs spray).
+          // Deduplicate by real listing identity so remapped dosage buckets do not
+          // collapse distinct dosages from the same vendor into one reused row.
           (d.vendors || []).forEach(function(v) {
             var stamped = stampVendor(v);
-            if (!existing.vendors.some(function(ev) {
-              return stamped.listing_id && ev.listing_id ? (ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null)) : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
-            })) {
+            if (!existing.vendors.some(function(ev) { return sameVendorListing(ev, stamped); })) {
               existing.vendors.push(stamped);
             }
           });
@@ -292,9 +317,7 @@
         // Deduplicate by vendor+product_name so distinct listings (vial vs spray) survive.
         (p.top_vendors || []).forEach(function(v) {
           var stamped = stampVendor(v);
-          if (!(grp.top_vendors || []).some(function(ev) {
-            return stamped.listing_id && ev.listing_id ? (ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null)) : ev.vendor === stamped.vendor && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
-          })) {
+          if (!(grp.top_vendors || []).some(function(ev) { return sameVendorListing(ev, stamped); })) {
             grp.top_vendors = grp.top_vendors || [];
             grp.top_vendors.push(stamped);
           }
@@ -302,9 +325,7 @@
           // vendors (e.g. "CAPSULES – Product 50mg x 60 Capsules") appear
           // alongside dosage-specific vendors on the card.
           grp.dosages.forEach(function(dos) {
-            if (!dos.top_vendors.some(function(ev) {
-              return ev.vendor === v.vendor && !!ev._is_kit === !!stamped._is_kit && (ev._formulation || null) === (stamped._formulation || null);
-            })) {
+            if (!dos.top_vendors.some(function(ev) { return sameVendorListing(ev, stamped); })) {
               dos.top_vendors.push(stamped);
               dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
             }
@@ -329,7 +350,7 @@
         // Save any null-dosage vendors accumulated into top_vendors before overwriting
         var nullDosageVendors = (map[k].top_vendors || []).filter(function(v) {
           return !map[k].dosages.some(function(d) {
-            return d.top_vendors.some(function(dv) { return dv.vendor === v.vendor && !!dv._is_kit === !!v._is_kit && (dv._formulation || null) === (v._formulation || null); });
+            return d.top_vendors.some(function(dv) { return sameVendorListing(dv, v); });
           });
         });
         map[k].id = first.id;
@@ -340,7 +361,7 @@
         if (nullDosageVendors.length > 0) {
           map[k].dosages.forEach(function(dos) {
             nullDosageVendors.forEach(function(v) {
-              if (!dos.top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
+              if (!dos.top_vendors.some(function(ev) { return sameVendorListing(ev, v); })) {
                 dos.top_vendors.push(v);
               }
             });
@@ -348,7 +369,7 @@
           });
           // Also reflect in the root top_vendors (now pointing to first dosage)
           nullDosageVendors.forEach(function(v) {
-            if (!map[k].top_vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
+            if (!map[k].top_vendors.some(function(ev) { return sameVendorListing(ev, v); })) {
               map[k].top_vendors.push(v);
             }
           });
@@ -366,7 +387,7 @@
         });
         if (avail) {
           (dos.top_vendors || []).forEach(function(v) {
-            if (!avail.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
+            if (!avail.vendors.some(function(ev) { return sameVendorListing(ev, v); })) {
               avail.vendors.push(v);
             }
           });
@@ -395,7 +416,7 @@
             destDosage = { label: displayLabel, vendors: [] };
             map[k].available_dosages.push(destDosage);
           }
-          if (!destDosage.vendors.some(function(ev) { return ev.vendor === v.vendor && !!ev._is_kit === !!v._is_kit && (ev._formulation || null) === (v._formulation || null); })) {
+          if (!destDosage.vendors.some(function(ev) { return sameVendorListing(ev, v); })) {
             destDosage.vendors.push(v);
           }
         });
@@ -410,46 +431,24 @@
       // exist in available_dosages, create a synthetic one so the compact card can
       // honour the remap. Previously this only ran when available_dosages was empty,
       // but the remapped target may also be absent when the product has other doses.
-      // Formulation-specific remaps use compound keys ("default|tablet", "default|liquid"
-      // etc.) so capsule and vial null-dose vendors can be remapped independently.
-      // A plain "default" key acts as the global fallback (used for vials / null formulation).
       if ((map[k].top_vendors || []).length > 0) {
         var pKeyD = (map[k].name || '').toLowerCase().trim();
         var remapMapD = (UI.dose_remaps && UI.dose_remaps[pKeyD]) || {};
-        // Collect formulation-specific default remaps: keys like "default|tablet"
-        var formRemapsD = {};
-        Object.keys(remapMapD).forEach(function(rk) {
-          var fm = rk.match(/^default\|(.+)$/);
-          if (fm) formRemapsD[fm[1]] = remapMapD[rk];
-        });
-        var hasFormRemapsD = Object.keys(formRemapsD).length > 0;
-        if (hasFormRemapsD || remapMapD['default']) {
-          // Group null-dose vendors by the remap label they resolve to
-          var remapBucketsD = {};
-          (map[k].top_vendors || []).forEach(function(v) {
-            var vForm = v._formulation || null;
-            var newLabelD = (hasFormRemapsD && vForm && formRemapsD[vForm])
-              ? formRemapsD[vForm]
-              : remapMapD['default'] || null;
-            if (!newLabelD) return;
-            if (!remapBucketsD[newLabelD]) remapBucketsD[newLabelD] = [];
-            remapBucketsD[newLabelD].push(v);
+        if (remapMapD['default']) {
+          var newLabelD = remapMapD['default'];
+          var newNormD = newLabelD.toLowerCase().replace(/\s+/g, '');
+          var bucketExists = map[k].available_dosages.some(function(d) {
+            return (d.label || '').toLowerCase().replace(/\s+/g, '') === newNormD;
           });
-          Object.keys(remapBucketsD).forEach(function(newLabelD) {
-            var newNormD = newLabelD.toLowerCase().replace(/\s+/g, '');
-            var bucketExists = map[k].available_dosages.some(function(d) {
-              return (d.label || '').toLowerCase().replace(/\s+/g, '') === newNormD;
+          if (!bucketExists) {
+            var doseMD = newLabelD.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+            var synthVendorsD = (map[k].top_vendors || []).map(function(v) {
+              if (!doseMD || v.amount_mg != null) return v;
+              return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
             });
-            if (!bucketExists) {
-              var doseMD = newLabelD.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
-              var synthVendorsD = remapBucketsD[newLabelD].map(function(v) {
-                if (!doseMD || v.amount_mg != null) return v;
-                return Object.assign({}, v, { amount_mg: parseFloat(doseMD[1]), amount_unit: doseMD[2].toLowerCase() });
-              });
-              map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
-              map[k].available_dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
-            }
-          });
+            map[k].available_dosages.push({ label: newLabelD, vendors: synthVendorsD });
+            map[k].available_dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
+          }
         }
       }
     });
@@ -497,7 +496,7 @@
         //  2) Product name contains kit/bulk/pack
         if (p._is_kit_product) return true;
         var pnl = (p.name || '').toLowerCase();
-        return pnl.includes('kit') || pnl.includes('pack') || pnl.includes('bulk');
+        return pnl.includes('kit') || pnl.includes('pack') || pnl.includes('bulk') || KIT_VIALS_RE.test(pnl);
       });
     }
     if (state.applied && state.applied.toggles.blends) {
@@ -571,10 +570,10 @@
       if (byFlag.length > 0) return byFlag;
     }
 
-    if (dosage && ((dosage.label || '').toLowerCase().includes('kit') || (dosage.label || '').toLowerCase().includes('pack') || (dosage.label || '').toLowerCase().includes('bulk'))) return vendors || [];
+    if (dosage && isKitTerm((dosage.label || '').toLowerCase())) return vendors || [];
     // Primary: product_name contains "kit" or "pack"
     var byName = (vendors || []).filter(function(v) {
-      var pn = (v.product_name || '').toLowerCase(); return pn.includes('kit') || pn.includes('pack') || pn.includes('bulk');
+      var pn = (v.product_name || '').toLowerCase(); return isKitTerm(pn);
     });
     if (byName.length > 0) return byName;
     // Fallback: _is_kit flag
@@ -583,9 +582,9 @@
 
   // Returns true if a dosage entry is a kit dosage (label contains "kit", or any vendor has _is_kit).
   function isKitDosage(d) {
-    if ((d.label || '').toLowerCase().includes('kit')) return true;
+    if (isKitTerm((d.label || '').toLowerCase())) return true;
     return (d.top_vendors || []).some(function(v) {
-      return (v.product_name || '').toLowerCase().includes('kit') || v._is_kit === true;
+      return isKitTerm((v.product_name || '').toLowerCase()) || v._is_kit === true;
     });
   }
 
@@ -624,7 +623,14 @@
 
   function buildVendorRow(v, isBest) {
     const row = el('div', 'pa-pcard-vendor-row' + (isBest ? ' is-best' : ''));
-
+// ADD THIS: Make the row look clickable and add the listener
+  row.style.cursor = 'pointer';
+  row.addEventListener('click', function(e) {
+    e.stopPropagation(); // THIS PREVENTS THE DETAIL VIEW FROM OPENING
+    if (v.link) {
+      window.open(v.link, '_blank', 'noopener noreferrer');
+    }
+  });
     // Avatar
     const avatar = el('div', 'pa-pcard-avatar');
     if (v.logo_url) {
@@ -654,39 +660,40 @@
     const pricePer = v.price_per_mg != null ? v.price_per_mg
       : (v.price != null && v.amount_mg ? v.price / v.amount_mg : null);
     const showPerMg = state.priceMode === 'mgml' && pricePer != null;
-    const displayPrice = showPerMg
+
+    // Compute coupon-discounted price for this vendor (if any)
+    var _compactSav = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
+    var _compactDiscountedPrice = null;
+    if (_compactSav && v.price != null) {
+      var _cSavStr = String(_compactSav).trim();
+      var _cPctM = _cSavStr.match(/(\d+(?:\.\d+)?)\s*%/);
+      var _cFixM = !_cPctM ? _cSavStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
+      _compactDiscountedPrice = _cPctM
+        ? v.price * (1 - parseFloat(_cPctM[1]) / 100)
+        : (_cFixM ? Math.max(0, v.price - parseFloat(_cFixM[1])) : null);
+    }
+
+    // If there's a coupon discount: show discounted price as main, actual price crossed out
+    // Otherwise: show actual price as main (original behaviour)
+    var _actualPrice = showPerMg
       ? '$' + Number(pricePer).toFixed(1) + '/' + (v.amount_unit || 'mg')
       : fmt(v.price, v.currency);
-    priceWrap.appendChild(el('span', 'pa-pcard-price' + (isBest ? ' pa-price--best' : ''), escHtml(displayPrice)));
-    // Show previous price (crossed out) when it differs from current
-    if (v.previous_price != null && v.previous_price !== v.price) {
-      var prevPer = v.amount_mg ? v.previous_price / v.amount_mg : null;
-      var prevDisplay = (showPerMg && prevPer != null)
-        ? '$' + Number(prevPer).toFixed(1) + '/' + (v.amount_unit || 'mg')
-        : fmt(v.previous_price, v.currency);
-      priceWrap.appendChild(el('span', 'pa-pcard-price-prev', escHtml(prevDisplay)));
+
+    if (_compactDiscountedPrice != null) {
+      var _discountedPer = v.amount_mg ? _compactDiscountedPrice / v.amount_mg : null;
+      var _discountedDisplay = showPerMg && _discountedPer != null
+        ? '$' + Number(_discountedPer).toFixed(1) + '/' + (v.amount_unit || 'mg')
+        : fmt(_compactDiscountedPrice, v.currency);
+      // Crossed-out actual price (shown first, above the discounted price)
+      priceWrap.appendChild(el('span', 'pa-pcard-price-orig-crossed', escHtml(_actualPrice)));
+      // Discounted price as the main price
+      priceWrap.appendChild(el('span', 'pa-pcard-price' + (isBest ? ' pa-price--best' : ''), escHtml(_discountedDisplay)));
+    } else {
+      priceWrap.appendChild(el('span', 'pa-pcard-price' + (isBest ? ' pa-price--best' : ''), escHtml(_actualPrice)));
     }
     // Coupon price tooltip — shown on row hover when a savings value is configured
-    if (v.coupon_code && v.price != null) {
-      var _sav = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
-      if (_sav) {
-        var _savStr = String(_sav).trim();
-        var _pctM = _savStr.match(/(\d+(?:\.\d+)?)\s*%/);
-        var _fixM = !_pctM ? _savStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
-        var _couponPrice = _pctM
-          ? v.price * (1 - parseFloat(_pctM[1]) / 100)
-          : (_fixM ? Math.max(0, v.price - parseFloat(_fixM[1])) : null);
-        if (_couponPrice != null) {
-          var _cpDisp = showPerMg && v.amount_mg
-            ? '$' + Number(_couponPrice / v.amount_mg).toFixed(1) + '/' + (v.amount_unit || 'mg')
-            : fmt(_couponPrice, v.currency);
-          var _tip = el('span', 'pa-price-coupon-tip');
-          _tip.innerHTML = 'Price after coupon<br><strong>' + escHtml(_cpDisp) + '</strong>';
-          priceWrap.appendChild(_tip);
-        }
-      }
-    }
     priceLinkRow.appendChild(priceWrap);
+    // 1. Handle the external link icon (if it exists)
     if (v.link) {
       const a = document.createElement('a');
       a.href = v.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
@@ -696,26 +703,45 @@
       priceLinkRow.appendChild(a);
     }
     right.appendChild(priceLinkRow);
+
+    // 2. Handle the Coupon Badge (Copy anywhere logic)
     if (v.coupon_code) {
       const vendorSavings = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
       const coupon = el('span', 'pa-coupon-badge');
-      coupon.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span class="pa-coupon-text">' + escHtml(v.coupon_code) + '</span>' + (vendorSavings ? '<span class="pa-coupon-save-inline">\u00b7 Save ' + escHtml(vendorSavings) + '</span>' : '');
-      const copyBtn = el('button', 'pa-coupon-copy', '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>');
-      copyBtn.title = 'Copy code';
-      copyBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
+      
+      // Make the entire badge look like a button
+      coupon.style.cursor = 'pointer';
+      
+      // We combine the icon and text into the badge
+      coupon.innerHTML = `
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span class="pa-coupon-text">${escHtml(v.coupon_code)}</span>
+        ${vendorSavings ? `<span class="pa-coupon-save-inline">\u00b7 Save ${escHtml(vendorSavings)}</span>` : ''}
+      `;
+
+      // Click listener for the ENTIRE badge
+      coupon.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevents the vendor row redirect from firing
+        
+        // Copy to clipboard
         navigator.clipboard && navigator.clipboard.writeText(v.coupon_code);
+        
+        // Show the toast notification
         showCouponToast(v.coupon_code, e.clientX, e.clientY, vendorSavings);
-        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
-        setTimeout(function () { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
+        
+        // Visual feedback on the badge
+        const originalContent = coupon.innerHTML;
+        coupon.innerHTML = '<span style="color:#16a34a; font-weight:bold;">\u2713 Copied!</span>';
+        setTimeout(() => { coupon.innerHTML = originalContent; }, 1500);
       });
-      coupon.appendChild(copyBtn);
+
       right.appendChild(coupon);
     }
+
+    // 3. Finalize the row
     row.appendChild(right);
     return row;
   }
-
   function buildProductCard(p) {
     const card = el('div', 'pa-pcard');
     const color = catColor(p.category);
@@ -833,118 +859,94 @@
     // for a vendor (e.g. Atomik vial + "Air Dispersal" listing). When the user switches
     // to a non-vial formulation (Spray/etc), we lazily enrich the card with the full
     // /products/{id}/prices payload and merge those listings into the existing dosage buckets.
+    // Fetch /products/{id}/prices once and build a dosage->vendors map using the
+    // exact same logic as the detail view (group by amount_mg + amount_unit).
+    // Returns a Promise that resolves to a map of normLabel -> vendor array.
     function ensureCardAllPricesLoaded() {
       if (p._cardAllPricesPromise) return p._cardAllPricesPromise;
+      var pKeyRM = (p.name || '').toLowerCase().trim();
+      var remapMapRM = (UI.dose_remaps && UI.dose_remaps[pKeyRM]) || {};
+      var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
       p._cardAllPricesPromise = fetch((REST || API + '/api') + '/products/' + p.id + '/prices')
         .then(function(r) { return r.json(); })
         .then(function(allPrices) {
-          if (!Array.isArray(allPrices)) return;
-
-          var dosageByNorm = {};
-          dosages.forEach(function(d) {
-            var norm = (d.label || '').toLowerCase().replace(/\s+/g, '');
-            dosageByNorm[norm] = d;
-          });
-
+          if (!Array.isArray(allPrices)) { p._cardPricesByDose = {}; return; }
+          // Build dosage map exactly as the detail view does.
+          var dosageMap = {};
           allPrices.forEach(function(v) {
-            if (v.amount_mg == null || !v.amount_unit) return;
-            var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
-            var key = (amt + (v.amount_unit || 'mg')).toLowerCase().replace(/\s+/g, '');
-            var dest = dosageByNorm[key];
-            if (!dest) return;
-
+            var lbl = null;
+            if (v.amount_mg != null && v.amount_unit) {
+              var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+              lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
+            }
+            if (!lbl) {
+              var m = (v.product || v.product_name || '').match(DOSAGE_RE);
+              if (m) lbl = m[1] + ' ' + m[2].toLowerCase();
+            }
+            if (!lbl) lbl = 'default';
+            var normLbl = lbl.toLowerCase().replace(/\s+/g, '');
+            // Apply dose remaps
+            if (remapMapRM[normLbl]) {
+              lbl = remapMapRM[normLbl];
+              normLbl = lbl.toLowerCase().replace(/\s+/g, '');
+              var remapDoseM = lbl.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+              if (remapDoseM && v.amount_mg == null) {
+                v = Object.assign({}, v, { amount_mg: parseFloat(remapDoseM[1]), amount_unit: remapDoseM[2].toLowerCase() });
+              }
+            }
+            if (!dosageMap[normLbl]) dosageMap[normLbl] = [];
             var effectiveName = v.product_name || v.product || '';
-            var pn = (effectiveName || '').toLowerCase();
+            var pn = effectiveName.toLowerCase();
             var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
-            var stamped = Object.assign({}, v, {
+            dosageMap[normLbl].push(Object.assign({}, v, {
+              vendor: v.vendor,
               product_name: effectiveName,
-              price: v.price != null ? v.price : v.effective_price,
+              price: v.effective_price != null ? v.effective_price : v.price,
+              previous_price: v.previous_price,
+              currency: v.currency,
+              listing_id: v.listing_id,
+              amount_mg: v.amount_mg,
+              amount_unit: v.amount_unit,
+              price_per_mg: v.price_per_mg,
+              link: v.link,
+              logo_url: v.logo_url,
+              coupon_code: v.coupon_code,
+              country: v.country,
+              in_stock: v.in_stock,
               _formulation: formulation,
-              _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk')
-            });
-
-            dest.top_vendors = dest.top_vendors || [];
-            var exists = dest.top_vendors.some(function(ev) {
-              if (stamped.listing_id && ev.listing_id) {
-                return ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null);
-              }
-              return (ev.vendor || '') === (stamped.vendor || '') && (ev.product_name || '') === (stamped.product_name || '') && (ev._formulation || null) === (stamped._formulation || null);
-            });
-            if (!exists) dest.top_vendors.push(stamped);
+              _is_kit: v._is_kit === true || isKitTerm(pn)
+            }));
           });
-
-          // Sort merged vendor lists by price.
-          dosages.forEach(function(d) {
-            (d.top_vendors || []).sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
-          });
-
-          // Route vendors without amount_mg into a remapped "default" bucket (if configured).
-          // The /products endpoint often omits formulation_key from lightweight vendor objects;
-          // the /prices endpoint includes it. Pulling them in here lets the rebuilt card detect
-          // formulations for the default-remap bucket.
-          // Formulation-specific remaps use compound keys ("default|tablet" etc.) so capsule
-          // and vial null-dose vendors can be remapped independently.
-          var pKeyRM = (p.name || '').toLowerCase().trim();
-          var remapMapRM = (UI.dose_remaps && UI.dose_remaps[pKeyRM]) || {};
-          // Collect formulation-specific default remaps: keys like "default|tablet"
-          var formRemapsRM = {};
-          Object.keys(remapMapRM).forEach(function(rk) {
-            var fm = rk.match(/^default\|(.+)$/);
-            if (fm) formRemapsRM[fm[1]] = remapMapRM[rk];
-          });
-          var hasFormRemapsRM = Object.keys(formRemapsRM).length > 0;
-          if (hasFormRemapsRM || remapMapRM['default']) {
-            allPrices.forEach(function(v) {
-              if (v.amount_mg != null) return;
-              var effectiveName = v.product_name || v.product || '';
-              var pn = (effectiveName || '').toLowerCase();
-              var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
-              // Resolve which remap label applies to this vendor based on its formulation
-              var remappedDefaultLabel = (hasFormRemapsRM && formulation && formRemapsRM[formulation])
-                ? formRemapsRM[formulation]
-                : remapMapRM['default'] || null;
-              if (!remappedDefaultLabel) return;
-              var remappedDefaultNorm = remappedDefaultLabel.toLowerCase().replace(/\s+/g, '');
-              var remapDoseMRM = remappedDefaultLabel.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
-              var destDefaultDosage = dosageByNorm[remappedDefaultNorm];
-              if (!destDefaultDosage) {
-                destDefaultDosage = { label: remappedDefaultLabel, top_vendors: [], vendors: [] };
-                dosages.push(destDefaultDosage);
-                dosages.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
-                dosageByNorm[remappedDefaultNorm] = destDefaultDosage;
-              }
-              var stamped = Object.assign({}, v, {
-                product_name: effectiveName,
-                price: v.price != null ? v.price : v.effective_price,
-                _formulation: formulation,
-                _is_kit: v._is_kit === true || pn.includes('kit') || pn.includes('pack') || pn.includes('bulk'),
-                amount_mg: remapDoseMRM ? parseFloat(remapDoseMRM[1]) : v.amount_mg,
-                amount_unit: remapDoseMRM ? remapDoseMRM[2].toLowerCase() : v.amount_unit
-              });
-              var exists = destDefaultDosage.top_vendors.some(function(ev) {
-                if (stamped.listing_id && ev.listing_id) {
-                  return ev.listing_id === stamped.listing_id && (ev._formulation || null) === (stamped._formulation || null);
-                }
-                return (ev.vendor || '') === (stamped.vendor || '') &&
-                       (ev.product_name || '') === (stamped.product_name || '') &&
-                       (ev._formulation || null) === (stamped._formulation || null);
-              });
-              if (!exists) destDefaultDosage.top_vendors.push(stamped);
+          // Sort each bucket by price (mirrors detail view)
+          Object.keys(dosageMap).forEach(function(k) {
+            dosageMap[k].sort(function(a, b) {
+              return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
             });
-            // Re-sort all dosage buckets that received new vendors
-            dosages.forEach(function(d) {
-              d.top_vendors.sort(function(a, b) {
-                return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
-              });
-            });
-          }
-
+          });
+          p._cardPricesByDose = dosageMap;
           p._cardAllPricesReady = true;
         })
         .catch(function() {
-          // If enrichment fails, keep the card functional with the original /products data.
+          p._cardPricesByDose = {};
         });
       return p._cardAllPricesPromise;
+    }
+
+    // Look up vendors for a given dose label from the API-sourced price map.
+    // Falls back to the preprocessed top_vendors if the API hasn't loaded yet or has no match.
+    function getCardVendorsForDose(doseLabel, fallbackVendors) {
+      if (!p._cardPricesByDose) return fallbackVendors;
+      var normLbl = (doseLabel || '').toLowerCase().replace(/\s+/g, '');
+      var vendors = p._cardPricesByDose[normLbl] || fallbackVendors;
+      // Hide kit vendors unless the Kits bar filter is active — mirrors detail view behaviour.
+      var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
+      if (!kitsOn) {
+        vendors = (vendors || []).filter(function(v) {
+          var pn = (v.product_name || '').toLowerCase();
+          return !isKitTerm(pn) && !v._is_kit;
+        });
+      }
+      return vendors;
     }
 
     // Compute which non-vial formulations exist for this product (needed before pill render)
@@ -1012,10 +1014,14 @@
     // options that would render an empty vendor list).
     var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
     function dosageHasFormulation(d, fKey) {
-      var byForm = filterByFormulation(d.top_vendors || [], fKey);
-      if (!kitsActive) return byForm.length > 0;
-      // While the card is not enriched yet, don't hide pills/options aggressively
-      // (otherwise the UI can render empty until the async merge completes).
+      // Use the API-sourced vendor list when available — it has correct _is_kit flags.
+      // For kit visibility checks always use the unfiltered list (before kit exclusion)
+      // so pills aren't hidden when kits is toggled on.
+      var rawVendors = (p._cardPricesByDose)
+        ? (p._cardPricesByDose[(d.label || '').toLowerCase().replace(/\s+/g, '')] || d.top_vendors || [])
+        : (d.top_vendors || []);
+      var byForm = filterByFormulation(rawVendors, fKey);
+      if (!kitsActive) return byForm.filter(function(v) { return !isKitTerm((v.product_name||'').toLowerCase()) && !v._is_kit; }).length > 0;
       if (!p._cardAllPricesReady) return byForm.length > 0;
       return kitFilterVendors(byForm, d, isKitProduct).length > 0;
     }
@@ -1068,17 +1074,13 @@
             pill.insertBefore(star, pill.firstChild);
           }
           p._activeId = d.id;
-          var doRender = function() {
-            var filteredByForm = filterByFormulation(d.top_vendors, activeFormulation);
+          // Always fetch from /prices API (same source as detail view) so each dose
+          // pill shows the correct per-dose vendors, not the preprocessed fallback.
+          ensureCardAllPricesLoaded().then(function() {
+            var vendors = getCardVendorsForDose(d.label, d.top_vendors);
+            var filteredByForm = filterByFormulation(vendors, activeFormulation);
             renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d, isKitProduct));
-          };
-          var pKeyDR = (p.name || '').toLowerCase().trim();
-          var hasDefaultRemap = !!(UI.dose_remaps && UI.dose_remaps[pKeyDR] && UI.dose_remaps[pKeyDR]['default']);
-          if (state.barFilters.kits || (state.applied && state.applied.toggles.kits) || hasDefaultRemap) {
-            ensureCardAllPricesLoaded().then(doRender);
-          } else {
-            doRender();
-          }
+          });
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
             var extra = (d.vendor_count || 0) - (d.top_vendors || []).length;
@@ -1091,9 +1093,7 @@
       scrollWrap.appendChild(leftBtn);
       scrollWrap.appendChild(pillsContainer);
       scrollWrap.appendChild(rightBtn);
-      if (dosages.length > 4) {
-        scrollWrap.appendChild(el('span', 'pa-dosage-more', '+' + (dosages.length - 4) + ' more'));
-      }
+
       dosageRow.appendChild(scrollWrap);
       card.appendChild(dosageRow);
     }
@@ -1144,14 +1144,10 @@
                   x.querySelector('.pa-pill-star') && x.querySelector('.pa-pill-star').remove();
                 });
                 p3.classList.add('is-active');
-                var doRender = function() {
-                  renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(d3.top_vendors, activeFormulation), d3, isKitProduct));
-                };
-                if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-                  ensureCardAllPricesLoaded().then(doRender);
-                } else {
-                  doRender();
-                }
+                ensureCardAllPricesLoaded().then(function() {
+                  var vendors = getCardVendorsForDose(d3.label, d3.top_vendors);
+                  renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vendors, activeFormulation), d3, isKitProduct));
+                });
               }; })(d2, idx2, p2));
               pillsContainer.appendChild(p2);
             });
@@ -1166,15 +1162,13 @@
                 if (vi === savedIdx) break;
               }
             }
-            var vds = visibleDosage ? visibleDosage.top_vendors : (p.top_vendors || []);
             var doRenderV = function() {
+              var vds = visibleDosage
+                ? getCardVendorsForDose(visibleDosage.label, visibleDosage.top_vendors)
+                : (p.top_vendors || []);
               renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage, isKitProduct));
             };
-            if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-              ensureCardAllPricesLoaded().then(doRenderV);
-            } else {
-              doRenderV();
-            }
+            ensureCardAllPricesLoaded().then(doRenderV);
           };
 
           // If switching to a non-vial formulation, ensure we have all listings first.
@@ -1202,23 +1196,23 @@
       card.appendChild(formRow);
     }
 
-    // Vendor rows — use active dosage's vendors if available, else top_vendors, filtered by formulation
+    // Vendor rows — fetch from /prices API (same as detail view) then render.
     var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
-    var defaultVendors = (activeDosage && activeDosage.top_vendors && activeDosage.top_vendors.length > 0)
-      ? activeDosage.top_vendors
-      : p.top_vendors;
     var renderInitial = function() {
-      renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(defaultVendors, activeFormulation), activeDosage, isKitProduct));
+      var curIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
+      var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
+      var vendors = curDosage
+        ? getCardVendorsForDose(curDosage.label, curDosage.top_vendors)
+        : (p.top_vendors || []);
+      renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vendors, activeFormulation), curDosage, isKitProduct));
     };
-    if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
-      ensureCardAllPricesLoaded().then(function() {
-        // After enrichment, auto-select the first dosage that actually has kit listings.
-        // This prevents the card from sticking on a saved non-kit dosage (e.g. DSIP 5mg)
-        // when only another dosage has kits (e.g. DSIP 10mg).
+    ensureCardAllPricesLoaded().then(function() {
+      if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
         if (!p._kitsAutoSelected && p._cardAllPricesReady) {
           for (var ai = 0; ai < dosages.length; ai++) {
-            var byForm = filterByFormulation(dosages[ai].top_vendors || [], activeFormulation);
+            var vendors = getCardVendorsForDose(dosages[ai].label, dosages[ai].top_vendors || []);
+            var byForm = filterByFormulation(vendors, activeFormulation);
             if (kitFilterVendors(byForm, dosages[ai], isKitProduct).length > 0) {
               state.activeDosages[p.id] = ai;
               p._kitsAutoSelected = true;
@@ -1228,20 +1222,9 @@
           }
           p._kitsAutoSelected = true;
         }
-        renderInitial();
-      });
-    } else {
-      var pKeyIR = (p.name || '').toLowerCase().trim();
-      var hasDefaultRemapIR = !!(UI.dose_remaps && UI.dose_remaps[pKeyIR] && UI.dose_remaps[pKeyIR]['default']);
-      if (hasDefaultRemapIR) {
-        // Render immediately with available data, then re-render once enrichment
-        // adds the default-remap vendor (which the lightweight /products data omits).
-        renderInitial();
-        ensureCardAllPricesLoaded().then(renderInitial);
-      } else {
-        renderInitial();
       }
-    }
+      renderInitial();
+    });
     card.appendChild(vendorList);
 
     // Footer
@@ -1475,8 +1458,8 @@
       if (getDoseLabel(state.detailProductName, d.label) === null) return false;
       return (d.vendors || []).some(function(v) {
         var name = (v.product_name || '').toLowerCase();
-        if (state.detailTypeFilter === 'kit' && !name.includes('kit') && !name.includes('bulk') && !name.includes('pack')) return false;
-        if (state.detailTypeFilter === 'vial' && (name.includes('kit') || name.includes('bulk') || name.includes('pack'))) return false;
+        if (state.detailTypeFilter === 'kit' && !isKitTerm(name)) return false;
+        if (state.detailTypeFilter === 'vial' && isKitTerm(name)) return false;
         if (state.detailFormulationFilter === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
         if (state.detailFormulationFilter !== 'all' && state.detailFormulationFilter !== 'vial' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
         return true;
@@ -1491,8 +1474,8 @@
           if (getDoseLabel(state.detailProductName, d.label) === null) return false;
           return (d.vendors || []).some(function(v) {
             var name = (v.product_name || '').toLowerCase();
-            if (state.detailTypeFilter === 'kit' && !name.includes('kit') && !name.includes('bulk') && !name.includes('pack')) return false;
-            if (state.detailTypeFilter === 'vial' && (name.includes('kit') || name.includes('bulk') || name.includes('pack'))) return false;
+            if (state.detailTypeFilter === 'kit' && !isKitTerm(name)) return false;
+            if (state.detailTypeFilter === 'vial' && isKitTerm(name)) return false;
             if (candidate === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
             if (candidate !== 'vial' && vendorFormulationKey(v) !== candidate) return false;
             return true;
@@ -1505,8 +1488,8 @@
             if (getDoseLabel(state.detailProductName, d.label) === null) return false;
             return (d.vendors || []).some(function(v) {
               var name = (v.product_name || '').toLowerCase();
-              if (state.detailTypeFilter === 'kit' && !name.includes('kit') && !name.includes('bulk') && !name.includes('pack')) return false;
-              if (state.detailTypeFilter === 'vial' && (name.includes('kit') || name.includes('bulk') || name.includes('pack'))) return false;
+              if (state.detailTypeFilter === 'kit' && !isKitTerm(name)) return false;
+              if (state.detailTypeFilter === 'vial' && isKitTerm(name)) return false;
               if (state.detailFormulationFilter === 'vial' && NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) !== -1) return false;
               if (state.detailFormulationFilter !== 'all' && state.detailFormulationFilter !== 'vial' && vendorFormulationKey(v) !== state.detailFormulationFilter) return false;
               return true;
@@ -1658,9 +1641,9 @@
       filtered = filtered.filter(function(v) { return v.in_stock !== false; });
     }
     if (state.detailTypeFilter === 'kit') {
-      filtered = filtered.filter(function(v) { var pn = (v.product_name || '').toLowerCase(); return pn.includes('kit') || pn.includes('bulk') || pn.includes('pack'); });
+      filtered = filtered.filter(function(v) { var pn = (v.product_name || '').toLowerCase(); return isKitTerm(pn); });
     } else if (state.detailTypeFilter === 'vial') {
-      filtered = filtered.filter(function(v) { var pn = (v.product_name || '').toLowerCase(); return !pn.includes('kit') && !pn.includes('bulk') && !pn.includes('pack'); });
+      filtered = filtered.filter(function(v) { var pn = (v.product_name || '').toLowerCase(); return !isKitTerm(pn); });
     }
     if (state.detailFormulationFilter === 'vial') {
       filtered = filtered.filter(function(v) { return NON_VIAL_KEYS.indexOf(vendorFormulationKey(v)) === -1; });
@@ -1726,35 +1709,41 @@
 
       var pricePer = v.price_per_mg != null ? v.price_per_mg : (v.price != null && v.amount_mg ? v.price / v.amount_mg : null);
       var showPer = state.detailPriceMode === 'mgml' && pricePer != null;
-      var displayPrice = showPer ? ('$' + Number(pricePer).toFixed(1) + '/' + (v.amount_unit || 'mg')) : fmt(v.price, v.currency);
-      var hasPrev = v.previous_price != null && v.previous_price !== v.price;
       var priceWrap = el('div', 'pa-detail-price-wrap');
-      var priceEl = el('span', 'pa-detail-price' + (i === 0 ? ' pa-price--best' : ''), escHtml(displayPrice) + (hasPrev ? '<sup>*</sup>' : ''));
-      if (v.listing_id) priceEl.setAttribute('data-listing-id', v.listing_id);
-      priceWrap.appendChild(priceEl);
-      if (hasPrev) {
-        priceWrap.appendChild(el('span', 'pa-detail-prev-price', escHtml(fmt(v.previous_price, v.currency))));
+
+      // Compute coupon-discounted price for this vendor (if any)
+      var _detailSav = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
+      var _detailDiscountedPrice = null;
+      if (_detailSav && v.price != null) {
+        var _dsSavStr = String(_detailSav).trim();
+        var _dsPctM = _dsSavStr.match(/(\d+(?:\.\d+)?)\s*%/);
+        var _dsFixM = !_dsPctM ? _dsSavStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
+        _detailDiscountedPrice = _dsPctM
+          ? v.price * (1 - parseFloat(_dsPctM[1]) / 100)
+          : (_dsFixM ? Math.max(0, v.price - parseFloat(_dsFixM[1])) : null);
+      }
+
+      var _detailActualPrice = showPer
+        ? '$' + Number(pricePer).toFixed(1) + '/' + (v.amount_unit || 'mg')
+        : fmt(v.price, v.currency);
+
+      if (_detailDiscountedPrice != null) {
+        var _detailDiscountedPer = v.amount_mg ? _detailDiscountedPrice / v.amount_mg : null;
+        var _detailDiscountedDisplay = showPer && _detailDiscountedPer != null
+          ? '$' + Number(_detailDiscountedPer).toFixed(1) + '/' + (v.amount_unit || 'mg')
+          : fmt(_detailDiscountedPrice, v.currency);
+        // Crossed-out actual price
+        priceWrap.appendChild(el('span', 'pa-detail-prev-price', escHtml(_detailActualPrice)));
+        // Discounted price as the main price
+        var priceEl = el('span', 'pa-detail-price' + (i === 0 ? ' pa-price--best' : ''), escHtml(_detailDiscountedDisplay));
+        if (v.listing_id) priceEl.setAttribute('data-listing-id', v.listing_id);
+        priceWrap.appendChild(priceEl);
+      } else {
+        var priceEl = el('span', 'pa-detail-price' + (i === 0 ? ' pa-price--best' : ''), escHtml(_detailActualPrice));
+        if (v.listing_id) priceEl.setAttribute('data-listing-id', v.listing_id);
+        priceWrap.appendChild(priceEl);
       }
       // Coupon price tooltip — shown on row hover when a savings value is configured
-      if (v.coupon_code && v.price != null) {
-        var _dSav = COUPON_SAVINGS[(v.vendor || '').toLowerCase()] || '';
-        if (_dSav) {
-          var _dSavStr = String(_dSav).trim();
-          var _dPctM = _dSavStr.match(/(\d+(?:\.\d+)?)\s*%/);
-          var _dFixM = !_dPctM ? _dSavStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
-          var _dCouponPrice = _dPctM
-            ? v.price * (1 - parseFloat(_dPctM[1]) / 100)
-            : (_dFixM ? Math.max(0, v.price - parseFloat(_dFixM[1])) : null);
-          if (_dCouponPrice != null) {
-            var _dCpDisp = showPer && v.amount_mg
-              ? '$' + Number(_dCouponPrice / v.amount_mg).toFixed(1) + '/' + (v.amount_unit || 'mg')
-              : fmt(_dCouponPrice, v.currency);
-            var _dTip = el('span', 'pa-price-coupon-tip');
-            _dTip.innerHTML = 'Price after coupon<br><strong>' + escHtml(_dCpDisp) + '</strong>';
-            priceWrap.appendChild(_dTip);
-          }
-        }
-      }
       priceRow.appendChild(priceWrap);
 
       if (v.link) {
@@ -1783,6 +1772,21 @@
             setTimeout(function() { btn.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
           });
         })(v.coupon_code, copyBtn, detailVendorSavings);
+
+        // Make the entire badge clickable — same as compact view
+        badge.style.cursor = 'pointer';
+        (function(code, bdg, sav) {
+          bdg.addEventListener('click', function(e) {
+            if (e.target.closest('.pa-coupon-copy-btn')) return;
+            e.stopPropagation();
+            navigator.clipboard && navigator.clipboard.writeText(code);
+            showCouponToast(code, e.clientX, e.clientY, sav);
+            var originalContent = bdg.innerHTML;
+            bdg.innerHTML = '<span style="color:#16a34a; font-weight:bold;">\u2713 Copied!</span>';
+            setTimeout(function() { bdg.innerHTML = originalContent; }, 1500);
+          });
+        })(v.coupon_code, badge, detailVendorSavings);
+
         badge.appendChild(copyBtn);
         cbWrap.appendChild(badge);
         right.appendChild(cbWrap);
