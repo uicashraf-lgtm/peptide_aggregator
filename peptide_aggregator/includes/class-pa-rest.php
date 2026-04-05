@@ -6,9 +6,21 @@ if (!defined('ABSPATH')) {
 
 class PA_Rest {
     private $api;
+    private $ionpeptide_logger;
+
+    /**
+     * Clear all cached /prices transients. Call whenever product data changes.
+     */
+    public static function clear_prices_cache() {
+        global $wpdb;
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_pa_prices_%' OR option_name LIKE '_transient_timeout_pa_prices_%'"
+        );
+    }
 
     public function __construct(PA_Api_Client $api) {
         $this->api = $api;
+        $this->ionpeptide_logger = new PA_Ionpeptide_Logger();
         delete_transient('pa_affiliate_map'); // Clear any stale cached map.
         add_action('rest_api_init', array($this, 'register_routes'));
     }
@@ -82,7 +94,7 @@ class PA_Rest {
         }
         update_option('pa_affiliate_templates', $templates);
         delete_transient('pa_products_cache');
-        return rest_ensure_response(array('ok' => true));
+        self::clear_prices_cache();
     }
 
     public function get_coupon_savings_endpoint() {
@@ -149,12 +161,19 @@ class PA_Rest {
         $cached = get_transient('pa_products_cache');
         if ($cached !== false) {
             $products = $cached;
+            $this->ionpeptide_logger->log_products_snapshot('cache_hit', $products, array(
+                'source' => 'pa/v1/products',
+            ));
         } else {
             $result = $this->api->request('GET', '/api/products');
             if (!$result['ok']) {
                 return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
             }
             $products = $result['data'];
+            $this->ionpeptide_logger->log_products_snapshot('raw_api_response', $products, array(
+                'source'       => 'pa/v1/products',
+                'api_endpoint' => '/api/products',
+            ));
 
             // Apply tag overrides.
             $tag_overrides = (array) get_option('pa_product_tag_overrides', array());
@@ -185,6 +204,11 @@ class PA_Rest {
             //   3. available_dosages vendor product_name contains 'kit'
             // Admin tag overrides applied above always take precedence.
             if (is_array($products)) {
+                // Returns true if a lowercase label/product_name matches any kit term.
+                $is_kit_name = function($s) {
+                    return strpos($s, 'kit') !== false
+                        || preg_match('/\d+\s*vials?/i', $s);
+                };
                 foreach ($products as &$product) {
                     $existing_tags = array_map('strtolower', (array) ($product['tags'] ?? []));
                     if (in_array('kit', $existing_tags, true) || in_array('kit_auto', $existing_tags, true)) {
@@ -194,20 +218,20 @@ class PA_Rest {
                     // Check available_dosages labels first — most reliable field in /products response.
                     foreach ((array) ($product['available_dosages'] ?? []) as $d) {
                         $lbl = strtolower(is_array($d) ? ($d['label'] ?? '') : (string) $d);
-                        if ($lbl !== '' && strpos($lbl, 'kit') !== false) { $has_kit = true; break; }
+                        if ($lbl !== '' && $is_kit_name($lbl)) { $has_kit = true; break; }
                     }
                     // Fall back to vendor product_name fields.
                     if (!$has_kit) {
                         foreach ((array) ($product['top_vendors'] ?? []) as $v) {
                             $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                            if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break; }
+                            if ($pn !== '' && $is_kit_name($pn)) { $has_kit = true; break; }
                         }
                     }
                     if (!$has_kit) {
                         foreach ((array) ($product['available_dosages'] ?? []) as $d) {
                             foreach ((array) ($d['vendors'] ?? []) as $v) {
                                 $pn = strtolower($v['product_name'] ?? $v['product'] ?? '');
-                                if ($pn !== '' && strpos($pn, 'kit') !== false) { $has_kit = true; break 2; }
+                                if ($pn !== '' && $is_kit_name($pn)) { $has_kit = true; break 2; }
                             }
                         }
                     }
@@ -254,7 +278,12 @@ class PA_Rest {
                 unset($product);
             }
 
-            set_transient('pa_products_cache', $products, 60);
+            $this->ionpeptide_logger->log_products_snapshot('post_plugin_processing', $products, array(
+                'source'       => 'pa/v1/products',
+                'api_endpoint' => '/api/products',
+            ));
+
+            set_transient('pa_products_cache', $products, 5 * MINUTE_IN_SECONDS);
         } // end cache miss block
 
         // Mark admin-designated kit products and their specific vendor entries fresh
@@ -507,12 +536,22 @@ class PA_Rest {
     }
 
     public function get_prices(WP_REST_Request $req) {
-        $id = $req->get_param('id');
+        $id         = $req->get_param('id');
+        $cache_key  = 'pa_prices_' . md5($id);
+        $cached     = get_transient($cache_key);
+        if ($cached !== false) {
+            return rest_ensure_response($cached);
+        }
         $result = $this->api->request('GET', '/api/products/' . rawurlencode($id) . '/prices');
         if (!$result['ok']) {
             return new WP_Error('pa_api_error', $result['error'], array('status' => $result['status'] ?: 502));
         }
         $prices = $result['data'];
+        $this->ionpeptide_logger->log_prices_snapshot($id, $prices, array(
+            'stage'        => 'raw_api_response',
+            'source'       => 'pa/v1/products/{id}/prices',
+            'api_endpoint' => '/api/products/' . rawurlencode($id) . '/prices',
+        ));
 
         // Apply affiliate templates to each price entry's link.
         $affiliate_map = $this->get_affiliate_map();
@@ -526,6 +565,14 @@ class PA_Rest {
             }
             unset($price);
         }
+
+        $this->ionpeptide_logger->log_prices_snapshot($id, $prices, array(
+            'stage'        => 'post_plugin_processing',
+            'source'       => 'pa/v1/products/{id}/prices',
+            'api_endpoint' => '/api/products/' . rawurlencode($id) . '/prices',
+        ));
+
+        set_transient($cache_key, $prices, 2 * MINUTE_IN_SECONDS);
 
         return rest_ensure_response($prices);
     }
