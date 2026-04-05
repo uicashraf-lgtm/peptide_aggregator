@@ -1751,21 +1751,81 @@ class PA_Admin {
                             + '<thead><tr>'
                             + '<th style="text-align:left;font-size:11px;color:#888;padding:0 16px 4px 0;font-weight:600">Dose</th>'
                             + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 0;font-weight:600">Vendor &amp; Price</th>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 16px 4px 0;font-weight:600">Set Dose</th>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 0;font-weight:600">Product URL</th>'
                             + '</tr></thead><tbody>';
+                        var rowIdx = 0;
                         dosageOrder.forEach(function(lbl) {
-                            var priceList = dosageMap[lbl].map(function(v) {
+                            dosageMap[lbl].forEach(function(v) {
+                                var rid = 'r' + (rowIdx++);
                                 var price = v.effective_price != null ? '$' + Number(v.effective_price).toFixed(2)
                                           : v.price != null ? '$' + Number(v.price).toFixed(2) : '--';
-                                return '<span style="color:#333">' + esc(v.vendor || '') + '</span>'
+                                var vendorPrice = '<span style="color:#333">' + esc(v.vendor || '') + '</span>'
                                      + '&nbsp;<strong style="color:#2271b1">' + price + '</strong>';
-                            }).join('&ensp;&middot;&ensp;');
-                            html += '<tr style="border-top:1px solid #f0f0f0">'
-                                + '<td style="padding:5px 16px 5px 0;font-size:12px;white-space:nowrap;font-weight:600;color:#444">' + esc(lbl) + '</td>'
-                                + '<td style="padding:5px 0;font-size:12px">' + priceList + '</td>'
-                                + '</tr>';
+                                var lockedIcon = v.dose_locked ? ' <span title="Dose locked — scraper will not overwrite" style="color:#1d8348;cursor:help">&#128274;</span>' : '';
+                                var variantAttr = v.variant_label ? ' data-variant-label="' + esc(v.variant_label) + '"' : '';
+                                var doseCell = '<span style="display:inline-flex;align-items:center;gap:4px">'
+                                    + '<input type="number" step="0.001" min="0" placeholder="mg" style="width:70px;font-size:11px;padding:2px 4px;height:26px;box-sizing:border-box;vertical-align:middle" '
+                                    + 'data-row-id="' + rid + '" data-listing-id="' + v.listing_id + '" class="pa-inline-dose-mg" '
+                                    + 'value="' + (v.amount_mg != null ? v.amount_mg : '') + '" />'
+                                    + '<select style="font-size:11px;padding:2px 4px;height:26px;min-width:52px;box-sizing:border-box;vertical-align:middle" data-row-id="' + rid + '" data-listing-id="' + v.listing_id + '" class="pa-inline-dose-unit">'
+                                    + '<option value="mg"' + ((v.amount_unit || 'mg') === 'mg' ? ' selected' : '') + '>mg</option>'
+                                    + '<option value="mcg"' + (v.amount_unit === 'mcg' ? ' selected' : '') + '>mcg</option>'
+                                    + '<option value="IU"' + (v.amount_unit === 'IU' ? ' selected' : '') + '>IU</option>'
+                                    + '<option value="mL"' + (v.amount_unit === 'mL' ? ' selected' : '') + '>mL</option>'
+                                    + '<option value="g"' + (v.amount_unit === 'g' ? ' selected' : '') + '>g</option>'
+                                    + '</select>'
+                                    + '<button type="button" class="button button-small pa-inline-dose-save" data-row-id="' + rid + '" data-listing-id="' + v.listing_id + '"' + variantAttr + ' '
+                                    + 'style="font-size:11px;padding:0 6px;line-height:22px">Save</button>'
+                                    + lockedIcon
+                                    + '</span>';
+                                var urlCell = v.link
+                                    ? '<a href="' + esc(v.link) + '" target="_blank" rel="noopener noreferrer" '
+                                        + 'style="font-size:11px;color:#2271b1;word-break:break-all;max-width:220px;display:inline-block">'
+                                        + esc(v.link) + '</a>'
+                                    : '<span style="color:#bbb;font-size:11px">\u2014</span>';
+                                html += '<tr style="border-top:1px solid #f0f0f0">'
+                                    + '<td style="padding:5px 16px 5px 0;font-size:12px;white-space:nowrap;font-weight:600;color:#444">' + esc(lbl) + '</td>'
+                                    + '<td style="padding:5px 8px 5px 0;font-size:12px">' + vendorPrice + '</td>'
+                                    + '<td style="padding:5px 16px 5px 0;font-size:12px">' + doseCell + '</td>'
+                                    + '<td style="padding:5px 0;font-size:12px">' + urlCell + '</td>'
+                                    + '</tr>';
+                            });
                         });
                         html += '</tbody></table>';
                         list.innerHTML = html;
+
+                        // Wire up per-listing dose save buttons
+                        list.querySelectorAll('.pa-inline-dose-save').forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                var lid = btn.getAttribute('data-listing-id');
+                                var rid = btn.getAttribute('data-row-id');
+                                var variantLabel = btn.getAttribute('data-variant-label');
+                                var mgInput = list.querySelector('input.pa-inline-dose-mg[data-row-id="' + rid + '"]');
+                                var unitSelect = list.querySelector('select.pa-inline-dose-unit[data-row-id="' + rid + '"]');
+                                var mg = parseFloat(mgInput.value);
+                                if (isNaN(mg) || mg <= 0) { alert('Enter a valid dose value.'); return; }
+                                btn.disabled = true; btn.textContent = 'Saving\u2026';
+                                var body = { amount_mg: mg, amount_unit: unitSelect.value };
+                                if (variantLabel) body.variant_label = variantLabel;
+                                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/admin/listings/' + lid, {
+                                    method: 'PATCH',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify(body)
+                                })
+                                .then(function(r) { return r.json(); })
+                                .then(function(r) {
+                                    btn.disabled = false; btn.textContent = 'Save';
+                                    if (r.ok) {
+                                        showNotice('success', 'Dose saved for listing #' + lid + ' (locked from scraper overwrite).');
+                                        loadScrapedPrices(pid);
+                                    } else {
+                                        showNotice('error', 'Failed: ' + (r.detail || 'unknown error'));
+                                    }
+                                })
+                                .catch(function() { btn.disabled = false; btn.textContent = 'Save'; showNotice('error', 'Network error saving dose.'); });
+                            });
+                        });
                     })
                     .catch(function() {
                         list.innerHTML = '<em style="color:#c00;font-size:12px">Could not load prices.</em>';
@@ -2293,6 +2353,7 @@ class PA_Admin {
         }
         update_option('pa_product_tag_overrides', $overrides, false);
         delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
         wp_send_json_success(array('tags' => $tags));
     }
 
@@ -2348,6 +2409,7 @@ class PA_Admin {
             update_option('pa_kit_exclude_map', $exclude_map, false);
         }
         delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
         wp_send_json_success(array('is_kit' => $is_kit, 'product_id' => $pid));
     }
 
