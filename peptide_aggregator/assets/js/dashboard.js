@@ -1007,6 +1007,7 @@
           if (!Array.isArray(allPrices)) { p._cardPricesByDose = {}; return; }
           // Build dosage map exactly as the detail view does.
           var dosageMap = {};
+          var dosageLabelMap = {}; // normLbl -> display label
           allPrices.forEach(function(v) {
             var lbl = null;
             if (v.amount_mg != null && v.amount_unit) {
@@ -1028,7 +1029,7 @@
                 v = Object.assign({}, v, { amount_mg: parseFloat(remapDoseM[1]), amount_unit: remapDoseM[2].toLowerCase() });
               }
             }
-            if (!dosageMap[normLbl]) dosageMap[normLbl] = [];
+            if (!dosageMap[normLbl]) { dosageMap[normLbl] = []; dosageLabelMap[normLbl] = lbl; }
             var effectiveName = v.product_name || v.product || '';
             var pn = effectiveName.toLowerCase();
             var formulation = getFormulationKey(pn) || v._formulation || v.formulation || v.formulation_key || null;
@@ -1058,6 +1059,7 @@
             });
           });
           p._cardPricesByDose = dosageMap;
+          p._cardDosageLabelMap = dosageLabelMap;
           p._cardAllPricesReady = true;
         })
         .catch(function() {
@@ -1526,6 +1528,76 @@
             }
           }
           p._kitsAutoSelected = true;
+        }
+      }
+      // Rebuild dosage pills from full price data (matches detail view dose grouping + remaps).
+      // This fixes cases where the initial /products data has a stale/pre-remap dose label.
+      if (p._cardPricesByDose && p._cardDosageLabelMap && pillsContainer) {
+        var normKeys = Object.keys(p._cardPricesByDose).filter(function(k) { return k !== 'default'; });
+        normKeys.sort(function(a, b) { return (parseFloat(a) || 0) - (parseFloat(b) || 0); });
+        if (normKeys.length === 0 && p._cardPricesByDose['default']) normKeys = ['default'];
+        var priceDosages = normKeys.map(function(nk) {
+          var lbl = p._cardDosageLabelMap[nk] || nk;
+          var vendors = p._cardPricesByDose[nk];
+          return { label: lbl, id: p.id, top_vendors: vendors, vendor_count: vendors.length };
+        });
+        var oldSet = dosages.map(function(d) { return (d.label||'').toLowerCase().replace(/\s+/g,''); }).sort().join(',');
+        var newSet = normKeys.slice().sort().join(',');
+        if (oldSet !== newSet && priceDosages.length > 0) {
+          dosages = priceDosages;
+          var prevActiveNorm = '';
+          var activePill = pillsContainer.querySelector('.pa-dosage-pill.is-active');
+          if (activePill) prevActiveNorm = activePill.textContent.toLowerCase().replace(/\s+/g,'').replace(/[^a-z0-9.]/g,'');
+          pillsContainer.innerHTML = '';
+          var firstActive = true;
+          dosages.forEach(function(d2, idx2) {
+            var dl2 = getDoseLabel(p.name, d2.label);
+            if (dl2 === null) return;
+            if (!dosageHasFormulation(d2, activeFormulation)) return;
+            if (!dosageHasSupplierFilter(p, d2)) return;
+            var normD2 = dl2.toLowerCase().replace(/\s+/g,'').replace(/[^a-z0-9.]/g,'');
+            var isActive = prevActiveNorm ? (normD2 === prevActiveNorm) : firstActive;
+            var pill = el('button', 'pa-dosage-pill' + (isActive ? ' is-active' : ''), '');
+            pill.type = 'button';
+            if (isActive) {
+              var starEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
+              starEl.setAttribute('class','pa-pill-star'); starEl.setAttribute('viewBox','0 0 12 12');
+              starEl.setAttribute('width','10'); starEl.setAttribute('height','10');
+              starEl.setAttribute('fill','currentColor');
+              starEl.innerHTML = '<path d="M6 1l1.4 2.8L11 4.3l-2.5 2.4.6 3.4L6 8.5 2.9 10.1l.6-3.4L1 4.3l3.6-.5z"/>';
+              pill.appendChild(starEl);
+              state.activeDosages[p.id] = idx2;
+              firstActive = false;
+            }
+            pill.appendChild(document.createTextNode(dl2));
+            pill.addEventListener('click', (function(d3, i3, p3) { return function(e) {
+              e.stopPropagation();
+              state.activeDosages[p.id] = i3;
+              pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) {
+                x.classList.remove('is-active');
+                x.querySelector('.pa-pill-star') && x.querySelector('.pa-pill-star').remove();
+              });
+              p3.classList.add('is-active');
+              var starEl2 = document.createElementNS('http://www.w3.org/2000/svg','svg');
+              starEl2.setAttribute('class','pa-pill-star'); starEl2.setAttribute('viewBox','0 0 12 12');
+              starEl2.setAttribute('width','10'); starEl2.setAttribute('height','10');
+              starEl2.setAttribute('fill','currentColor');
+              starEl2.innerHTML = '<path d="M6 1l1.4 2.8L11 4.3l-2.5 2.4.6 3.4L6 8.5 2.9 10.1l.6-3.4L1 4.3l3.6-.5z"/>';
+              p3.insertBefore(starEl2, p3.firstChild);
+              renderVendorRows(vendorList, cardKitFilter(filterByFormulation(
+                getCardVendorsForDose(d3.label, d3.top_vendors), activeFormulation), d3));
+            }; })(d2, idx2, pill));
+            pillsContainer.appendChild(pill);
+            if (isActive) {
+              renderVendorRows(vendorList, cardKitFilter(filterByFormulation(
+                getCardVendorsForDose(d2.label, d2.top_vendors), activeFormulation), d2));
+            }
+          });
+          if (!pillsContainer.querySelector('.pa-dosage-pill.is-active')) {
+            var fp = pillsContainer.querySelector('.pa-dosage-pill');
+            if (fp) { fp.classList.add('is-active'); }
+          }
+          return; // vendor rows already rendered above
         }
       }
       renderInitial();
