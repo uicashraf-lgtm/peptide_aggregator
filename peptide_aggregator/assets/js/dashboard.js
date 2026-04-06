@@ -1024,9 +1024,10 @@
         ? (p._cardPricesByDose[(d.label || '').toLowerCase().replace(/\s+/g, '')] || d.top_vendors || [])
         : (d.top_vendors || []);
       var byForm = filterByFormulation(rawVendors, fKey);
-      if (!kitsActive) return byForm.filter(function(v) { return !isKitTerm((v.product_name||'').toLowerCase()) && !v._is_kit; }).length > 0;
+      var effectiveKitsActive = cardKitsActive || kitsActive;
+      if (!effectiveKitsActive) return byForm.filter(function(v) { return !isKitTerm((v.product_name||'').toLowerCase()) && !v._is_kit; }).length > 0;
       if (!p._cardAllPricesReady) return byForm.length > 0;
-      return kitFilterVendors(byForm, d, isKitProduct).length > 0;
+      return cardKitFilter(byForm, d).length > 0;
     }
 
     // Card-local kit filter: applies cardKitsActive on top of (or instead of) the global state.
@@ -1092,7 +1093,7 @@
           ensureCardAllPricesLoaded().then(function() {
             var vendors = getCardVendorsForDose(d.label, d.top_vendors);
             var filteredByForm = filterByFormulation(vendors, activeFormulation);
-            renderVendorRows(vendorList, kitFilterVendors(filteredByForm, d, isKitProduct));
+            renderVendorRows(vendorList, cardKitFilter(filteredByForm, d));
           });
           var moreEl = card.querySelector('.pa-pcard-more');
           if (moreEl) {
@@ -1127,6 +1128,7 @@
       formOptions.forEach(function(f) {
         var btn = el('button', 'pa-dosage-pill' + (f.key === activeFormulation ? ' is-active' : ''), f.label);
         btn.type = 'button';
+        btn.setAttribute('data-fkey', f.key);
         btn.addEventListener('click', (function(fKey, fBtn) { return function(e) {
           e.stopPropagation();
 
@@ -1218,6 +1220,49 @@
       e.stopPropagation();
       cardKitsActive = !cardKitsActive;
       kitToggleBtn.classList.toggle('is-active', cardKitsActive);
+
+      // Rebuild dosage pills to show only those with kit vendors (or restore all when off)
+      if (pillsContainer) {
+        pillsContainer.innerHTML = '';
+        dosages.forEach(function(d2, idx2) {
+          var dl2 = getDoseLabel(p.name, d2.label);
+          if (dl2 === null) return;
+          if (!dosageHasFormulation(d2, activeFormulation)) return;
+          var p2 = el('button', 'pa-dosage-pill', escHtml(dl2));
+          p2.type = 'button';
+          p2.addEventListener('click', (function(d3, i3, p3) { return function(ev) {
+            ev.stopPropagation();
+            state.activeDosages[p.id] = i3;
+            pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) { x.classList.remove('is-active'); });
+            p3.classList.add('is-active');
+            ensureCardAllPricesLoaded().then(function() {
+              var vendors = getCardVendorsForDose(d3.label, d3.top_vendors);
+              renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), d3));
+            });
+          }; })(d2, idx2, p2));
+          pillsContainer.appendChild(p2);
+        });
+        // Auto-select the first visible pill and update active dosage index
+        var firstPill = pillsContainer.querySelector('.pa-dosage-pill');
+        if (firstPill) {
+          firstPill.classList.add('is-active');
+          var firstIdx = dosages.findIndex(function(d2, idx2) {
+            return getDoseLabel(p.name, d2.label) !== null && dosageHasFormulation(d2, activeFormulation);
+          });
+          if (firstIdx !== -1) state.activeDosages[p.id] = firstIdx;
+        }
+      }
+
+      // Show/hide formulation buttons that have no kit vendors
+      if (formBtns && formBtns.length) {
+        formBtns.forEach(function(btn) {
+          var fk = btn.getAttribute('data-fkey');
+          if (!fk) return;
+          var hasVendors = dosages.some(function(d) { return dosageHasFormulation(d, fk); });
+          btn.style.display = hasVendors ? '' : 'none';
+        });
+      }
+
       ensureCardAllPricesLoaded().then(renderInitial);
     });
     kitRow.appendChild(kitToggleBtn);
