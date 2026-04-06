@@ -308,29 +308,36 @@
     white-space: nowrap !important;
 }
 
+/* Segmented switch group */
+.pa-shell .pa-ptoggle-group {
+    background: var(--panel-soft, #eef1f5) !important;
+    border-radius: 8px !important;
+    padding: 3px !important;
+}
+
 .pa-shell .pa-ptoggle {
-    height: 34px !important;
-    padding: 0 14px !important;
-    border-radius: var(--radius-md) !important;
-    background: var(--panel) !important;
-    border: 1.5px solid var(--line) !important;
+    height: 28px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    border: none !important;
     color: var(--muted) !important;
     font-size: 12px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     transition: all 0.15s ease !important;
+    white-space: nowrap !important;
 }
 
 .pa-shell .pa-ptoggle.is-active {
-    background: var(--accent) !important;
-    color: #ffffff !important;
-    border-color: var(--accent) !important;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.25) !important;
+    background: #ffffff !important;
+    color: var(--text) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12) !important;
 }
 
 .pa-shell .pa-ptoggle:not(.is-active):hover {
-    border-color: var(--accent) !important;
-    color: var(--accent) !important;
+    color: var(--text-soft) !important;
+    background: rgba(255,255,255,0.5) !important;
 }
 
 .pa-shell .pa-sort-label {
@@ -1922,22 +1929,15 @@
         gap: 4px 8px !important;
     }
 
-    /* Price toggle: label above buttons */
+    /* Price toggle: keep inline on mobile */
     .pa-shell .pa-price-toggle {
         flex-direction: row !important;
-        flex-wrap: wrap !important;
         align-items: center !important;
-        gap: 3px !important;
-    }
-
-    .pa-shell .pa-price-toggle .pa-price-toggle-label {
-        width: 100% !important;
-        font-size: 10px !important;
-        line-height: 1 !important;
+        gap: 4px !important;
     }
 
     .pa-shell .pa-ptoggle {
-        height: 26px !important;
+        height: 22px !important;
         padding: 0 7px !important;
         font-size: 11px !important;
     }

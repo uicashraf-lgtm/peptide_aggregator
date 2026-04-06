@@ -56,6 +56,7 @@ class PA_Shortcodes {
 .pa-shell .pa-results-left{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-results-right{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important}
 .pa-shell .pa-price-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important}
+.pa-shell .pa-ptoggle-group{display:flex!important;flex-direction:row!important;align-items:center!important;gap:2px!important;background:var(--panel-soft,#f0f2f5)!important;border-radius:8px!important;padding:3px!important}
 .pa-shell .pa-sort-label{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;white-space:nowrap!important}
 .pa-shell .pa-bar-icons{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important}
 .pa-shell .pa-view-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:2px!important}
@@ -215,14 +216,13 @@ class PA_Shortcodes {
 .pa-shell .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
 .pa-shell .pa-pcard-vright .pa-coupon-badge{padding:2px 5px!important;gap:2px!important}
 .pa-shell .pa-detail-vrow-right .pa-coupon-badge{padding:2px 5px!important;gap:2px!important;font-size:8px!important;letter-spacing:0!important}.pa-shell .pa-detail-vrow-right .pa-coupon-save-inline{font-size:8px!important}
-.pa-shell .pa-results-right{flex-wrap:wrap!important;align-items:flex-start!important;gap:4px 8px!important}
-.pa-shell .pa-results-right::after{content:""!important;flex-basis:100%!important;height:0!important;order:1!important}
-.pa-shell .pa-price-toggle{order:0!important;flex:0 0 auto!important;flex-wrap:wrap!important;align-items:center!important;gap:3px!important}
-.pa-shell .pa-price-toggle .pa-price-toggle-label{width:100%!important;font-size:10px!important}
-.pa-shell .pa-ptoggle{height:24px!important;padding:0 6px!important;font-size:11px!important}
-.pa-shell .pa-sort-label{order:0!important;flex:0 0 auto!important;flex-direction:column!important;align-items:flex-start!important;gap:3px!important;white-space:normal!important;font-size:10px!important}
+.pa-shell .pa-results-right{flex-wrap:nowrap!important;align-items:center!important;gap:6px!important}
+.pa-shell .pa-price-toggle{flex-shrink:0!important;gap:4px!important}
+.pa-shell .pa-price-toggle-label{font-size:11px!important}
+.pa-shell .pa-ptoggle{height:22px!important;padding:0 6px!important;font-size:11px!important}
+.pa-shell .pa-sort-label{display:none!important}
 .pa-shell .pa-filter-btn{display:inline-flex!important}
-.pa-shell .pa-bar-icons{order:2!important;gap:2px!important}
+.pa-shell .pa-bar-icons{gap:2px!important}
 .pa-shell .pa-bar-icon{width:26px!important;height:26px!important}
 .pa-shell .pa-view-toggle{display:none!important}
 }
@@ -362,9 +362,11 @@ class PA_Shortcodes {
                     </div>
                     <div class="pa-results-right">
                         <div class="pa-price-toggle">
-                            <span class="pa-price-toggle-label">Show prices:</span>
-                            <button id="pa-toggle-total" class="pa-ptoggle is-active" type="button">Total</button>
-                            <button id="pa-toggle-mgml" class="pa-ptoggle" type="button">mg/mL</button>
+                            <span class="pa-price-toggle-label">Prices:</span>
+                            <div class="pa-ptoggle-group">
+                                <button id="pa-toggle-total" class="pa-ptoggle is-active" type="button">Total</button>
+                                <button id="pa-toggle-mgml" class="pa-ptoggle" type="button">mg/mL</button>
+                            </div>
                         </div>
                         <label class="pa-sort-label">Sort by:
                             <select id="pa-grid-sort" class="pa-grid-sort-select">
