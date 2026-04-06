@@ -161,9 +161,6 @@ class PA_Rest {
         $cached = get_transient('pa_products_cache');
         if ($cached !== false) {
             $products = $cached;
-            $this->ionpeptide_logger->log_products_snapshot('cache_hit', $products, array(
-                'source' => 'pa/v1/products',
-            ));
         } else {
             $result = $this->api->request('GET', '/api/products');
             if (!$result['ok']) {
@@ -360,8 +357,7 @@ class PA_Rest {
         }
 
         $response = rest_ensure_response($products);
-        $response->header('Cache-Control', 'no-store, no-cache, must-revalidate');
-        $response->header('Pragma', 'no-cache');
+        $response->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
         return $response;
     }
 
