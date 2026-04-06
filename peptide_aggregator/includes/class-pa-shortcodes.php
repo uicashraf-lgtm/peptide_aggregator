@@ -171,15 +171,18 @@ class PA_Shortcodes {
 .pa-toggle-row input:checked~i::after{transform:translateX(36px)!important}
 .pa-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:16px 0 8px!important}
 .pa-section-tools{display:flex!important;align-items:center!important;gap:8px!important}
-.pa-check-list{display:flex!important;flex-direction:column!important;gap:4px!important;max-height:180px!important;overflow-y:auto!important;margin-bottom:8px!important}
-.pa-check-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:8px 12px!important;cursor:pointer!important;background:#ffffff!important;border:none!important;width:100%!important;border-radius:6px!important;text-align:left!important}
-.pa-check-item:hover{background:#f0f5ff!important}
-.pa-check-item.is-selected{background:#eff6ff!important}
-.pa-check-item span,.pa-check-title,.pa-check-box{color:#1a2332!important;font-size:13px!important;font-weight:500!important}
-.pa-check-item:hover span,.pa-check-item:hover .pa-check-title,.pa-check-item:hover .pa-check-box{color:#1a2332!important}
-.pa-check-item.is-selected .pa-check-title,.pa-check-item.is-selected span{color:#2563eb!important;font-weight:600!important}
-.pa-count-pill,.pa-country-pill{font-size:11px!important;color:#6b7a90!important;background:#f7f9fc!important;border-radius:10px!important;padding:1px 7px!important}
-.pa-check-item:hover .pa-count-pill,.pa-check-item:hover .pa-country-pill{color:#6b7a90!important;background:#f7f9fc!important}
+.pa-check-list{display:flex!important;flex-direction:column!important;gap:6px!important;max-height:240px!important;overflow-y:auto!important;margin-bottom:8px!important}
+.pa-check-item{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;padding:8px 12px!important;cursor:pointer!important;background:#ffffff!important;border:1px solid #e4e9f0!important;width:100%!important;border-radius:8px!important;text-align:left!important;transition:border-color 0.15s ease,background 0.15s ease!important;box-sizing:border-box!important}
+.pa-check-item:hover{background:#f0f5ff!important;border-color:#93b4f5!important}
+.pa-check-item.is-selected{background:#eff6ff!important;border-color:#2563eb!important}
+.pa-check-title{color:#1a2332!important;font-size:13px!important;font-weight:500!important;flex:1!important}
+.pa-check-item:hover .pa-check-title{color:#1a2332!important}
+.pa-check-item.is-selected .pa-check-title{color:#2563eb!important;font-weight:600!important}
+.pa-check-box{margin-left:auto!important;flex-shrink:0!important;width:18px!important;height:18px!important;border-radius:4px!important;border:1.5px solid #c0cad8!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;color:transparent!important;background:#fff!important}
+.pa-check-item.is-selected .pa-check-box{background:#2563eb!important;border-color:#2563eb!important;color:#fff!important}
+.pa-check-logo{width:28px!important;height:28px!important;border-radius:50%!important;object-fit:cover!important;flex-shrink:0!important}
+.pa-check-avatar{width:28px!important;height:28px!important;border-radius:50%!important;background:#253a5e!important;color:#fff!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:10px!important;font-weight:700!important;flex-shrink:0!important}
+.pa-count-pill,.pa-country-pill{font-size:11px!important;color:#6b7a90!important;background:#f0f4fa!important;border-radius:10px!important;padding:1px 7px!important;flex-shrink:0!important}
 .pa-price-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:8px!important}
 .pa-price-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:7px 10px!important;border:1.5px solid #2563eb!important;border-radius:8px!important;background:#ffffff!important;color:#2563eb!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;line-height:1!important}
 .pa-price-btn:hover{background:#eff6ff!important}
