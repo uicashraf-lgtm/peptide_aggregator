@@ -482,10 +482,58 @@
       });
       UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
       renderProductGrid(state.allProducts);
+      // Kick off full vendor data loading in background so supplier filter is accurate
+      loadAllVendorNames();
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
       if (grid) grid.innerHTML = '<p class="pa-error">Could not load products. Is the API running?</p>';
     }
+  }
+
+  // ─── Full vendor names loader ─────────────────────────────────────────────
+  // Fetches /products/{id}/prices for every product so the supplier filter can
+  // match vendors that don't appear in top_vendors (e.g. non-cheapest vendors).
+  var _allVendorNamesPromise = null;
+  function loadAllVendorNames() {
+    if (_allVendorNamesPromise) return _allVendorNamesPromise;
+    _allVendorNamesPromise = Promise.all((state.allProducts || []).map(function(p) {
+      if (p._allVendorNamesReady) return Promise.resolve();
+      return fetch((REST || API + '/api') + '/products/' + p.id + '/prices')
+        .then(function(r) { return r.json(); })
+        .then(function(raw) {
+          var names = new Set();
+          var supplierInfo = {};
+          (Array.isArray(raw) ? raw : []).forEach(function(v) {
+            if (v.vendor) {
+              names.add(v.vendor);
+              if (!supplierInfo[v.vendor]) supplierInfo[v.vendor] = { name: v.vendor, country: v.country || '', logo_url: v.logo_url || '' };
+            }
+          });
+          p._allVendorNames = names;
+          p._allVendorNamesReady = true;
+          // Merge any newly discovered vendors into UI.suppliers
+          var changed = false;
+          Object.keys(supplierInfo).forEach(function(name) {
+            if (!(UI.suppliers || []).some(function(s) { return s.name === name; })) {
+              UI.suppliers = (UI.suppliers || []).concat([supplierInfo[name]]);
+              changed = true;
+            }
+          });
+          if (changed) {
+            UI.suppliers.sort(function(a, b) { return a.name.localeCompare(b.name); });
+          }
+        })
+        .catch(function() {
+          p._allVendorNames = new Set();
+          p._allVendorNamesReady = true;
+        });
+    })).then(function() {
+      // Re-render if a supplier filter is currently active so the full data is used
+      if (state.applied && state.applied.suppliers.size > 0) {
+        renderProductGrid(filteredProducts());
+      }
+    });
+    return _allVendorNamesPromise;
   }
 
   function filteredProducts() {
@@ -558,9 +606,12 @@
         });
       });
     }
-    // Supplier filter
+    // Supplier filter — use full vendor names if loaded, else fall back to top_vendors
     if (state.applied && state.applied.suppliers.size > 0) {
       list = list.filter(function(p) {
+        if (p._allVendorNamesReady) {
+          return Array.from(state.applied.suppliers).some(function(s) { return p._allVendorNames.has(s); });
+        }
         return (p.top_vendors || []).some(function(v) { return state.applied.suppliers.has(v.vendor); });
       });
     }
