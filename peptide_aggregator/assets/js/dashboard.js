@@ -2229,12 +2229,14 @@
       chip.innerHTML = escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
       chip.addEventListener('click', function () {
         state.activeFilters.delete(name);
-        // Also clear the matching applied toggle so it doesn't re-apply
+        // Also clear the matching applied state so filteredProducts() stops filtering on it
         if (state.applied) {
           if (name === 'In Stock Only') state.applied.toggles.instock = false;
           if (name === 'KIT Only') state.applied.toggles.kits = false;
           if (name === 'Blends Only') state.applied.toggles.blends = false;
           if (name === 'Likes Only') state.applied.toggles.likes = false;
+          state.applied.priceRanges.delete(name);
+          state.applied.suppliers.delete(name);
         }
         renderActiveFilters();
         renderProductGrid(filteredProducts());
