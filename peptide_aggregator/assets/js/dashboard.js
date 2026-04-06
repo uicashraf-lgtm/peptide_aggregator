@@ -882,6 +882,9 @@
     var CARD_VENDOR_LIMIT = 4;
 
     function renderVendorRows(vList, vendors) {
+      if (state.applied && state.applied.suppliers.size > 0) {
+        vendors = (vendors || []).filter(function(v) { return state.applied.suppliers.has(v.vendor); });
+      }
       vList.innerHTML = '';
       if (vendors && vendors.length > 0) {
         var shown = vendors.slice(0, CARD_VENDOR_LIMIT);
