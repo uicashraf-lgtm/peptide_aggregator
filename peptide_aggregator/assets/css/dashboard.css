@@ -1338,9 +1338,9 @@
     border-color: var(--accent) !important;
 }
 
+.pa-check-item,
+.pa-check-item .pa-check-title,
 .pa-check-item span {
-    font-size: 13px !important;
-    font-weight: 500 !important;
     color: var(--text) !important;
 }
 
