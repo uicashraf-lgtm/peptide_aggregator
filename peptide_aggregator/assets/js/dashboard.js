@@ -232,7 +232,7 @@
         var pKey0 = (pd.base || '').toLowerCase().trim();
         var remapMap0 = (UI.dose_remaps && UI.dose_remaps[pKey0]) || {};
         map[key] = {
-          id: p.id, name: pd.base, category: p.category,
+          id: p.id, name: pd.base, category: (p.category || '').trim(),
           description: p.description, dosages: [],
           top_vendors: (p.top_vendors || []).map(stampVendor),
           min_price: p.min_price,
@@ -461,6 +461,16 @@
       const res = await fetch((REST || API + '/api') + '/products');
       const raw = await res.json();
       state.allProducts = groupByDosage(raw);
+      // Derive real categories and counts from the actual product data.
+      var catCounts = {};
+      state.allProducts.forEach(function(p) {
+        var cat = (p.category || '').trim();
+        if (!cat) return;
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      });
+      UI.categories = Object.keys(catCounts).sort().map(function(name) {
+        return { name: name, count: catCounts[name] };
+      });
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
@@ -506,7 +516,7 @@
                p.name.toLowerCase().includes('blend');
       });
     }
-    // Tag filter (from popular chips)
+    // Tag filter (from popular chips — also used by modal category filter via applyModal sync)
     if (state.tagFilters.size > 0) {
       list = list.filter(function (p) {
         return Array.from(state.tagFilters).some(function (tag) {
@@ -1283,18 +1293,65 @@
           }
         }
 
-        // Show/hide formulation buttons that have no kit vendors; hide the whole row if none remain
-        if (formBtns && formBtns.length) {
-          formBtns.forEach(function(btn) {
-            var fk = btn.getAttribute('data-fkey');
-            if (!fk) return;
-            var hasVendors = dosages.some(function(d) { return dosageHasFormulation(d, fk); });
-            btn.style.display = hasVendors ? '' : 'none';
+        // Rebuild formulation buttons — mirrors how dosage pills are rebuilt on kit toggle.
+        // Clear and re-add only formulation options that have kit vendors.
+        if (formRow) {
+          var formLabel = formRow.querySelector('.pa-dosage-label');
+          formRow.innerHTML = '';
+          if (formLabel) formRow.appendChild(formLabel);
+          formBtns.length = 0;
+          var visibleFormOptions = cardKitsActive
+            ? formOptions.filter(function(opt) { return dosages.some(function(d) { return dosageHasFormulation(d, opt.key); }); })
+            : formOptions;
+          visibleFormOptions.forEach(function(f) {
+            var btn = el('button', 'pa-dosage-pill' + (f.key === activeFormulation ? ' is-active' : ''), f.label);
+            btn.type = 'button';
+            btn.setAttribute('data-fkey', f.key);
+            btn.addEventListener('click', (function(fKey, fBtn) { return function(e) {
+              e.stopPropagation();
+              activeFormulation = fKey;
+              formBtns.forEach(function(b) { b.classList.remove('is-active'); });
+              fBtn.classList.add('is-active');
+              pillsContainer.innerHTML = '';
+              dosages.forEach(function(d2, idx2) {
+                var dl2 = getDoseLabel(p.name, d2.label);
+                if (dl2 === null) return;
+                if (!dosageHasFormulation(d2, fKey)) return;
+                var p2 = el('button', 'pa-dosage-pill', escHtml(dl2));
+                p2.type = 'button';
+                p2.addEventListener('click', (function(d3, i3, p3) { return function(ev) {
+                  ev.stopPropagation();
+                  state.activeDosages[p.id] = i3;
+                  pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) { x.classList.remove('is-active'); });
+                  p3.classList.add('is-active');
+                  ensureCardAllPricesLoaded().then(function() {
+                    var vendors = getCardVendorsForDose(d3.label, d3.top_vendors);
+                    renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), d3));
+                  });
+                }; })(d2, idx2, p2));
+                pillsContainer.appendChild(p2);
+              });
+              var firstPill = pillsContainer.querySelector('.pa-dosage-pill');
+              if (firstPill) { firstPill.classList.add('is-active'); }
+              var visibleDosage = null;
+              for (var vi = 0; vi < dosages.length; vi++) {
+                if (getDoseLabel(p.name, dosages[vi].label) !== null && dosageHasFormulation(dosages[vi], fKey)) {
+                  visibleDosage = dosages[vi]; break;
+                }
+              }
+              var vds = visibleDosage ? getCardVendorsForDose(visibleDosage.label, visibleDosage.top_vendors) : (p.top_vendors || []);
+              renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vds, fKey), visibleDosage));
+            }; })(f.key, btn));
+            formBtns.push(btn);
+            formRow.appendChild(btn);
           });
-          if (formRow) {
-            var anyFBtnVisible = formBtns.some(function(btn) { return btn.style.display !== 'none'; });
-            formRow.style.display = anyFBtnVisible ? '' : 'none';
+          // If active formulation was removed, switch to first available
+          var activeStillVisible = formBtns.some(function(b) { return b.classList.contains('is-active'); });
+          if (!activeStillVisible && formBtns.length > 0) {
+            activeFormulation = formBtns[0].getAttribute('data-fkey');
+            formBtns[0].classList.add('is-active');
           }
+          formRow.style.display = formBtns.length > 0 ? '' : 'none';
         }
 
         renderInitial();
@@ -1331,19 +1388,64 @@
         }
       }
       renderInitial();
-      // After prices load, re-filter formulation buttons for the global kits filter
-      // (handles the case where kitsAutoSelected already ran so no full re-render occurs).
-      if (kitsActive && formBtns && formBtns.length) {
-        formBtns.forEach(function(btn) {
-          var fk = btn.getAttribute('data-fkey');
-          if (!fk) return;
-          var hasVendors = dosages.some(function(d) { return dosageHasFormulation(d, fk); });
-          btn.style.display = hasVendors ? '' : 'none';
+      // After prices load, rebuild formulation buttons for the global kits filter —
+      // mirrors the dose pill rebuild so only formulations with kit vendors are shown.
+      if (kitsActive && formRow) {
+        var formLabelG = formRow.querySelector('.pa-dosage-label');
+        formRow.innerHTML = '';
+        if (formLabelG) formRow.appendChild(formLabelG);
+        formBtns.length = 0;
+        var visibleFormOptionsG = formOptions.filter(function(opt) {
+          return dosages.some(function(d) { return dosageHasFormulation(d, opt.key); });
         });
-        if (formRow) {
-          var anyFBtnVisible = formBtns.some(function(btn) { return btn.style.display !== 'none'; });
-          formRow.style.display = anyFBtnVisible ? '' : 'none';
+        visibleFormOptionsG.forEach(function(f) {
+          var btn = el('button', 'pa-dosage-pill' + (f.key === activeFormulation ? ' is-active' : ''), f.label);
+          btn.type = 'button';
+          btn.setAttribute('data-fkey', f.key);
+          btn.addEventListener('click', (function(fKey, fBtn) { return function(e) {
+            e.stopPropagation();
+            activeFormulation = fKey;
+            formBtns.forEach(function(b) { b.classList.remove('is-active'); });
+            fBtn.classList.add('is-active');
+            pillsContainer.innerHTML = '';
+            dosages.forEach(function(d2, idx2) {
+              var dl2 = getDoseLabel(p.name, d2.label);
+              if (dl2 === null) return;
+              if (!dosageHasFormulation(d2, fKey)) return;
+              var p2 = el('button', 'pa-dosage-pill', escHtml(dl2));
+              p2.type = 'button';
+              p2.addEventListener('click', (function(d3, i3, p3) { return function(ev) {
+                ev.stopPropagation();
+                state.activeDosages[p.id] = i3;
+                pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x) { x.classList.remove('is-active'); });
+                p3.classList.add('is-active');
+                ensureCardAllPricesLoaded().then(function() {
+                  var vendors = getCardVendorsForDose(d3.label, d3.top_vendors);
+                  renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), d3));
+                });
+              }; })(d2, idx2, p2));
+              pillsContainer.appendChild(p2);
+            });
+            var firstPill = pillsContainer.querySelector('.pa-dosage-pill');
+            if (firstPill) { firstPill.classList.add('is-active'); }
+            var visibleDosage = null;
+            for (var vi = 0; vi < dosages.length; vi++) {
+              if (getDoseLabel(p.name, dosages[vi].label) !== null && dosageHasFormulation(dosages[vi], fKey)) {
+                visibleDosage = dosages[vi]; break;
+              }
+            }
+            var vds = visibleDosage ? getCardVendorsForDose(visibleDosage.label, visibleDosage.top_vendors) : (p.top_vendors || []);
+            renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vds, fKey), visibleDosage));
+          }; })(f.key, btn));
+          formBtns.push(btn);
+          formRow.appendChild(btn);
+        });
+        var activeStillVisibleG = formBtns.some(function(b) { return b.classList.contains('is-active'); });
+        if (!activeStillVisibleG && formBtns.length > 0) {
+          activeFormulation = formBtns[0].getAttribute('data-fkey');
+          formBtns[0].classList.add('is-active');
         }
+        formRow.style.display = formBtns.length > 0 ? '' : 'none';
       }
     });
     card.appendChild(vendorList);
@@ -2246,9 +2348,14 @@
     Array.from(UI.categories || []).forEach(function (c) { state.activeFilters.delete(c.name); });
     Array.from(UI.suppliers || []).forEach(function (s) { state.activeFilters.delete(s.name); });
     Array.from(UI.price_ranges || []).forEach(function (p) { state.activeFilters.delete(p); });
-    state.applied.categories.forEach(function (c) { state.activeFilters.add(c); });
+    // Categories are synced into tagFilters (rendered by renderActiveFilters already),
+    // so do NOT also add them to activeFilters — that would show duplicate chips.
     state.applied.suppliers.forEach(function (s) { state.activeFilters.add(s); });
     state.applied.priceRanges.forEach(function (p) { state.activeFilters.add(p); });
+    // Sync selected categories into tagFilters — the same mechanism used by card
+    // category badge clicks, which is what filteredProducts() actually reads.
+    Array.from(UI.categories || []).forEach(function (c) { state.tagFilters.delete(c.name); });
+    state.applied.categories.forEach(function (c) { state.tagFilters.add(c); });
     renderActiveFilters();
     renderProductGrid(filteredProducts());
     showProductGrid();
