@@ -232,72 +232,59 @@ class PA_Shortcodes {
         }
 
         wp_register_style('pa-dashboard-css',   plugin_dir_url(__FILE__) . '../assets/css/dashboard.css', $css_deps, PA_PLUGIN_VERSION);
-        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), PA_PLUGIN_VERSION, true);
-        wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), PA_PLUGIN_VERSION, true);
-        wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), PA_PLUGIN_VERSION, true);
-        if (!is_admin()) {
-            wp_enqueue_style('pa-dashboard-css');
-            // Inline CSS appended to our stylesheet â€“ guaranteed to appear after
-            // both Elementor and dashboard.css in document order.
-            wp_add_inline_style( 'pa-dashboard-css', $this->critical_layout_css() );
-            wp_enqueue_script('pa-dashboard-js');
-            wp_enqueue_script('pa-suppliers-js');
-            wp_enqueue_script('pa-about-js');
+        wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), PA_PLUGIN_VERSION, array('strategy' => 'defer', 'in_footer' => true));
+        wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), PA_PLUGIN_VERSION, array('strategy' => 'defer', 'in_footer' => true));
+        wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), PA_PLUGIN_VERSION, array('strategy' => 'defer', 'in_footer' => true));
+        // Scripts are enqueued only by the shortcode renderers, so they load
+        // exclusively on pages that actually use the shortcodes.
+    }
 
-            // Build the full PA_UI object here so it is available before dashboard.js
-            // runs regardless of whether scripts are loaded in <head> or footer.
-            // Normalize dose_labels keys to lowercase so they always match the
-            // lowercase lookup in getDoseLabel(), even if older data was saved
-            // under original-case product names.
-            $dose_labels_raw = get_option('pa_dose_labels', array());
-            $dose_labels = array();
-            foreach ( (array) $dose_labels_raw as $k => $v ) {
-                $dose_labels[ strtolower( trim( $k ) ) ] = $v;
-            }
-            $default_doses_raw = get_option('pa_default_doses', array());
-            $default_doses = array();
-            foreach ( (array) $default_doses_raw as $k => $v ) {
-                $default_doses[ strtolower( trim( $k ) ) ] = $v;
-            }
-            $dose_remaps_raw = get_option('pa_dose_remaps', array());
-            $dose_remaps = array();
-            foreach ( (array) $dose_remaps_raw as $k => $v ) {
-                $dose_remaps[ strtolower( trim( $k ) ) ] = $v;
-            }
-            wp_add_inline_script('pa-dashboard-js',
-                'window.PA_UI = {' .
-                    'api_base:'     . json_encode($this->api->base_url()) . ',' .
-                    'rest_base:'    . json_encode(rest_url('pa/v1'))      . ',' .
-                    'sse_url:'      . json_encode($this->api->sse_url())  . ',' .
-                    'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','Glow','BPC-157 / TB4 Blend','MOTS-c','BPC-157']) . ',' .
-                    'categories:'   . json_encode([
-                        ['name'=>'GLP-1','count'=>9],['name'=>'Healing','count'=>7],['name'=>'Blends','count'=>9],
-                        ['name'=>'Growth Hormones','count'=>10],['name'=>'Hormones & Reproductive','count'=>4],
-                        ['name'=>'Sleep & Recovery','count'=>1],['name'=>'Accessories','count'=>2],
-                    ]) . ',' .
-                    'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
-                    'sort_options:' . json_encode(['Popularity','Price: Low to High','Price: High to Low','Newest']) . ',' .
-                    'dose_labels:'     . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) . ',' .
-                    'default_doses:'   . json_encode( empty($default_doses) ? new stdClass() : $default_doses ) . ',' .
-                    'dose_remaps:'     . json_encode( empty($dose_remaps) ? new stdClass() : $dose_remaps ) . ',' .
-                    'coupon_savings:'  . wp_json_encode( (object) get_option('pa_coupon_savings', array()) ) .
-                '};',
-                'before'
-            );
-            wp_add_inline_script('pa-suppliers-js',
-                'window.PA_SUPPLIERS_UI = window.PA_SUPPLIERS_UI || {}; window.PA_SUPPLIERS_UI.api_base = ' . json_encode($this->api->base_url()) . '; window.PA_SUPPLIERS_UI.coupon_savings = ' . wp_json_encode((object) get_option('pa_coupon_savings', array())) . ';',
-                'before'
-            );
-            wp_add_inline_script('pa-about-js',
-                'window.PA_ABOUT_UI = window.PA_ABOUT_UI || {}; window.PA_ABOUT_UI.api_base = ' . json_encode($this->api->base_url()) . ';',
-                'before'
-            );
+    /**
+     * Enqueue dashboard CSS/JS and attach the PA_UI config object.
+     * Uses a static flag so multiple shortcodes on the same page don't duplicate the inline script.
+     */
+    private function enqueue_dashboard_assets() {
+        static $done = false;
+        wp_enqueue_style('pa-dashboard-css');
+        wp_add_inline_style('pa-dashboard-css', $this->critical_layout_css());
+        wp_enqueue_script('pa-dashboard-js');
+        if ($done) return;
+        $done = true;
+        $dose_labels_raw = get_option('pa_dose_labels', array());
+        $dose_labels = array();
+        foreach ( (array) $dose_labels_raw as $k => $v ) {
+            $dose_labels[ strtolower( trim( $k ) ) ] = $v;
         }
+        $default_doses_raw = get_option('pa_default_doses', array());
+        $default_doses = array();
+        foreach ( (array) $default_doses_raw as $k => $v ) {
+            $default_doses[ strtolower( trim( $k ) ) ] = $v;
+        }
+        $dose_remaps_raw = get_option('pa_dose_remaps', array());
+        $dose_remaps = array();
+        foreach ( (array) $dose_remaps_raw as $k => $v ) {
+            $dose_remaps[ strtolower( trim( $k ) ) ] = $v;
+        }
+        wp_add_inline_script('pa-dashboard-js',
+            'window.PA_UI = {' .
+                'api_base:'     . json_encode($this->api->base_url()) . ',' .
+                'rest_base:'    . json_encode(rest_url('pa/v1'))      . ',' .
+                'sse_url:'      . json_encode($this->api->sse_url())  . ',' .
+                'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','Glow','BPC-157 / TB4 Blend','MOTS-c','BPC-157']) . ',' .
+                'categories:'   . '[]' . ',' .
+                'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
+                'sort_options:' . json_encode(['Popularity','Price: Low to High','Price: High to Low','Newest']) . ',' .
+                'dose_labels:'     . json_encode( empty($dose_labels) ? new stdClass() : $dose_labels ) . ',' .
+                'default_doses:'   . json_encode( empty($default_doses) ? new stdClass() : $default_doses ) . ',' .
+                'dose_remaps:'     . json_encode( empty($dose_remaps) ? new stdClass() : $dose_remaps ) . ',' .
+                'coupon_savings:'  . wp_json_encode( (object) get_option('pa_coupon_savings', array()) ) .
+            '};',
+            'before'
+        );
     }
 
     public function render_dashboard_shortcode() {
-        wp_enqueue_style('pa-dashboard-css');
-        wp_enqueue_script('pa-dashboard-js');
+        $this->enqueue_dashboard_assets();
 
         // Read dose labels here so they are always available regardless of
         // whether wp_add_inline_script ran first (caching plugins, page builders,
@@ -600,7 +587,12 @@ class PA_Shortcodes {
         }
 
         wp_enqueue_style('pa-dashboard-css');
+        wp_add_inline_style('pa-dashboard-css', $this->critical_layout_css());
         wp_enqueue_script('pa-about-js');
+        wp_add_inline_script('pa-about-js',
+            'window.PA_ABOUT_UI = window.PA_ABOUT_UI || {}; window.PA_ABOUT_UI.api_base = ' . json_encode($this->api->base_url()) . ';',
+            'before'
+        );
 
         ob_start();
         ?>
@@ -775,7 +767,12 @@ class PA_Shortcodes {
         ), $atts, 'peptide_suppliers_dashboard');
 
         wp_enqueue_style('pa-dashboard-css');
+        wp_add_inline_style('pa-dashboard-css', $this->critical_layout_css());
         wp_enqueue_script('pa-suppliers-js');
+        wp_add_inline_script('pa-suppliers-js',
+            'window.PA_SUPPLIERS_UI = window.PA_SUPPLIERS_UI || {}; window.PA_SUPPLIERS_UI.api_base = ' . json_encode($this->api->base_url()) . '; window.PA_SUPPLIERS_UI.coupon_savings = ' . wp_json_encode((object) get_option('pa_coupon_savings', array())) . ';',
+            'before'
+        );
 
         ob_start();
         ?>
