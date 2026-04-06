@@ -1263,6 +1263,16 @@
           return dosages.some(function(d) { return dosageHasFormulation(d, opt.key); });
         });
       }
+      // Hide formulation buttons that have no vendor matching the active supplier filter.
+      if (state.applied && state.applied.suppliers.size > 0) {
+        formOptions = formOptions.filter(function(opt) {
+          return filterByFormulation(allCardVendors, opt.key).some(function(v) { return state.applied.suppliers.has(v.vendor); });
+        });
+        // If active formulation was hidden, switch to first remaining
+        if (formOptions.length > 0 && !formOptions.some(function(o) { return o.key === activeFormulation; })) {
+          activeFormulation = formOptions[0].key;
+        }
+      }
       formOptions.forEach(function(f) {
         var btn = el('button', 'pa-dosage-pill' + (f.key === activeFormulation ? ' is-active' : ''), f.label);
         btn.type = 'button';
