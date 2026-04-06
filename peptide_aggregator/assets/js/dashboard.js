@@ -477,7 +477,7 @@
         (p.top_vendors || []).forEach(function(v) {
           var name = (v.vendor || '').trim();
           if (!name) return;
-          if (!supplierMap[name]) supplierMap[name] = { name: name, country: v.country || '' };
+          if (!supplierMap[name]) supplierMap[name] = { name: name, country: v.country || '', logo_url: v.logo_url || '' };
         });
       });
       UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
@@ -2282,7 +2282,7 @@
       const selected = state.draft.categories.has(c.name);
       const item = el('button', 'pa-check-item' + (selected ? ' is-selected' : ''));
       item.type = 'button';
-      item.innerHTML = '<span class="pa-check-box">' + (selected ? '✓' : '') + '</span><span class="pa-check-title">' + escHtml(c.name) + '</span><span class="pa-count-pill">' + (c.count || '') + '</span>';
+      item.innerHTML = '<span class="pa-check-title">' + escHtml(c.name) + '</span><span class="pa-count-pill">' + (c.count || '') + '</span><span class="pa-check-box">' + (selected ? '✓' : '') + '</span>';
       item.addEventListener('click', function () {
         if (state.draft.categories.has(c.name)) state.draft.categories.delete(c.name);
         else state.draft.categories.add(c.name);
@@ -2304,7 +2304,10 @@
         const selected = state.draft.suppliers.has(s.name);
         const item = el('button', 'pa-check-item' + (selected ? ' is-selected' : ''));
         item.type = 'button';
-        item.innerHTML = '<span class="pa-check-box">' + (selected ? '✓' : '') + '</span><span class="pa-check-title">' + escHtml(s.name) + '</span><span class="pa-country-pill">' + escHtml(s.country || '') + '</span>';
+        var logoHtml = s.logo_url
+          ? '<img class="pa-check-logo" src="' + escHtml(s.logo_url) + '" alt="">'
+          : '<span class="pa-check-avatar">' + escHtml(vendorInitials(s.name)) + '</span>';
+        item.innerHTML = logoHtml + '<span class="pa-check-title">' + escHtml(s.name) + '</span><span class="pa-check-box">' + (selected ? '✓' : '') + '</span>';
         item.addEventListener('click', function () {
           if (state.draft.suppliers.has(s.name)) state.draft.suppliers.delete(s.name);
           else state.draft.suppliers.add(s.name);
