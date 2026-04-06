@@ -527,6 +527,20 @@
         });
       });
     }
+    // Price range filter
+    if (state.applied && state.applied.priceRanges.size > 0 && !state.applied.priceRanges.has('Any Price')) {
+      list = list.filter(function (p) {
+        var price = p.min_price != null ? p.min_price : 9999;
+        return Array.from(state.applied.priceRanges).some(function (range) {
+          if (range === '$0 - $50')    return price >= 0   && price <= 50;
+          if (range === '$50 - $100')  return price >  50  && price <= 100;
+          if (range === '$100 - $250') return price >  100 && price <= 250;
+          if (range === '$250 - $500') return price >  250 && price <= 500;
+          if (range === '$500+')       return price >  500;
+          return true;
+        });
+      });
+    }
     const sort = (document.getElementById('pa-grid-sort') || {}).value || 'name';
     list.sort(function (a, b) {
       if (sort === 'price_asc') return (a.min_price || 9999) - (b.min_price || 9999);
