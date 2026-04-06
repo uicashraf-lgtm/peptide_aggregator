@@ -21,7 +21,7 @@ class PA_Api_Client {
         $url = $this->base_url() . $path;
         $args = array(
             'method'  => strtoupper($method),
-            'timeout' => 30,
+            'timeout' => 10,
             'headers' => array(
                 'Accept' => 'application/json',
             ),
