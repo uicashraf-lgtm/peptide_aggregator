@@ -938,8 +938,8 @@
       if (!p._cardPricesByDose) return fallbackVendors;
       var normLbl = (doseLabel || '').toLowerCase().replace(/\s+/g, '');
       var vendors = p._cardPricesByDose[normLbl] || fallbackVendors;
-      // Hide kit vendors unless the Kits bar filter is active — mirrors detail view behaviour.
-      var kitsOn = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
+      // Hide kit vendors unless the Kits bar filter or the card-local toggle is active.
+      var kitsOn = cardKitsActive || state.barFilters.kits || (state.applied && state.applied.toggles.kits);
       if (!kitsOn) {
         vendors = (vendors || []).filter(function(v) {
           var pn = (v.product_name || '').toLowerCase();
