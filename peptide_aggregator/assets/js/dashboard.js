@@ -1010,6 +1010,9 @@
     }
 
     // Returns true if a dosage has at least one vendor visible under the given formulation.
+    // Per-card kit filter toggle state (independent of the global bar filter).
+    var cardKitsActive = false;
+
     // When Kits Only is active, only count kit listings (to avoid showing dosage/formulation
     // options that would render an empty vendor list).
     var kitsActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
@@ -1024,6 +1027,16 @@
       if (!kitsActive) return byForm.filter(function(v) { return !isKitTerm((v.product_name||'').toLowerCase()) && !v._is_kit; }).length > 0;
       if (!p._cardAllPricesReady) return byForm.length > 0;
       return kitFilterVendors(byForm, d, isKitProduct).length > 0;
+    }
+
+    // Card-local kit filter: applies cardKitsActive on top of (or instead of) the global state.
+    function cardKitFilter(vendors, dosage) {
+      if (!cardKitsActive) return kitFilterVendors(vendors, dosage, isKitProduct);
+      var orig = state.barFilters.kits;
+      state.barFilters.kits = true;
+      var r = kitFilterVendors(vendors, dosage, isKitProduct);
+      state.barFilters.kits = orig;
+      return r;
     }
 
     if (dosages.length >= 1) {
@@ -1146,7 +1159,7 @@
                 p3.classList.add('is-active');
                 ensureCardAllPricesLoaded().then(function() {
                   var vendors = getCardVendorsForDose(d3.label, d3.top_vendors);
-                  renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vendors, activeFormulation), d3, isKitProduct));
+                  renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), d3));
                 });
               }; })(d2, idx2, p2));
               pillsContainer.appendChild(p2);
@@ -1166,7 +1179,7 @@
               var vds = visibleDosage
                 ? getCardVendorsForDose(visibleDosage.label, visibleDosage.top_vendors)
                 : (p.top_vendors || []);
-              renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vds, fKey), visibleDosage, isKitProduct));
+              renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vds, fKey), visibleDosage));
             };
             ensureCardAllPricesLoaded().then(doRenderV);
           };
@@ -1196,18 +1209,16 @@
       card.appendChild(formRow);
     }
 
-    // Kit filter toggle row — mirrors the "Kits only" bar icon filter
+    // Kit filter toggle row — local to this card only, does not affect the global grid filter
     var kitRow = el('div', 'pa-pcard-dosage');
     kitRow.appendChild(el('span', 'pa-dosage-label', 'Kit:'));
-    var kitsCurrentlyActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
-    var kitToggleBtn = el('button', 'pa-dosage-pill' + (kitsCurrentlyActive ? ' is-active' : ''), 'Kits Only');
+    var kitToggleBtn = el('button', 'pa-dosage-pill', 'Kits Only');
     kitToggleBtn.type = 'button';
     kitToggleBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      state.barFilters.kits = !state.barFilters.kits;
-      var barKitBtn = document.querySelector('.pa-bar-icon[title="Kits only"]');
-      if (barKitBtn) barKitBtn.classList.toggle('is-active', state.barFilters.kits);
-      renderProductGrid(filteredProducts());
+      cardKitsActive = !cardKitsActive;
+      kitToggleBtn.classList.toggle('is-active', cardKitsActive);
+      ensureCardAllPricesLoaded().then(renderInitial);
     });
     kitRow.appendChild(kitToggleBtn);
     card.appendChild(kitRow);
@@ -1221,7 +1232,7 @@
       var vendors = curDosage
         ? getCardVendorsForDose(curDosage.label, curDosage.top_vendors)
         : (p.top_vendors || []);
-      renderVendorRows(vendorList, kitFilterVendors(filterByFormulation(vendors, activeFormulation), curDosage, isKitProduct));
+      renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), curDosage));
     };
     ensureCardAllPricesLoaded().then(function() {
       if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
