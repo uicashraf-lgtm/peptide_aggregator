@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Peptide Aggregator
  * Description: CMS-driven frontend and admin bridge for the AminoPrices FastAPI backend.
- * Version: 14.0.12
+ * Version: 14.0.13
  * Author: Peptide Aggregator
  */
 
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('PA_PLUGIN_VERSION', '14.0.12');
+define('PA_PLUGIN_VERSION', '14.0.13');
 define('PA_PLUGIN_FILE', __FILE__);
 define('PA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PA_PLUGIN_URL', plugin_dir_url(__FILE__));
