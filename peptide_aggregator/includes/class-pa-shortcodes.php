@@ -156,10 +156,12 @@ class PA_Shortcodes {
 .pa-toggle-list{display:flex!important;flex-direction:column!important;gap:4px!important}
 .pa-toggle-row{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:8px 0!important;cursor:pointer!important}
 .pa-toggle-row input[type="checkbox"]{-webkit-appearance:none!important;-moz-appearance:none!important;appearance:none!important;position:absolute!important;opacity:0!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;pointer-events:none!important}
-.pa-toggle-row i{display:inline-block!important;flex-shrink:0!important;width:36px!important;height:20px!important;background:#e4e9f0!important;border-radius:10px!important;position:relative!important;transition:background 0.2s ease!important}
-.pa-toggle-row i::after{content:""!important;position:absolute!important;width:16px!important;height:16px!important;background:#fff!important;border-radius:50%!important;top:2px!important;left:2px!important;transition:transform 0.2s ease!important}
-.pa-toggle-row input:checked~i{background:#2563eb!important}
-.pa-toggle-row input:checked~i::after{transform:translateX(16px)!important}
+.pa-toggle-row i{display:inline-flex!important;flex-shrink:0!important;width:52px!important;height:22px!important;background:#d1d5db!important;border-radius:11px!important;position:relative!important;transition:background 0.25s ease!important;align-items:center!important;justify-content:flex-end!important;padding:0 6px!important;box-sizing:border-box!important;font-style:normal!important;font-size:10px!important;font-weight:700!important;color:#999!important;letter-spacing:0.5px!important}
+.pa-toggle-row i::before{content:"OFF"!important;position:absolute!important;right:7px!important;color:#999!important;font-size:10px!important;font-weight:700!important;transition:opacity 0.2s!important}
+.pa-toggle-row i::after{content:""!important;position:absolute!important;width:16px!important;height:16px!important;background:#fff!important;border-radius:50%!important;top:3px!important;left:3px!important;transition:transform 0.25s ease!important;box-shadow:0 1px 4px rgba(0,0,0,0.25)!important}
+.pa-toggle-row input:checked~i{background:#2563eb!important;justify-content:flex-start!important;color:#fff!important}
+.pa-toggle-row input:checked~i::before{content:"ON"!important;left:7px!important;right:auto!important;color:#fff!important}
+.pa-toggle-row input:checked~i::after{transform:translateX(36px)!important}
 .pa-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:16px 0 8px!important}
 .pa-section-tools{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-check-list{display:flex!important;flex-direction:column!important;gap:4px!important;max-height:180px!important;overflow-y:auto!important;margin-bottom:8px!important}
@@ -378,9 +380,9 @@ class PA_Shortcodes {
                             </select>
                         </label>
                         <div class="pa-bar-icons">
-                            <button class="pa-bar-icon" type="button" title="Has coupon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>
+
                             <button class="pa-bar-icon" type="button" title="Favourites"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-                            <button class="pa-bar-icon" type="button" title="US vendors only"><span class="pa-flag-us">US</span></button>
+                            <button class="pa-bar-icon" type="button" title="US vendors only" style="display:none!important"><span class="pa-flag-us">US</span></button>
                             <button class="pa-bar-icon" type="button" title="Kits only"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></button>
                         </div>
                         <div class="pa-view-toggle">
@@ -498,7 +500,7 @@ class PA_Shortcodes {
                     <div class="pa-tab-content is-active" data-content="filter">
                         <div class="pa-toggle-list">
                             <label class="pa-toggle-row"><span>In Stock Only</span><input type="checkbox" id="pa-instock-only"><i></i></label>
-                            <label class="pa-toggle-row"><span>Kits Only</span><input type="checkbox" id="pa-kits-only"><i></i></label>
+                            <label class="pa-toggle-row"><span>KIT Only</span><input type="checkbox" id="pa-kits-only"><i></i></label>
                             <label class="pa-toggle-row"><span>Blends Only</span><input type="checkbox" id="pa-blends-only"><i></i></label>
                             <label class="pa-toggle-row"><span>Likes Only</span><input type="checkbox" id="pa-likes-only"><i></i></label>
                         </div>
@@ -831,14 +833,12 @@ class PA_Shortcodes {
                         <button id="pas-sort-desc" class="pa-sort-dir" type="button" title="Descending">&#8595;</button>
                     </div>
                     <div class="pa-bar-icons">
-                        <button id="pas-filter-coupon" class="pa-bar-icon" type="button" title="Has coupon">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                        </button>
+
                         <button id="pas-filter-crypto" class="pa-bar-icon" type="button" title="Accepts crypto"><span style="font-weight:800;font-size:13px">&#8383;</span></button>
                         <button id="pas-filter-favs" class="pa-bar-icon" type="button" title="Favourites">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                         </button>
-                        <button id="pas-filter-us" class="pa-bar-icon" type="button" title="US vendors only"><span class="pa-flag-us">US</span></button>
+                        <button id="pas-filter-us" class="pa-bar-icon" type="button" title="US vendors only" style="display:none!important"><span class="pa-flag-us">US</span></button>
                     </div>
                     <div class="pa-view-toggle">
                         <button id="pas-view-grid" class="pa-view-btn is-active" type="button" title="Grid view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
