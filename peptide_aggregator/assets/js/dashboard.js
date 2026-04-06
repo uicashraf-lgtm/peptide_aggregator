@@ -851,7 +851,7 @@
           vList.appendChild(expandBtn);
         }
       } else {
-        vList.appendChild(el('p', 'pa-pcard-empty', 'No prices scraped yet'));
+        vList.appendChild(el('p', 'pa-pcard-empty', cardKitsActive ? 'No kits available for this product' : 'No prices scraped yet'));
       }
     }
 
