@@ -487,8 +487,8 @@
 /* Dosage pills */
 .pa-shell .pa-dosage-pill {
     height: 24px !important;
-    padding: 0 8px !important;
-    border-radius: var(--radius-md) !important;
+    padding: 0 5px !important;
+    border-radius: 6px !important;
     background: var(--panel-soft) !important;
     border: 1.5px solid var(--line) !important;
     color: var(--muted) !important;
@@ -981,8 +981,8 @@
 .pa-shell .pa-dpbar-sort-btn,
 .pa-shell .pa-dpbar-supplier-btn {
     height: 30px !important;
-    padding: 0 12px !important;
-    border-radius: var(--radius-sm) !important;
+    padding: 0 8px !important;
+    border-radius: 4px !important;
     background: var(--panel) !important;
     border: 1px solid var(--line) !important;
     color: var(--text-soft) !important;
@@ -1918,7 +1918,7 @@
     .pa-shell .pa-dpbar-sort-btn,
     .pa-shell .pa-dpbar-supplier-btn {
         height: 24px !important;
-        padding: 0 8px !important;
+        padding: 0 6px !important;
         font-size: 10px !important;
     }
 
