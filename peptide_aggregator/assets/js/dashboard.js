@@ -1120,7 +1120,7 @@
       var formOptions = (hasVialVendors ? [{ key: 'vial', label: 'Vials' }] : []).concat(FORMULATIONS.filter(function(f) { return cardFormKeys.indexOf(f.key) !== -1; }));
       // In Kits Only mode, hide formulation buttons that would show no kit listings.
       // Only apply after enrichment has run; otherwise the async merge may add kit listings.
-      if (kitsActive && p._cardAllPricesLoaded) {
+      if (kitsActive && p._cardAllPricesReady) {
         formOptions = formOptions.filter(function(opt) {
           return dosages.some(function(d) { return dosageHasFormulation(d, opt.key); });
         });
@@ -1283,7 +1283,7 @@
           }
         }
 
-        // Show/hide formulation buttons that have no kit vendors
+        // Show/hide formulation buttons that have no kit vendors; hide the whole row if none remain
         if (formBtns && formBtns.length) {
           formBtns.forEach(function(btn) {
             var fk = btn.getAttribute('data-fkey');
@@ -1291,6 +1291,10 @@
             var hasVendors = dosages.some(function(d) { return dosageHasFormulation(d, fk); });
             btn.style.display = hasVendors ? '' : 'none';
           });
+          if (formRow) {
+            var anyFBtnVisible = formBtns.some(function(btn) { return btn.style.display !== 'none'; });
+            formRow.style.display = anyFBtnVisible ? '' : 'none';
+          }
         }
 
         renderInitial();
@@ -1327,6 +1331,20 @@
         }
       }
       renderInitial();
+      // After prices load, re-filter formulation buttons for the global kits filter
+      // (handles the case where kitsAutoSelected already ran so no full re-render occurs).
+      if (kitsActive && formBtns && formBtns.length) {
+        formBtns.forEach(function(btn) {
+          var fk = btn.getAttribute('data-fkey');
+          if (!fk) return;
+          var hasVendors = dosages.some(function(d) { return dosageHasFormulation(d, fk); });
+          btn.style.display = hasVendors ? '' : 'none';
+        });
+        if (formRow) {
+          var anyFBtnVisible = formBtns.some(function(btn) { return btn.style.display !== 'none'; });
+          formRow.style.display = anyFBtnVisible ? '' : 'none';
+        }
+      }
     });
     card.appendChild(vendorList);
 
