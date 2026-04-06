@@ -311,7 +311,10 @@
         }
       });
       if (pd.dosage) {
-        grp.dosages.push({ label: pd.dosage, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
+        var dosageRemap = (UI.dose_remaps && UI.dose_remaps[(pd.base || '').toLowerCase().trim()]) || {};
+        var dosageNorm = pd.dosage.toLowerCase().replace(/\s+/g, '');
+        var mappedDosageLabel = dosageRemap[dosageNorm] || pd.dosage;
+        grp.dosages.push({ label: mappedDosageLabel, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
         // Deduplicate by vendor+product_name so distinct listings (vial vs spray) survive.
