@@ -172,10 +172,10 @@ class PA_Shortcodes {
 .pa-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:16px 0 8px!important}
 .pa-section-tools{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-check-list{display:flex!important;flex-direction:column!important;gap:6px!important;max-height:240px!important;overflow-y:auto!important;margin-bottom:8px!important}
-.pa-check-item{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;padding:8px 12px!important;cursor:pointer!important;background:#ffffff!important;border:1px solid #e4e9f0!important;width:100%!important;border-radius:8px!important;text-align:left!important;transition:border-color 0.15s ease,background 0.15s ease!important;box-sizing:border-box!important}
-.pa-check-item:hover{background:#f0f5ff!important;border-color:#93b4f5!important}
+.pa-check-item{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;padding:8px 12px!important;cursor:pointer!important;background:#ffffff!important;border:1px solid #e4e9f0!important;width:100%!important;border-radius:8px!important;text-align:left!important;transition:border-color 0.15s ease,background 0.15s ease!important;box-sizing:border-box!important;color:#1a2332!important}
+.pa-check-item:hover{background:#f0f5ff!important;border-color:#93b4f5!important;color:#1a2332!important}
 .pa-check-item.is-selected{background:#eff6ff!important;border-color:#2563eb!important}
-.pa-check-title{color:#1a2332!important;font-size:13px!important;font-weight:500!important;flex:1!important}
+.pa-check-item .pa-check-title{color:#1a2332!important;font-size:13px!important;font-weight:500!important;flex:1!important}
 .pa-check-item:hover .pa-check-title{color:#1a2332!important}
 .pa-check-item.is-selected .pa-check-title{color:#2563eb!important;font-weight:600!important}
 .pa-check-box{margin-left:auto!important;flex-shrink:0!important;width:18px!important;height:18px!important;border-radius:4px!important;border:1.5px solid #c0cad8!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;color:transparent!important;background:#fff!important}
