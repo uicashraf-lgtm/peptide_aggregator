@@ -1213,13 +1213,42 @@
 
     // Kit filter toggle row — local to this card only, does not affect the global grid filter
     var kitRow = el('div', 'pa-pcard-dosage');
-    kitRow.appendChild(el('span', 'pa-dosage-label', 'Kit:'));
-    var kitToggleBtn = el('button', 'pa-dosage-pill', 'Kits Only');
-    kitToggleBtn.type = 'button';
-    kitToggleBtn.addEventListener('click', function(e) {
+    kitRow.appendChild(el('span', 'pa-dosage-label', 'KIT Only'));
+    var kitToggleLabel = document.createElement('label');
+    kitToggleLabel.className = 'pa-kit-toggle-label';
+    kitToggleLabel.style.cssText = 'display:inline-flex;align-items:center;cursor:pointer;';
+    var kitToggleInput = document.createElement('input');
+    kitToggleInput.type = 'checkbox';
+    kitToggleInput.style.cssText = 'position:absolute;opacity:0;width:0;height:0;';
+    var kitToggleTrack = document.createElement('span');
+    kitToggleTrack.className = 'pa-kit-toggle-track';
+    kitToggleTrack.style.cssText = 'display:inline-flex;align-items:center;width:52px;height:22px;background:#d1d5db;border-radius:11px;position:relative;transition:background 0.25s ease;flex-shrink:0;';
+    var kitToggleKnob = document.createElement('span');
+    kitToggleKnob.style.cssText = 'position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform 0.25s ease;box-shadow:0 1px 4px rgba(0,0,0,0.25);';
+    var kitToggleText = document.createElement('span');
+    kitToggleText.style.cssText = 'position:absolute;right:6px;font-size:9px;font-weight:700;color:#999;letter-spacing:0.5px;pointer-events:none;';
+    kitToggleText.textContent = 'OFF';
+    kitToggleTrack.appendChild(kitToggleKnob);
+    kitToggleTrack.appendChild(kitToggleText);
+    kitToggleLabel.appendChild(kitToggleInput);
+    kitToggleLabel.appendChild(kitToggleTrack);
+    var kitToggleBtn = kitToggleLabel;
+    kitToggleLabel.addEventListener('click', function(e) { e.stopPropagation(); });
+    kitRow.addEventListener('click', function(e) { e.stopPropagation(); });
+    kitToggleInput.addEventListener('change', function(e) {
       e.stopPropagation();
-      cardKitsActive = !cardKitsActive;
-      kitToggleBtn.classList.toggle('is-active', cardKitsActive);
+      cardKitsActive = kitToggleInput.checked;
+      if (cardKitsActive) {
+        kitToggleTrack.style.background = '#2563eb';
+        kitToggleKnob.style.transform = 'translateX(30px)';
+        kitToggleText.style.cssText = 'position:absolute;left:6px;font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px;pointer-events:none;';
+        kitToggleText.textContent = 'ON';
+      } else {
+        kitToggleTrack.style.background = '#d1d5db';
+        kitToggleKnob.style.transform = 'translateX(0)';
+        kitToggleText.style.cssText = 'position:absolute;right:6px;font-size:9px;font-weight:700;color:#999;letter-spacing:0.5px;pointer-events:none;';
+        kitToggleText.textContent = 'OFF';
+      }
 
       ensureCardAllPricesLoaded().then(function() {
         // Rebuild dosage pills to show only those with kit vendors (or restore all when off)
@@ -1267,7 +1296,7 @@
         renderInitial();
       });
     });
-    kitRow.appendChild(kitToggleBtn);
+    kitRow.appendChild(kitToggleLabel);
     card.appendChild(kitRow);
 
     // Vendor rows — fetch from /prices API (same as detail view) then render.
@@ -2062,7 +2091,7 @@
         // Also clear the matching applied toggle so it doesn't re-apply
         if (state.applied) {
           if (name === 'In Stock Only') state.applied.toggles.instock = false;
-          if (name === 'Kits Only') state.applied.toggles.kits = false;
+          if (name === 'KIT Only') state.applied.toggles.kits = false;
           if (name === 'Blends Only') state.applied.toggles.blends = false;
           if (name === 'Likes Only') state.applied.toggles.likes = false;
         }
@@ -2191,9 +2220,9 @@
 
   function applyModal() {
     state.applied = copyDraft(state.draft);
-    ['In Stock Only', 'Kits Only', 'Blends Only', 'Likes Only'].forEach(function (t) { state.activeFilters.delete(t); });
+    ['In Stock Only', 'KIT Only', 'Blends Only', 'Likes Only'].forEach(function (t) { state.activeFilters.delete(t); });
     if (state.applied.toggles.instock) state.activeFilters.add('In Stock Only');
-    if (state.applied.toggles.kits) state.activeFilters.add('Kits Only');
+    if (state.applied.toggles.kits) state.activeFilters.add('KIT Only');
     if (state.applied.toggles.blends) state.activeFilters.add('Blends Only');
     if (state.applied.toggles.likes) state.activeFilters.add('Likes Only');
     Array.from(UI.categories || []).forEach(function (c) { state.activeFilters.delete(c.name); });
