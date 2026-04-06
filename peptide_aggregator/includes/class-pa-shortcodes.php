@@ -120,6 +120,12 @@ class PA_Shortcodes {
 .pa-shell .pa-nav-links{display:flex!important;gap:4px!important;padding:4px!important}
 .pa-shell .pa-sort-dir-btns{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important}
 .pa-shell .pa-sort-dir{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:30px!important;height:30px!important}
+/* High-specificity ID overrides for suppliers page to defeat any Elementor/theme column overrides */
+#pas-shell .pa-results-right{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important}
+#pas-shell .pa-bar-icons{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important}
+#pas-shell .pa-sort-dir-btns{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important}
+#pas-shell .pa-view-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:2px!important}
+#pas-shell .pa-sort-label{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;white-space:nowrap!important}
 .pa-shell .pa-supplier-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important;gap:16px!important;margin-top:4px!important}
 .pa-shell .pa-supplier-grid.is-list{grid-template-columns:1fr!important}
 .pa-shell .pa-scard{display:flex!important;flex-direction:column!important;gap:12px!important;padding:18px!important;cursor:pointer!important}
@@ -816,26 +822,25 @@ class PA_Shortcodes {
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f4c842" stroke-width="2.5" style="flex-shrink:0"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     <span id="pas-count" class="pa-results-count"></span>
                 </div>
-                <div class="pa-results-right">
-                    <label class="pa-sort-label">Sort by:
+                <div class="pa-results-right" style="display:flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:nowrap">
+                    <label class="pa-sort-label" style="display:flex;flex-direction:row;align-items:center;gap:6px;white-space:nowrap">Sort by:
                         <select id="pas-sort" class="pa-grid-sort-select">
                             <option value="name">Name</option>
                             <option value="products">Product Count</option>
                         </select>
                     </label>
-                    <div class="pa-sort-dir-btns">
+                    <div class="pa-sort-dir-btns" style="display:flex;flex-direction:row;align-items:center;gap:4px">
                         <button id="pas-sort-asc" class="pa-sort-dir is-active" type="button" title="Ascending">&#8593;</button>
                         <button id="pas-sort-desc" class="pa-sort-dir" type="button" title="Descending">&#8595;</button>
                     </div>
-                    <div class="pa-bar-icons">
-
+                    <div class="pa-bar-icons" style="display:flex;flex-direction:row;align-items:center;gap:4px">
                         <button id="pas-filter-crypto" class="pa-bar-icon" type="button" title="Accepts crypto"><span style="font-weight:800;font-size:13px">&#8383;</span></button>
                         <button id="pas-filter-favs" class="pa-bar-icon" type="button" title="Favourites">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                         </button>
                         <button id="pas-filter-us" class="pa-bar-icon" type="button" title="US vendors only" style="display:none!important"><span class="pa-flag-us">US</span></button>
                     </div>
-                    <div class="pa-view-toggle">
+                    <div class="pa-view-toggle" style="display:flex;flex-direction:row;align-items:center;gap:2px">
                         <button id="pas-view-grid" class="pa-view-btn is-active" type="button" title="Grid view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
                         <button id="pas-view-list" class="pa-view-btn" type="button" title="List view"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
                     </div>
