@@ -1196,6 +1196,22 @@
       card.appendChild(formRow);
     }
 
+    // Kit filter toggle row — mirrors the "Kits only" bar icon filter
+    var kitRow = el('div', 'pa-pcard-dosage');
+    kitRow.appendChild(el('span', 'pa-dosage-label', 'Kit:'));
+    var kitsCurrentlyActive = state.barFilters.kits || (state.applied && state.applied.toggles.kits);
+    var kitToggleBtn = el('button', 'pa-dosage-pill' + (kitsCurrentlyActive ? ' is-active' : ''), 'Kits Only');
+    kitToggleBtn.type = 'button';
+    kitToggleBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      state.barFilters.kits = !state.barFilters.kits;
+      var barKitBtn = document.querySelector('.pa-bar-icon[title="Kits only"]');
+      if (barKitBtn) barKitBtn.classList.toggle('is-active', state.barFilters.kits);
+      renderProductGrid(filteredProducts());
+    });
+    kitRow.appendChild(kitToggleBtn);
+    card.appendChild(kitRow);
+
     // Vendor rows — fetch from /prices API (same as detail view) then render.
     var activeIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
     var activeDosage = dosages.length > 0 ? dosages[Math.min(activeIdx, dosages.length - 1)] : null;
