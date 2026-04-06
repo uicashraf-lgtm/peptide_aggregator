@@ -503,13 +503,30 @@
         .then(function(raw) {
           var names = new Set();
           var supplierInfo = {};
+          var doseVendors = {}; // normLabel -> Set<vendorName>
+          var DOSAGE_RE_AV = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
           (Array.isArray(raw) ? raw : []).forEach(function(v) {
             if (v.vendor) {
               names.add(v.vendor);
               if (!supplierInfo[v.vendor]) supplierInfo[v.vendor] = { name: v.vendor, country: v.country || '', logo_url: v.logo_url || '' };
+              // Build per-dosage vendor map
+              var lbl = null;
+              if (v.amount_mg != null && v.amount_unit) {
+                var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+                lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
+              }
+              if (!lbl) {
+                var m2 = (v.product || v.product_name || '').match(DOSAGE_RE_AV);
+                if (m2) lbl = m2[1] + ' ' + m2[2].toLowerCase();
+              }
+              if (!lbl) lbl = 'default';
+              var normLbl = lbl.toLowerCase().replace(/\s+/g, '');
+              if (!doseVendors[normLbl]) doseVendors[normLbl] = new Set();
+              doseVendors[normLbl].add(v.vendor);
             }
           });
           p._allVendorNames = names;
+          p._vendorsByDoseLabel = doseVendors;
           p._allVendorNamesReady = true;
           // Merge any newly discovered vendors into UI.suppliers
           var changed = false;
@@ -534,6 +551,19 @@
       }
     });
     return _allVendorNamesPromise;
+  }
+
+  // Returns true if dosage d of product p has at least one vendor matching active supplier filter.
+  function dosageHasSupplierFilter(p, d) {
+    if (!state.applied || state.applied.suppliers.size === 0) return true;
+    var normLbl = (d.label || '').toLowerCase().replace(/\s+/g, '');
+    if (p._vendorsByDoseLabel) {
+      var dv = p._vendorsByDoseLabel[normLbl] || p._vendorsByDoseLabel['default'];
+      if (!dv) return false;
+      return Array.from(state.applied.suppliers).some(function(s) { return dv.has(s); });
+    }
+    // Before full data is loaded, fall back to top_vendors
+    return (d.top_vendors || []).some(function(v) { return state.applied.suppliers.has(v.vendor); });
   }
 
   function filteredProducts() {
@@ -1163,12 +1193,19 @@
           if (dosageHasFormulation(dosages[kdi], activeFormulation)) { activeIdx = kdi; break; }
         }
       }
+      // If the active dosage has no vendors for the current supplier filter, move to the first that does.
+      if (!dosageHasSupplierFilter(p, dosages[activeIdx] || {})) {
+        for (var sdi = 0; sdi < dosages.length; sdi++) {
+          if (dosageHasSupplierFilter(p, dosages[sdi])) { activeIdx = sdi; break; }
+        }
+      }
 
       dosages.forEach(function (d, idx) {
         var isActive = idx === activeIdx;
         var displayLabel = getDoseLabel(p.name, d.label);
         if (displayLabel === null) return; // hidden via admin dose labels
         if (!dosageHasFormulation(d, activeFormulation)) return; // hidden for current formulation
+        if (!dosageHasSupplierFilter(p, d)) return; // hidden for current supplier filter
         var pillHtml = (isActive ? '<svg class="pa-pill-star" viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M6 1l1.4 2.8L11 4.3l-2.5 2.4.6 3.4L6 8.5 2.9 10.1l.6-3.4L1 4.3l3.6-.5z"/></svg>' : '') + escHtml(displayLabel);
         var pill = el('button', 'pa-dosage-pill' + (isActive ? ' is-active' : ''), pillHtml);
         pill.type = 'button';
