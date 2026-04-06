@@ -471,6 +471,16 @@
       UI.categories = Object.keys(catCounts).sort().map(function(name) {
         return { name: name, count: catCounts[name] };
       });
+      // Derive unique supplier list from all product vendors
+      var supplierMap = {};
+      state.allProducts.forEach(function(p) {
+        (p.top_vendors || []).forEach(function(v) {
+          var name = (v.vendor || '').trim();
+          if (!name) return;
+          if (!supplierMap[name]) supplierMap[name] = { name: name, country: v.country || '' };
+        });
+      });
+      UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
       renderProductGrid(state.allProducts);
     } catch (e) {
       const grid = document.getElementById('pa-product-grid');
@@ -546,6 +556,12 @@
           if (range === '$500+')       return price >= 500;
           return true;
         });
+      });
+    }
+    // Supplier filter
+    if (state.applied && state.applied.suppliers.size > 0) {
+      list = list.filter(function(p) {
+        return (p.top_vendors || []).some(function(v) { return state.applied.suppliers.has(v.vendor); });
       });
     }
     const sort = (document.getElementById('pa-grid-sort') || {}).value || 'name';
