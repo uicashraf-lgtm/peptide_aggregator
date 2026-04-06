@@ -53,12 +53,12 @@ class PA_Shortcodes {
 .pa-shell .pa-active-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-active-list{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
 .pa-shell .pa-results-bar{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important;padding:10px 2px!important}
-.pa-shell .pa-results-left{display:flex!important;align-items:center!important;gap:8px!important}
-.pa-shell .pa-results-right{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important}
-.pa-shell .pa-price-toggle{display:flex!important;align-items:center!important;gap:6px!important}
-.pa-shell .pa-sort-label{display:flex!important;align-items:center!important;gap:8px!important;white-space:nowrap!important}
-.pa-shell .pa-bar-icons{display:flex!important;align-items:center!important;gap:4px!important}
-.pa-shell .pa-view-toggle{display:flex!important;align-items:center!important;gap:2px!important}
+.pa-shell .pa-results-left{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important}
+.pa-shell .pa-results-right{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important}
+.pa-shell .pa-price-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important}
+.pa-shell .pa-sort-label{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;white-space:nowrap!important}
+.pa-shell .pa-bar-icons{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important}
+.pa-shell .pa-view-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:2px!important}
 .pa-shell .pa-ptoggle{display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .pa-shell .pa-bar-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important}
 .pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;border:none!important}
@@ -118,7 +118,7 @@ class PA_Shortcodes {
 .pa-shell .pa-ddosage-label{display:flex!important;align-items:center!important;gap:3px!important}
 .pa-shell .pa-back-btn{display:inline-flex!important;align-items:center!important;gap:6px!important;cursor:pointer!important;white-space:nowrap!important}
 .pa-shell .pa-nav-links{display:flex!important;gap:4px!important;padding:4px!important}
-.pa-shell .pa-sort-dir-btns{display:flex!important;align-items:center!important;gap:4px!important}
+.pa-shell .pa-sort-dir-btns{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important}
 .pa-shell .pa-sort-dir{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:30px!important;height:30px!important}
 .pa-shell .pa-supplier-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important;gap:16px!important;margin-top:4px!important}
 .pa-shell .pa-supplier-grid.is-list{grid-template-columns:1fr!important}
