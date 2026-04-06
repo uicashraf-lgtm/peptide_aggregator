@@ -1341,7 +1341,7 @@
 .pa-check-item span {
     font-size: 13px !important;
     font-weight: 500 !important;
-    color: var(--text-soft) !important;
+    color: var(--text) !important;
 }
 
 /* Price range grid */
