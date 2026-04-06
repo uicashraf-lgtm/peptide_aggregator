@@ -235,8 +235,12 @@ class PA_Shortcodes {
         wp_register_script('pa-dashboard-js',   plugin_dir_url(__FILE__) . '../assets/js/dashboard.js',   array(), PA_PLUGIN_VERSION, array('strategy' => 'defer', 'in_footer' => true));
         wp_register_script('pa-suppliers-js',   plugin_dir_url(__FILE__) . '../assets/js/suppliers.js',   array(), PA_PLUGIN_VERSION, array('strategy' => 'defer', 'in_footer' => true));
         wp_register_script('pa-about-js',       plugin_dir_url(__FILE__) . '../assets/js/about.js',       array(), PA_PLUGIN_VERSION, array('strategy' => 'defer', 'in_footer' => true));
-        // Scripts are enqueued only by the shortcode renderers, so they load
-        // exclusively on pages that actually use the shortcodes.
+        // CSS must be enqueued here (before wp_head fires) so it appears in <head>.
+        // Scripts are enqueued by the shortcode renderers since they load in footer.
+        if ( ! is_admin() ) {
+            wp_enqueue_style( 'pa-dashboard-css' );
+            wp_add_inline_style( 'pa-dashboard-css', $this->critical_layout_css() );
+        }
     }
 
     /**
@@ -245,8 +249,6 @@ class PA_Shortcodes {
      */
     private function enqueue_dashboard_assets() {
         static $done = false;
-        wp_enqueue_style('pa-dashboard-css');
-        wp_add_inline_style('pa-dashboard-css', $this->critical_layout_css());
         wp_enqueue_script('pa-dashboard-js');
         if ($done) return;
         $done = true;
@@ -586,8 +588,6 @@ class PA_Shortcodes {
             }
         }
 
-        wp_enqueue_style('pa-dashboard-css');
-        wp_add_inline_style('pa-dashboard-css', $this->critical_layout_css());
         wp_enqueue_script('pa-about-js');
         wp_add_inline_script('pa-about-js',
             'window.PA_ABOUT_UI = window.PA_ABOUT_UI || {}; window.PA_ABOUT_UI.api_base = ' . json_encode($this->api->base_url()) . ';',
@@ -766,8 +766,6 @@ class PA_Shortcodes {
             'prices_url' => home_url('/'),
         ), $atts, 'peptide_suppliers_dashboard');
 
-        wp_enqueue_style('pa-dashboard-css');
-        wp_add_inline_style('pa-dashboard-css', $this->critical_layout_css());
         wp_enqueue_script('pa-suppliers-js');
         wp_add_inline_script('pa-suppliers-js',
             'window.PA_SUPPLIERS_UI = window.PA_SUPPLIERS_UI || {}; window.PA_SUPPLIERS_UI.api_base = ' . json_encode($this->api->base_url()) . '; window.PA_SUPPLIERS_UI.coupon_savings = ' . wp_json_encode((object) get_option('pa_coupon_savings', array())) . ';',
