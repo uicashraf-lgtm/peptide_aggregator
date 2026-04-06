@@ -94,6 +94,7 @@ class PA_Rest {
         }
         update_option('pa_affiliate_templates', $templates);
         delete_transient('pa_products_cache');
+        delete_transient('pa_affiliate_map');
         self::clear_prices_cache();
     }
 
@@ -118,7 +119,13 @@ class PA_Rest {
     }
 
     private function get_affiliate_map() {
-        return (array) get_option('pa_affiliate_templates', array());
+        $cached = get_transient('pa_affiliate_map');
+        if ($cached !== false) {
+            return $cached;
+        }
+        $map = (array) get_option('pa_affiliate_templates', array());
+        set_transient('pa_affiliate_map', $map, HOUR_IN_SECONDS);
+        return $map;
     }
 
     /**
@@ -280,84 +287,85 @@ class PA_Rest {
                 'api_endpoint' => '/api/products',
             ));
 
-            set_transient('pa_products_cache', $products, 5 * MINUTE_IN_SECONDS);
+            // Mark admin-designated kit products and their specific vendor entries.
+            // Kept inside the cache so the triple-nested regex loop does not execute
+            // on every request. Cache is invalidated on kit-setting changes in admin.
+            //
+            // pa_kit_vendor_map  = { lowercase_product_name => original_name_prefix }
+            // pa_kit_exclude_map = { lowercase_product_name => [ sibling original_names ] }
+            //
+            // A vendor entry is kit only when its product_name starts with the kit prefix
+            // AND the text before the first dosage unit (e.g. "5mg") matches the prefix
+            // exactly. This distinguishes "EZP-1P 5mg" (kit) from "EZP-1P (GLP-1SG) 5mg"
+            // (non-kit variant with extra text before the dosage) regardless of naming
+            // conventions. The exclusion map adds an extra layer for edge cases.
+            $kit_vendor_map  = (array) get_option('pa_kit_vendor_map', array());
+            $kit_exclude_map = (array) get_option('pa_kit_exclude_map', array());
+            $kit_ids         = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+            if (!empty($kit_vendor_map) && is_array($products)) {
+                foreach ($products as &$product) {
+                    $pname_lc = strtolower(trim($product['name'] ?? ''));
+                    if (!isset($kit_vendor_map[$pname_lc]) || $kit_vendor_map[$pname_lc] === '') continue;
+                    $prefix     = $kit_vendor_map[$pname_lc];
+                    $exclusions = (array) ($kit_exclude_map[$pname_lc] ?? array());
+                    $product['_is_kit_product'] = true;
+                    // Only mark individual vendor entries as kit for the designated kit product.
+                    // Non-kit siblings with the same name must not have their vendor entries
+                    // flagged — otherwise both EZP kit and non-kit entries get _is_kit:true,
+                    // and the cheaper non-kit price is shown first in the kit filter.
+                    if (!in_array((int) ($product['id'] ?? 0), $kit_ids, true)) continue;
+                    // Returns true when a vendor product_name is the kit entry.
+                    // Two complementary checks:
+                    //   1. Explicit exclusion: does NOT start with any sibling original_name.
+                    //   2. Dosage-boundary check: the text before the first dosage unit (e.g.
+                    //      "5mg", "10mcg") must match the kit prefix exactly when trimmed. This
+                    //      auto-detects non-kit variants without needing re-toggling.
+                    $dosage_re = '/\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?/i';
+                    $is_kit_vendor = function($pn) use ($prefix, $exclusions, $dosage_re) {
+                        if (strpos($pn, $prefix) !== 0) return false;
+                        foreach ($exclusions as $excl) {
+                            if ($excl !== '' && strpos($pn, $excl) === 0) return false;
+                        }
+                        // Extract variant prefix: everything before the first dosage number.
+                        if (preg_match($dosage_re, $pn, $dm, PREG_OFFSET_CAPTURE)) {
+                            $variant_prefix = rtrim(substr($pn, 0, (int) $dm[0][1]));
+                        } else {
+                            $variant_prefix = $pn; // no dosage found — use full name
+                        }
+                        return $variant_prefix === rtrim($prefix);
+                    };
+                    // Mark matching vendor entries in top_vendors.
+                    if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
+                        foreach ($product['top_vendors'] as &$vendor) {
+                            if ($is_kit_vendor($vendor['product_name'] ?? '')) {
+                                $vendor['_is_kit'] = true;
+                            }
+                        }
+                        unset($vendor);
+                    }
+                    // Mark matching vendor entries in available_dosages.
+                    if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
+                        foreach ($product['available_dosages'] as &$dosage) {
+                            if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
+                                foreach ($dosage['vendors'] as &$vendor) {
+                                    if ($is_kit_vendor($vendor['product_name'] ?? '')) {
+                                        $vendor['_is_kit'] = true;
+                                    }
+                                }
+                                unset($vendor);
+                            }
+                        }
+                        unset($dosage);
+                    }
+                }
+                unset($product);
+            }
+
+            set_transient('pa_products_cache', $products, 30 * MINUTE_IN_SECONDS);
         } // end cache miss block
 
-        // Mark admin-designated kit products and their specific vendor entries fresh
-        // on every request (never cached) so admin changes apply immediately.
-        //
-        // pa_kit_vendor_map  = { lowercase_product_name => original_name_prefix }
-        // pa_kit_exclude_map = { lowercase_product_name => [ sibling original_names ] }
-        //
-        // A vendor entry is kit only when its product_name starts with the kit prefix
-        // AND the text before the first dosage unit (e.g. "5mg") matches the prefix
-        // exactly. This distinguishes "EZP-1P 5mg" (kit) from "EZP-1P (GLP-1SG) 5mg"
-        // (non-kit variant with extra text before the dosage) regardless of naming
-        // conventions. The exclusion map adds an extra layer for edge cases.
-        $kit_vendor_map  = (array) get_option('pa_kit_vendor_map', array());
-        $kit_exclude_map = (array) get_option('pa_kit_exclude_map', array());
-        $kit_ids         = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
-        if (!empty($kit_vendor_map) && is_array($products)) {
-            foreach ($products as &$product) {
-                $pname_lc = strtolower(trim($product['name'] ?? ''));
-                if (!isset($kit_vendor_map[$pname_lc]) || $kit_vendor_map[$pname_lc] === '') continue;
-                $prefix     = $kit_vendor_map[$pname_lc];
-                $exclusions = (array) ($kit_exclude_map[$pname_lc] ?? array());
-                $product['_is_kit_product'] = true;
-                // Only mark individual vendor entries as kit for the designated kit product.
-                // Non-kit siblings with the same name must not have their vendor entries
-                // flagged — otherwise both EZP kit and non-kit entries get _is_kit:true,
-                // and the cheaper non-kit price is shown first in the kit filter.
-                if (!in_array((int) ($product['id'] ?? 0), $kit_ids, true)) continue;
-                // Returns true when a vendor product_name is the kit entry.
-                // Two complementary checks:
-                //   1. Explicit exclusion: does NOT start with any sibling original_name.
-                //   2. Dosage-boundary check: the text before the first dosage unit (e.g.
-                //      "5mg", "10mcg") must match the kit prefix exactly when trimmed. This
-                //      auto-detects non-kit variants without needing re-toggling.
-                $dosage_re = '/\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?/i';
-                $is_kit_vendor = function($pn) use ($prefix, $exclusions, $dosage_re) {
-                    if (strpos($pn, $prefix) !== 0) return false;
-                    foreach ($exclusions as $excl) {
-                        if ($excl !== '' && strpos($pn, $excl) === 0) return false;
-                    }
-                    // Extract variant prefix: everything before the first dosage number.
-                    if (preg_match($dosage_re, $pn, $dm, PREG_OFFSET_CAPTURE)) {
-                        $variant_prefix = rtrim(substr($pn, 0, (int) $dm[0][1]));
-                    } else {
-                        $variant_prefix = $pn; // no dosage found — use full name
-                    }
-                    return $variant_prefix === rtrim($prefix);
-                };
-                // Mark matching vendor entries in top_vendors.
-                if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
-                    foreach ($product['top_vendors'] as &$vendor) {
-                        if ($is_kit_vendor($vendor['product_name'] ?? '')) {
-                            $vendor['_is_kit'] = true;
-                        }
-                    }
-                    unset($vendor);
-                }
-                // Mark matching vendor entries in available_dosages.
-                if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
-                    foreach ($product['available_dosages'] as &$dosage) {
-                        if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
-                            foreach ($dosage['vendors'] as &$vendor) {
-                                if ($is_kit_vendor($vendor['product_name'] ?? '')) {
-                                    $vendor['_is_kit'] = true;
-                                }
-                            }
-                            unset($vendor);
-                        }
-                    }
-                    unset($dosage);
-                }
-            }
-            unset($product);
-        }
-
         $response = rest_ensure_response($products);
-        $response->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        $response->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=300');
         return $response;
     }
 
@@ -568,7 +576,7 @@ class PA_Rest {
             'api_endpoint' => '/api/products/' . rawurlencode($id) . '/prices',
         ));
 
-        set_transient($cache_key, $prices, 2 * MINUTE_IN_SECONDS);
+        set_transient($cache_key, $prices, 10 * MINUTE_IN_SECONDS);
 
         return rest_ensure_response($prices);
     }

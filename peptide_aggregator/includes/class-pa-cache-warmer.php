@@ -8,8 +8,8 @@ class PA_Cache_Warmer {
 
     const CRON_HOOK     = 'pa_warm_prices_cache';
     const CRON_INTERVAL = 'pa_every_2_minutes';
-    const BATCH_SIZE    = 5;   // products fetched per cron run to avoid timeout
-    const PRICES_TTL    = 2 * MINUTE_IN_SECONDS;
+    const BATCH_SIZE    = 10;  // products fetched per cron run to avoid timeout
+    const PRICES_TTL    = 10 * MINUTE_IN_SECONDS;
     const LOG_OPTION    = 'pa_cache_warmer_log';
 
     private $api;
@@ -143,7 +143,7 @@ class PA_Cache_Warmer {
                 return array();
             }
             $products = $result['data'];
-            set_transient('pa_products_cache', $products, 5 * MINUTE_IN_SECONDS);
+            set_transient('pa_products_cache', $products, 30 * MINUTE_IN_SECONDS);
         }
 
         // Extract unique IDs (products list may have multiple entries per base product)
