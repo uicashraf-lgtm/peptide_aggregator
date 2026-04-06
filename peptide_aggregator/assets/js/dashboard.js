@@ -530,13 +530,20 @@
     // Price range filter
     if (state.applied && state.applied.priceRanges.size > 0 && !state.applied.priceRanges.has('Any Price')) {
       list = list.filter(function (p) {
-        var price = p.min_price != null ? p.min_price : 9999;
+        // Use API min_price when available; otherwise derive from top_vendors prices
+        var price = p.min_price;
+        if (price == null) {
+          var vprices = (p.top_vendors || []).map(function (v) { return v.price; }).filter(function (pr) { return pr != null && pr > 0; });
+          price = vprices.length > 0 ? Math.min.apply(null, vprices) : null;
+        }
+        // If we still have no price data, don't exclude the product
+        if (price == null) return true;
         return Array.from(state.applied.priceRanges).some(function (range) {
           if (range === '$0 - $50')    return price >= 0   && price <= 50;
           if (range === '$50 - $100')  return price >  50  && price <= 100;
           if (range === '$100 - $250') return price >  100 && price <= 250;
           if (range === '$250 - $500') return price >  250 && price <= 500;
-          if (range === '$500+')       return price >  500;
+          if (range === '$500+')       return price >= 500;
           return true;
         });
       });
