@@ -1915,11 +1915,11 @@
         font-size: 10px !important;
     }
 
-    /* Results bar right: keep everything on one row */
+    /* Results bar right: wrap to two rows on mobile */
     .pa-shell .pa-results-right {
-        flex-wrap: nowrap !important;
-        align-items: flex-end !important;
-        gap: 6px !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 4px 8px !important;
     }
 
     /* Price toggle: label above buttons */
