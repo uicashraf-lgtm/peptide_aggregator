@@ -1934,18 +1934,43 @@ class PA_Admin {
                         var DOSAGE_RE = /(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\b/i;
                         var hasDefault = false;
                         var detectedFormulations = [];
+                        var addedLabels = false;
                         prices.forEach(function(v) {
-                            if (v.amount_mg != null && v.amount_unit) return;
-                            if ((v.product || '').match(DOSAGE_RE)) return;
+                            // Compute a dose label using the same logic as the frontend price loaders.
+                            // amount_unit is optional — fall back to 'mg' so that listings like
+                            // Ion Peptide's BPC-157 (amount_mg=157, amount_unit=null) are recognised
+                            // as a real dose rather than silently bucketed as null-dose.
+                            var priceLbl = null;
+                            if (v.amount_mg != null) {
+                                var pAmt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+                                priceLbl = pAmt + ' ' + (v.amount_unit || 'mg').toLowerCase();
+                            }
+                            if (!priceLbl) {
+                                var m = (v.product || '').match(DOSAGE_RE);
+                                if (m) priceLbl = m[1] + ' ' + m[2].toLowerCase();
+                            }
+                            if (priceLbl) {
+                                // Vendor has a dose — add to admin list if not already present
+                                // (covers amount_mg-only listings missed by steps 1-3).
+                                if (_dllSnapshot.indexOf(priceLbl) === -1) {
+                                    _dllSnapshot.push(priceLbl);
+                                    addedLabels = true;
+                                }
+                                return;
+                            }
+                            // No dose extractable — treat as null-dose ("default").
                             hasDefault = true;
                             // Detect formulation from the vendor's product name
                             var fk = adminGetFormulationKey(v.product || v.product_name || '');
                             // null = vial; stored as null in the array
                             if (detectedFormulations.indexOf(fk) === -1) detectedFormulations.push(fk);
                         });
-                        if (hasDefault && currentDoseLabelProductName === _pNameForDose) {
+                        if (currentDoseLabelProductName !== _pNameForDose) return;
+                        if (hasDefault) {
                             currentNullDoseFormulations = detectedFormulations;
                             if (_dllSnapshot.indexOf('default') === -1) _dllSnapshot.push('default');
+                        }
+                        if (hasDefault || addedLabels) {
                             renderDoseLabelsSection(_dllSnapshot);
                         }
                     })
