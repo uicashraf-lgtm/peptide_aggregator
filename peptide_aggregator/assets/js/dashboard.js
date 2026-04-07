@@ -27,9 +27,16 @@
 
   // Returns true if a lowercase product/dosage name matches any kit term:
   // "kit", "pack", "bulk", or a numeric vials pattern like "3 vials", "10vials".
-  var KIT_VIALS_RE = /\d+\s*vials?/;
+  // Returns false when the name also matches a non-vial formulation (e.g.
+  // "Air Dispersal Kit" → spray formulation, not a kit).
+  var KIT_VIALS_RE = /(?:^|\s)\d+\s*vials?\b/;
   function isKitTerm(s) {
-    return s.includes('kit') || s.includes('pack') || s.includes('bulk') || KIT_VIALS_RE.test(s);
+    var hasKit = s.includes('kit') || s.includes('pack') || s.includes('bulk') || KIT_VIALS_RE.test(s);
+    if (!hasKit) return false;
+    // If the name matches a non-vial formulation (spray, tablet, etc.) it is
+    // a delivery method, not a kit bundle.
+    var formulation = getFormulationKey(s);
+    return formulation === null;
   }
 
   function getFormulationKey(str) {
@@ -1167,10 +1174,17 @@
       return vendors;
     }
 
-    // Compute which non-vial formulations exist for this product (needed before pill render)
+    // Compute which non-vial formulations exist for this product (needed before pill render).
+    // Include enriched price data when available so formulations discovered after the
+    // initial /products call (e.g. "Air Dispersal Kit" → Spray) appear in the row.
     var allCardVendors = [];
     dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
     if (allCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { allCardVendors.push(v); });
+    if (p._cardPricesByDose) {
+      Object.keys(p._cardPricesByDose).forEach(function(k) {
+        (p._cardPricesByDose[k] || []).forEach(function(v) { allCardVendors.push(v); });
+      });
+    }
 
     // Tag-aware formulation resolver for compact card — mirrors vendorFormulationKey()
     // but uses this card's product tags instead of state.detailProductTags.
@@ -1706,29 +1720,31 @@
     foot.appendChild(arrow);
     card.appendChild(foot);
 
-    // If this product has a "default" remap but we couldn't detect formulations from the
-    // lightweight /products data, eagerly load full prices so the rebuilt card can show
-    // the formulation row. Rebuilds the grid once after enrichment; guarded by _formRowAdded
-    // so it doesn't loop.
+    // After enrichment, check whether the full /prices data reveals non-vial
+    // formulations that weren't present in the lightweight /products top_vendors
+    // (e.g. "Air Dispersal Kit" → Spray). Rebuilds the grid once if new
+    // formulations are discovered; guarded by _formRowAdded so it doesn't loop.
     if (!hasFormulationRow && !p._formRowAdded) {
-      var pKeyEager = (p.name || '').toLowerCase().trim();
-      var remapMapEager = (UI.dose_remaps && UI.dose_remaps[pKeyEager]) || {};
-      if (remapMapEager['default']) {
-        p._formRowAdded = true;
-        ensureCardAllPricesLoaded().then(function() {
-          var newCardFormKeys = [];
-          var newAllCardVendors = [];
-          dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); }); });
-          if (newAllCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); });
-          newAllCardVendors.forEach(function(v) {
-            var fk = getCardFormulationKey(v);
-            if (fk && newCardFormKeys.indexOf(fk) === -1) newCardFormKeys.push(fk);
+      p._formRowAdded = true;
+      ensureCardAllPricesLoaded().then(function() {
+        var newCardFormKeys = [];
+        // Check both the original dosage vendors and the enriched price data
+        var newAllCardVendors = [];
+        dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); }); });
+        if (newAllCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); });
+        if (p._cardPricesByDose) {
+          Object.keys(p._cardPricesByDose).forEach(function(k) {
+            (p._cardPricesByDose[k] || []).forEach(function(v) { newAllCardVendors.push(v); });
           });
-          if (newCardFormKeys.length >= 1) {
-            renderProductGrid(filteredProducts());
-          }
+        }
+        newAllCardVendors.forEach(function(v) {
+          var fk = getCardFormulationKey(v);
+          if (fk && newCardFormKeys.indexOf(fk) === -1) newCardFormKeys.push(fk);
         });
-      }
+        if (newCardFormKeys.length >= 1) {
+          renderProductGrid(filteredProducts());
+        }
+      });
     }
 
     card.addEventListener('click', function () { loadProductDetail(p._activeId || p.id, p.name); });
