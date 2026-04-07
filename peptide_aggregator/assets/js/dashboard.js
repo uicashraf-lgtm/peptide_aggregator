@@ -1885,10 +1885,12 @@
         return {
           label: dosageLabelMap[normKey],
           vendors: dosageMap[normKey].sort(function(a, b) {
-            return (a.effective_price == null) - (b.effective_price == null) || (a.effective_price || 0) - (b.effective_price || 0);
+            var pa = a.effective_price != null ? a.effective_price : a.price;
+            var pb = b.effective_price != null ? b.effective_price : b.price;
+            return (pa == null) - (pb == null) || (pa || 0) - (pb || 0);
           }).map(function(v) {
             return {
-              vendor: v.vendor, price: v.effective_price, previous_price: v.previous_price,
+              vendor: v.vendor, price: v.effective_price != null ? v.effective_price : v.price, previous_price: v.previous_price,
               currency: v.currency, listing_id: v.listing_id, product_name: v.product_name || v.product,
               amount_mg: v.amount_mg, amount_unit: v.amount_unit, price_per_mg: v.price_per_mg,
               link: v.link, logo_url: v.logo_url, coupon_code: v.coupon_code,
@@ -2380,7 +2382,7 @@
       el2.innerHTML = '<p class="pa-no-prices">No prices available yet. The crawler may still be running.</p>';
       return;
     }
-    prices.sort(function (a, b) { return (a.effective_price || 0) - (b.effective_price || 0); });
+    prices.sort(function (a, b) { var pa = a.effective_price != null ? a.effective_price : (a.price || 0); var pb = b.effective_price != null ? b.effective_price : (b.price || 0); return pa - pb; });
     var wrap = el('div', 'pa-detail-vendor-list');
     prices.forEach(function (p, i) {
       var row = el('div', 'pa-detail-vrow' + (i === 0 ? ' is-best' : ''));
