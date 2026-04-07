@@ -27,9 +27,16 @@
 
   // Returns true if a lowercase product/dosage name matches any kit term:
   // "kit", "pack", "bulk", or a numeric vials pattern like "3 vials", "10vials".
+  // Returns false when the name also matches a non-vial formulation (e.g.
+  // "Air Dispersal Kit" → spray formulation, not a kit).
   var KIT_VIALS_RE = /(?:^|\s)\d+\s*vials?\b/;
   function isKitTerm(s) {
-    return s.includes('kit') || s.includes('pack') || s.includes('bulk') || KIT_VIALS_RE.test(s);
+    var hasKit = s.includes('kit') || s.includes('pack') || s.includes('bulk') || KIT_VIALS_RE.test(s);
+    if (!hasKit) return false;
+    // If the name matches a non-vial formulation (spray, tablet, etc.) it is
+    // a delivery method, not a kit bundle.
+    var formulation = getFormulationKey(s);
+    return formulation === null;
   }
 
   function getFormulationKey(str) {
