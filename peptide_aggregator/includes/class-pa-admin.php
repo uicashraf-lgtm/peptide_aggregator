@@ -2037,11 +2037,16 @@ class PA_Admin {
                 var _pBaseKey5   = pBaseKey;
                 var _pName5      = currentDoseLabelProductName;
                 var _DOSAGE_RE5  = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)(?:\s*\([^)]*\))?$/i;
+                // Normalize base name for comparison: lowercase, collapse spaces/hyphens.
+                // Handles cases where admin has "BPC-157" but REST API returns "BPC 157".
+                function normBase5(s) { return (s || '').toLowerCase().replace(/[\s\-]+/g, ''); }
+                var _normPBaseKey5 = normBase5(_pBaseKey5);
                 fetch(PA_REST_PRODUCTS_URL)
                     .then(function(r) { return r.json(); })
                     .then(function(allProducts) {
                         if (!Array.isArray(allProducts)) return;
                         if (currentDoseLabelProductName !== _pName5) return;
+                        console.log('[PA Dose Debug] Step 5: REST products count=', allProducts.length, 'looking for base=', _pBaseKey5, '(norm='+_normPBaseKey5+')');
                         var added = false;
                         allProducts.forEach(function(prod) {
                             var name = prod.name || '';
@@ -2050,7 +2055,9 @@ class PA_Admin {
                             var base = dm
                                 ? name.slice(0, name.length - dm[0].length).trim().toLowerCase()
                                 : name.trim().toLowerCase();
-                            if (base !== _pBaseKey5) return;
+                            // Use normalized comparison to handle "bpc-157" vs "bpc 157".
+                            if (normBase5(base) !== _normPBaseKey5) return;
+                            console.log('[PA Dose Debug] Step 5 matched product:', name, '| base=', base, '| dm=', dm ? dm[1] : null, '| available_dosages=', (prod.available_dosages || []).map(function(d){return d && d.label || d;}));
                             // Name-derived dose label.
                             if (dm) {
                                 var lbl = dm[1].replace(/\s+/g, '').toLowerCase()
@@ -2070,9 +2077,10 @@ class PA_Admin {
                                 }
                             });
                         });
+                        console.log('[PA Dose Debug] Step 5 done: added=', added, 'snapshot=', _dllSnapshot.slice());
                         if (added) renderDoseLabelsSection(_dllSnapshot);
                     })
-                    .catch(function() { /* silently ignore */ });
+                    .catch(function(err) { console.error('[PA Dose Debug] Step 5 fetch failed:', err); });
 
                 renderDoseLabelsSection(doseLabelList);
 
