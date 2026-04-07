@@ -2027,6 +2027,51 @@ class PA_Admin {
                         }
                     })
                     .catch(function() { /* silently ignore */ });
+
+                // 5. Fetch the full public /api/products list and run the exact same
+                //    parseDosage + available_dosages extraction the frontend uses in
+                //    groupByDosage().  This is the definitive source: if the compact
+                //    card shows a dose pill, this step will find it.
+                var _pBaseKey5   = pBaseKey;
+                var _pName5      = currentDoseLabelProductName;
+                var _DOSAGE_RE5  = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)(?:\s*\([^)]*\))?$/i;
+                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products')
+                    .then(function(r) { return r.json(); })
+                    .then(function(allProducts) {
+                        if (!Array.isArray(allProducts)) return;
+                        if (currentDoseLabelProductName !== _pName5) return;
+                        var added = false;
+                        allProducts.forEach(function(prod) {
+                            var name = prod.name || '';
+                            // parseDosage: extract dosage suffix from product name.
+                            var dm = name.match(_DOSAGE_RE5);
+                            var base = dm
+                                ? name.slice(0, name.length - dm[0].length).trim().toLowerCase()
+                                : name.trim().toLowerCase();
+                            if (base !== _pBaseKey5) return;
+                            // Name-derived dose label.
+                            if (dm) {
+                                var lbl = dm[1].replace(/\s+/g, '').toLowerCase()
+                                               .replace(/(\d)([a-z])/, '$1 $2');
+                                if (lbl && _dllSnapshot.indexOf(lbl) === -1) {
+                                    _dllSnapshot.push(lbl);
+                                    added = true;
+                                }
+                            }
+                            // available_dosages labels.
+                            (prod.available_dosages || []).forEach(function(d) {
+                                var dlbl = (d && typeof d === 'object')
+                                    ? String(d.label || '') : String(d || '');
+                                if (dlbl && _dllSnapshot.indexOf(dlbl) === -1) {
+                                    _dllSnapshot.push(dlbl);
+                                    added = true;
+                                }
+                            });
+                        });
+                        if (added) renderDoseLabelsSection(_dllSnapshot);
+                    })
+                    .catch(function() { /* silently ignore */ });
+
                 renderDoseLabelsSection(doseLabelList);
 
                 document.getElementById('pa-product-form-wrap').scrollIntoView({behavior:'smooth', block:'start'});
