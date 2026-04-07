@@ -517,7 +517,7 @@
               if (!supplierInfo[v.vendor]) supplierInfo[v.vendor] = { name: v.vendor, country: v.country || '', logo_url: v.logo_url || '' };
               // Build per-dosage vendor map
               var lbl = null;
-              if (v.amount_mg != null && v.amount_unit) {
+              if (v.amount_mg != null) {
                 var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
                 lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
               }
@@ -543,7 +543,7 @@
             var remapMapAV = (UI.dose_remaps && UI.dose_remaps[pKeyAV]) || {};
             (Array.isArray(raw) ? raw : []).forEach(function(v) {
               var lbl2 = null;
-              if (v.amount_mg != null && v.amount_unit) {
+              if (v.amount_mg != null) {
                 var amt2 = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
                 lbl2 = amt2 + ' ' + (v.amount_unit || 'mg').toLowerCase();
               }
