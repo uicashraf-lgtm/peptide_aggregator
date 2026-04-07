@@ -1713,29 +1713,31 @@
     foot.appendChild(arrow);
     card.appendChild(foot);
 
-    // If the lightweight /products data didn't reveal any non-vial formulations,
-    // eagerly load full prices so the rebuilt card can show the formulation row
-    // (e.g. "Air Dispersal Kit" → Spray). Rebuilds the grid once after enrichment;
-    // guarded by _formRowAdded so it doesn't loop.
+    // After enrichment, check whether the full /prices data reveals non-vial
+    // formulations that weren't present in the lightweight /products top_vendors
+    // (e.g. "Air Dispersal Kit" → Spray). Rebuilds the grid once if new
+    // formulations are discovered; guarded by _formRowAdded so it doesn't loop.
     if (!hasFormulationRow && !p._formRowAdded) {
-      var pKeyEager = (p.name || '').toLowerCase().trim();
-      var remapMapEager = (UI.dose_remaps && UI.dose_remaps[pKeyEager]) || {};
-      if (remapMapEager['default']) {
-        p._formRowAdded = true;
-        ensureCardAllPricesLoaded().then(function() {
-          var newCardFormKeys = [];
-          var newAllCardVendors = [];
-          dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); }); });
-          if (newAllCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); });
-          newAllCardVendors.forEach(function(v) {
-            var fk = getCardFormulationKey(v);
-            if (fk && newCardFormKeys.indexOf(fk) === -1) newCardFormKeys.push(fk);
+      p._formRowAdded = true;
+      ensureCardAllPricesLoaded().then(function() {
+        var newCardFormKeys = [];
+        // Check both the original dosage vendors and the enriched price data
+        var newAllCardVendors = [];
+        dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); }); });
+        if (newAllCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { newAllCardVendors.push(v); });
+        if (p._cardPricesByDose) {
+          Object.keys(p._cardPricesByDose).forEach(function(k) {
+            (p._cardPricesByDose[k] || []).forEach(function(v) { newAllCardVendors.push(v); });
           });
-          if (newCardFormKeys.length >= 1) {
-            renderProductGrid(filteredProducts());
-          }
+        }
+        newAllCardVendors.forEach(function(v) {
+          var fk = getCardFormulationKey(v);
+          if (fk && newCardFormKeys.indexOf(fk) === -1) newCardFormKeys.push(fk);
         });
-      }
+        if (newCardFormKeys.length >= 1) {
+          renderProductGrid(filteredProducts());
+        }
+      });
     }
 
     card.addEventListener('click', function () { loadProductDetail(p._activeId || p.id, p.name); });
