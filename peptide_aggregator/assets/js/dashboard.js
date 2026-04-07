@@ -30,7 +30,7 @@
   // Formulation keywords used for detail-view vendor filtering
   // Order matters: most specific first so the first match wins.
   var FORMULATIONS = [
-    { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'], patterns: [/x\s*\d+/i] },
+    { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps', 'units'], patterns: [/x\s*\d+/i] },
     { key: 'liquid',  label: 'Liquid',   terms: ['liquid', 'solution', 'dropper', '/ml'] },
     { key: 'topical', label: 'Topical',  terms: ['topical', 'cream', 'gel', 'patch', 'lotion', 'balm'] },
     { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal', 'aerosol', 'dispersal', 'air dispersal'] },
@@ -73,6 +73,7 @@
 
     return null;
   }
+
   // Resolve formulation key for a vendor: name-detection wins, product tags as fallback.
   function vendorFormulationKey(v) {
     var k = getFormulationKey(v.product_name || v.product || '');
