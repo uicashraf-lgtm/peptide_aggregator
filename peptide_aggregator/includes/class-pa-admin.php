@@ -1856,6 +1856,11 @@ class PA_Admin {
                                     btn.disabled = false; btn.textContent = 'Save';
                                     if (r.ok) {
                                         showNotice('success', 'Dose saved for listing #' + lid + ' (locked from scraper overwrite).');
+                                        // Clear WP products cache so the frontend picks up the new dosage grouping.
+                                        var cXhr = new XMLHttpRequest();
+                                        cXhr.open('POST', ajaxurl);
+                                        cXhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                                        cXhr.send('action=pa_clear_products_cache&_wpnonce=' + PA_CLEAR_CACHE_NONCE);
                                         loadScrapedPrices(pid);
                                     } else {
                                         showNotice('error', 'Failed: ' + (r.detail || 'unknown error'));
