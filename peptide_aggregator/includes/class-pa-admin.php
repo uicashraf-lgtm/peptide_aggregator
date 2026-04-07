@@ -771,12 +771,33 @@ class PA_Admin {
             if (!empty($pid) && empty($product['tags']) && isset($public_tags_by_id[$pid])) {
                 $product['tags'] = $public_tags_by_id[$pid];
             }
-            // Populate available_dosages: prefer exact ID match, fall back to
-            // base-name bucket which aggregates all variants' dosage labels.
-            if (!empty($pid) && isset($public_dosages_by_id[$pid])) {
-                $product['available_dosages'] = $public_dosages_by_id[$pid];
-            } elseif ($base !== '' && isset($public_dosages_by_base[$base])) {
-                $product['available_dosages'] = $public_dosages_by_base[$base];
+            // Populate available_dosages: merge the exact-ID match with the
+            // base-name bucket so the admin sees all dosage labels that the
+            // frontend's groupByDosage() surfaces from sibling variants.
+            // Previously, using only the ID-matched product could miss dosages
+            // that live on other variants (e.g. "BPC-157 157mg" contributing
+            // "157 mg" to the group while the main "BPC-157" product's ID match
+            // had no such entry).
+            $pid_dosages  = (!empty($pid) && isset($public_dosages_by_id[$pid]))
+                            ? (array) $public_dosages_by_id[$pid]
+                            : array();
+            $base_dosages = ($base !== '' && isset($public_dosages_by_base[$base]))
+                            ? (array) $public_dosages_by_base[$base]
+                            : array();
+            // Start from the ID-specific list, then append any labels from the
+            // base-merged bucket that are not already present.
+            $merged_dosages = $pid_dosages;
+            $get_lbl = function($d) { return is_array($d) ? (string) ($d['label'] ?? '') : (string) $d; };
+            $existing_lbls  = array_map($get_lbl, $merged_dosages);
+            foreach ($base_dosages as $d) {
+                $lbl = $get_lbl($d);
+                if ($lbl !== '' && !in_array($lbl, $existing_lbls, true)) {
+                    $merged_dosages[] = $d;
+                    $existing_lbls[]  = $lbl;
+                }
+            }
+            if (!empty($merged_dosages)) {
+                $product['available_dosages'] = $merged_dosages;
             }
         }
         unset($product);
