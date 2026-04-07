@@ -234,6 +234,7 @@
         var isKitByName = formulation === null && isKitTerm(pn);
         return Object.assign({}, v, {
           product_name: effectiveName,
+          price: v.price != null ? v.price : (v.effective_price != null ? v.effective_price : null),
           _is_kit: formulation === null && (v._is_kit === true || srcIsKit || isKitByName),
           _formulation: formulation
         });
@@ -2392,7 +2393,7 @@
       info.appendChild(el('span', 'pa-vendor-name', escHtml(p.vendor)));
       if (p.last_fetched_at) info.appendChild(el('span', 'pa-vendor-updated', 'Updated ' + new Date(p.last_fetched_at).toLocaleDateString()));
       var right = el('div', 'pa-detail-vrow-right');
-      var priceEl = el('span', 'pa-detail-price', escHtml(fmt(p.effective_price, p.currency)));
+      var priceEl = el('span', 'pa-detail-price', escHtml(fmt(p.effective_price != null ? p.effective_price : p.price, p.currency)));
       priceEl.setAttribute('data-listing-id', p.listing_id);
       right.appendChild(priceEl);
       if (p.link) {
