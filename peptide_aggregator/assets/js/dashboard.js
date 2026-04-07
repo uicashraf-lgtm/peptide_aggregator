@@ -434,9 +434,17 @@
           }
         });
       });
-      // Re-sort mg-amount entries' vendors by price after backfill
+      // Re-sort mg-amount entries' vendors by price after backfill, and remove
+      // vendors whose amount_mg contradicts the bucket label (stale backend data).
       map[k].available_dosages.forEach(function(d) {
         if (mgStartRe.test((d.label || '').trim())) {
+          var bucketNorm = (d.label || '').toLowerCase().replace(/\s+/g, '');
+          d.vendors = d.vendors.filter(function(v) {
+            if (v.amount_mg == null || !v.amount_unit) return true; // no amount info → keep
+            var vAmt = v.amount_mg === Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+            var vNorm = (vAmt + '' + (v.amount_unit || 'mg')).toLowerCase().replace(/\s+/g, '');
+            return vNorm === bucketNorm;
+          });
           d.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
         }
       });
@@ -1151,8 +1159,17 @@
         // Also merge pre-loaded fallbackVendors (top_vendors from available_dosages):
         // they carry correct _formulation from the products endpoint even when the
         // prices endpoint returns a plain product name with no formulation keywords.
+        // Skip vendors whose amount_mg places them in a different dosage bucket —
+        // the prices API is the authoritative source after inline dose edits.
+        var doseLblMatch = normLbl.match(/^(\d+(?:\.\d+)?)(mg|mcg|ug|g|iu|ml)$/);
         (fallbackVendors || []).forEach(function(v) {
-          if (!vendors.some(function(ev) { return sameVendorListing(ev, v); })) vendors.push(v);
+          if (vendors.some(function(ev) { return sameVendorListing(ev, v); })) return;
+          // If the vendor has an explicit amount_mg that doesn't match this bucket, skip it.
+          if (doseLblMatch && v.amount_mg != null && v.amount_unit) {
+            var vNorm = (String(v.amount_mg === Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg) + v.amount_unit).toLowerCase().replace(/\s+/g, '');
+            if (vNorm !== normLbl) return;
+          }
+          vendors.push(v);
         });
       } else {
         vendors = fallbackVendors;
