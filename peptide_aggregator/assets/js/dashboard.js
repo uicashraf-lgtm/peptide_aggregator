@@ -1132,7 +1132,16 @@
     function getCardVendorsForDose(doseLabel, fallbackVendors) {
       if (!p._cardPricesByDose) return fallbackVendors;
       var normLbl = (doseLabel || '').toLowerCase().replace(/\s+/g, '');
-      var vendors = p._cardPricesByDose[normLbl] || fallbackVendors;
+      var byDose = p._cardPricesByDose[normLbl];
+      var byDefault = p._cardPricesByDose['default'] || [];
+      // Merge null-dose vendors (bucketed as "default") into the dosage-specific list.
+      // This preserves spray/tablet vendors that have no amount_mg so they remain visible
+      // when the user switches formulation tabs (e.g. Spray shows Atomik Air Dispersal).
+      var vendors = byDose
+        ? (byDefault.length
+            ? byDose.concat(byDefault.filter(function(v) { return !byDose.some(function(ev) { return sameVendorListing(ev, v); }); }))
+            : byDose)
+        : fallbackVendors;
       // Hide kit vendors unless the Kits bar filter or the card-local toggle is active.
       var kitsOn = cardKitsActive || state.barFilters.kits || (state.applied && state.applied.toggles.kits);
       if (!kitsOn) {
@@ -1215,9 +1224,23 @@
       // Use the API-sourced vendor list when available — it has correct _is_kit flags.
       // For kit visibility checks always use the unfiltered list (before kit exclusion)
       // so pills aren't hidden when kits is toggled on.
-      var rawVendors = (p._cardPricesByDose)
-        ? (p._cardPricesByDose[(d.label || '').toLowerCase().replace(/\s+/g, '')] || d.top_vendors || [])
-        : (d.top_vendors || []);
+      var rawVendors;
+      if (p._cardPricesByDose) {
+        var byDose = p._cardPricesByDose[(d.label || '').toLowerCase().replace(/\s+/g, '')];
+        // Also include null-dose vendors (bucketed as "default") — e.g. a spray listing
+        // from the same vendor that has no amount_mg will be in "default" but should
+        // appear when the user switches to the Spray formulation tab.
+        var byDefault = p._cardPricesByDose['default'] || [];
+        if (byDose) {
+          rawVendors = byDefault.length
+            ? byDose.concat(byDefault.filter(function(v) { return !byDose.some(function(ev) { return sameVendorListing(ev, v); }); }))
+            : byDose;
+        } else {
+          rawVendors = d.top_vendors || [];
+        }
+      } else {
+        rawVendors = d.top_vendors || [];
+      }
       var byForm = filterByFormulation(rawVendors, fKey);
       var effectiveKitsActive = cardKitsActive || kitsActive;
       if (!effectiveKitsActive) return byForm.filter(function(v) { return !isKitTerm((v.product_name||'').toLowerCase()) && !v._is_kit; }).length > 0;
