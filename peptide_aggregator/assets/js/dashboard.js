@@ -242,7 +242,6 @@
           available_dosages: (function() {
             var initDosages = [];
             (p.available_dosages || []).forEach(function(d) {
-              if ((d.label || '').indexOf('157') !== -1) { console.log('[PA Dose Debug] 157 in available_dosages (init) - product:', p.name, 'label:', d.label); }
               var normRaw0 = (d.label || '').toLowerCase().replace(/\s+/g, '');
               var remapped = d;
               if (remapMap0[normRaw0]) {
@@ -278,7 +277,6 @@
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
       // Merge available_dosages (objects with {label, vendors})
       (p.available_dosages || []).forEach(function(d) {
-        if ((d.label || d + '').indexOf('157') !== -1) { console.log('[PA Dose Debug] 157 in available_dosages (merge) - product:', p.name, 'key:', key, 'label:', d.label || d); }
         var rawLabel = (d.label || d);
         // Apply dose remap: if this product has a remap for this scraped label,
         // rewrite the label so it merges into the correct canonical bucket.
@@ -316,7 +314,6 @@
         var dosageRemap = (UI.dose_remaps && UI.dose_remaps[(pd.base || '').toLowerCase().trim()]) || {};
         var dosageNorm = pd.dosage.toLowerCase().replace(/\s+/g, '');
         var mappedDosageLabel = dosageRemap[dosageNorm] || pd.dosage;
-        if (pd.dosage.indexOf('157') !== -1) { console.log('[PA Dose Debug] 157 from parseDosage - product:', p.name, 'base:', pd.base, 'dose:', pd.dosage, 'mapped:', mappedDosageLabel); }
         grp.dosages.push({ label: mappedDosageLabel, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
