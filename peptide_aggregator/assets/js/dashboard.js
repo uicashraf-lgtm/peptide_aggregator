@@ -12,6 +12,19 @@
   const COUPON_SAVINGS = UI.coupon_savings || {};
   let sseSource = null;
 
+  // Compute coupon-discounted price for a vendor; returns original price if no coupon applies.
+  function discountedPrice(vendorName, price) {
+    if (price == null) return null;
+    var sav = COUPON_SAVINGS[(vendorName || '').toLowerCase()] || '';
+    if (!sav) return price;
+    var savStr = String(sav).trim();
+    var pctM = savStr.match(/(\d+(?:\.\d+)?)\s*%/);
+    var fixM = !pctM ? savStr.match(/\$\s*(\d+(?:\.\d+)?)/) : null;
+    if (pctM) return price * (1 - parseFloat(pctM[1]) / 100);
+    if (fixM) return Math.max(0, price - parseFloat(fixM[1]));
+    return price;
+  }
+
 
   // ─── Utility ─────────────────────────────────────────────────────────────
   // Formulation keywords used for detail-view vendor filtering
@@ -726,9 +739,16 @@
       });
     }
     const sort = (document.getElementById('pa-grid-sort') || {}).value || 'name';
+    // Compute effective minimum price considering coupon discounts
+    function effectiveMinPrice(p) {
+      var vendors = p.top_vendors || [];
+      var prices = vendors.map(function(v) { return discountedPrice(v.vendor, v.price); }).filter(function(pr) { return pr != null && pr > 0; });
+      if (prices.length > 0) return Math.min.apply(null, prices);
+      return p.min_price != null ? p.min_price : null;
+    }
     list.sort(function (a, b) {
-      if (sort === 'price_asc') return (a.min_price || 9999) - (b.min_price || 9999);
-      if (sort === 'price_desc') return (b.min_price || 0) - (a.min_price || 0);
+      if (sort === 'price_asc') return (effectiveMinPrice(a) || 9999) - (effectiveMinPrice(b) || 9999);
+      if (sort === 'price_desc') return (effectiveMinPrice(b) || 0) - (effectiveMinPrice(a) || 0);
       if (sort === 'vendors') return b.vendor_count - a.vendor_count;
       return a.name.localeCompare(b.name);
     });
@@ -2162,16 +2182,18 @@
       var dedupKey = state.detailTypeFilter === 'kit'
         ? v.vendor + '\x00' + (v.product_name || '')
         : v.vendor;
-      var p = v.price != null ? v.price : Infinity;
+      var p = v.price != null ? discountedPrice(v.vendor, v.price) : Infinity;
       var existing = vendorBest[dedupKey];
-      var ep = existing && existing.price != null ? existing.price : Infinity;
+      var ep = existing && existing.price != null ? discountedPrice(existing.vendor, existing.price) : Infinity;
       if (!existing || p < ep) {
         vendorBest[dedupKey] = v;
       }
     });
     filtered = Object.keys(vendorBest).map(function(k) { return vendorBest[k]; });
     filtered.sort(function(a, b) {
-      var d = (a.price || 0) - (b.price || 0);
+      var ap = discountedPrice(a.vendor, a.price) || 0;
+      var bp = discountedPrice(b.vendor, b.price) || 0;
+      var d = ap - bp;
       return state.detailSortDir === 'desc' ? -d : d;
     });
     if (filtered.length === 0) {
