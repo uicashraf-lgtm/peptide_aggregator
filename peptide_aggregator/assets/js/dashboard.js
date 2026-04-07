@@ -1067,6 +1067,13 @@
         .then(function(r) { return r.json(); })
         .then(function(allPrices) {
           if (!Array.isArray(allPrices)) { p._cardPricesByDose = {}; return; }
+          // DEBUG: log all vendor entries to diagnose formulation detection
+          if ((p.name || '').toLowerCase().indexOf('glut') !== -1) {
+            allPrices.forEach(function(v) {
+              var pn = (v.product_name || v.product || '').toLowerCase();
+              console.log('[PA Card Debug]', p.name, '| vendor:', v.vendor, '| product_name:', v.product_name, '| product:', v.product, '| amount_mg:', v.amount_mg, '| amount_unit:', v.amount_unit, '| _formulation:', v._formulation, '| formulation:', v.formulation, '| formulation_key:', v.formulation_key, '| _is_kit:', v._is_kit, '| detected_form:', getFormulationKey(pn));
+            });
+          }
           // Build dosage map exactly as the detail view does.
           var dosageMap = {};
           var dosageLabelMap = {}; // normLbl -> display label
