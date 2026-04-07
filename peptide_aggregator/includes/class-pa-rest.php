@@ -201,22 +201,28 @@ class PA_Rest {
                 unset($product);
             }
 
-            // Auto-tag products as 'kit' when the API signals kit availability.
-            // Checks (in order of reliability for the /products endpoint):
-            //   1. available_dosages label contains 'kit' (e.g. "Kit", "5mg Kit")
-            //   2. top_vendors product_name contains 'kit' (present when the field is populated)
-            //   3. available_dosages vendor product_name contains 'kit'
-            // Admin tag overrides applied above always take precedence.
+            // Auto-tag products as 'kit_auto' only when BOTH conditions are met:
+            //   1. The product is toggled as a kit in admin (pa_kit_product_ids)
+            //   2. A vendor/dosage name contains a vial quantity (e.g. "10 vials")
+            //      or the word 'kit'
+            // This prevents false positives like "CJC-1295 Vial" which has a
+            // number next to "Vial" but is not actually a kit.
             if (is_array($products)) {
-                // Returns true if a lowercase label/product_name matches any kit term.
+                $admin_kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
+                // Returns true if a lowercase label/product_name signals a kit.
                 $is_kit_name = function($s) {
                     return strpos($s, 'kit') !== false
-                        || preg_match('/\d+\s*vials?/i', $s);
+                        || preg_match('/(?:^|\s)\d+\s*vials?\b/i', $s);
                 };
                 foreach ($products as &$product) {
                     $existing_tags = array_map('strtolower', (array) ($product['tags'] ?? []));
                     if (in_array('kit', $existing_tags, true) || in_array('kit_auto', $existing_tags, true)) {
                         continue; // already tagged — do not overwrite
+                    }
+                    // Must be toggled as kit in admin to qualify for auto-tagging.
+                    $pid = intval($product['id'] ?? 0);
+                    if (!in_array($pid, $admin_kit_ids, true)) {
+                        continue;
                     }
                     $has_kit = false;
                     // Check available_dosages labels first — most reliable field in /products response.
