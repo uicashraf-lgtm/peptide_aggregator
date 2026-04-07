@@ -27,7 +27,7 @@
 
   // Returns true if a lowercase product/dosage name matches any kit term:
   // "kit", "pack", "bulk", or a numeric vials pattern like "3 vials", "10vials".
-  var KIT_VIALS_RE = /\d+\s*vials?/;
+  var KIT_VIALS_RE = /(?:^|\s)\d+\s*vials?\b/;
   function isKitTerm(s) {
     return s.includes('kit') || s.includes('pack') || s.includes('bulk') || KIT_VIALS_RE.test(s);
   }
