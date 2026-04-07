@@ -1361,6 +1361,13 @@
           if (dosageHasFormulation(dosages[kdi], activeFormulation)) { activeIdx = kdi; break; }
         }
       }
+      // Ensure the active dosage has vendors for the current formulation; otherwise
+      // the pill for the active index is skipped and nothing appears selected.
+      if (!kitsActive && dosages.length > 0 && !dosageHasFormulation(dosages[activeIdx], activeFormulation)) {
+        for (var fdi = 0; fdi < dosages.length; fdi++) {
+          if (dosageHasFormulation(dosages[fdi], activeFormulation)) { activeIdx = fdi; break; }
+        }
+      }
       // If the active dosage has no vendors for the current supplier filter, move to the first that does.
       if (!dosageHasSupplierFilter(p, dosages[activeIdx] || {})) {
         for (var sdi = 0; sdi < dosages.length; sdi++) {
