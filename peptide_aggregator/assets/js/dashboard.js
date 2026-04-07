@@ -1137,14 +1137,19 @@
       var normLbl = (doseLabel || '').toLowerCase().replace(/\s+/g, '');
       var byDose = p._cardPricesByDose[normLbl];
       var byDefault = p._cardPricesByDose['default'] || [];
-      // Merge null-dose vendors (bucketed as "default") into the dosage-specific list.
-      // This preserves spray/tablet vendors that have no amount_mg so they remain visible
-      // when the user switches formulation tabs (e.g. Spray shows Atomik Air Dispersal).
-      var vendors = byDose
-        ? (byDefault.length
-            ? byDose.concat(byDefault.filter(function(v) { return !byDose.some(function(ev) { return sameVendorListing(ev, v); }); }))
-            : byDose)
-        : fallbackVendors;
+      var vendors;
+      if (byDose) {
+        // Start with the dosage-specific price data, merge in null-dose bucket.
+        vendors = byDose.concat(byDefault.filter(function(v) { return !byDose.some(function(ev) { return sameVendorListing(ev, v); }); }));
+        // Also merge pre-loaded fallbackVendors (top_vendors from available_dosages):
+        // they carry correct _formulation from the products endpoint even when the
+        // prices endpoint returns a plain product name with no formulation keywords.
+        (fallbackVendors || []).forEach(function(v) {
+          if (!vendors.some(function(ev) { return sameVendorListing(ev, v); })) vendors.push(v);
+        });
+      } else {
+        vendors = fallbackVendors;
+      }
       // Hide kit vendors unless the Kits bar filter or the card-local toggle is active.
       var kitsOn = cardKitsActive || state.barFilters.kits || (state.applied && state.applied.toggles.kits);
       if (!kitsOn) {
@@ -1230,17 +1235,18 @@
       var rawVendors;
       if (p._cardPricesByDose) {
         var byDose = p._cardPricesByDose[(d.label || '').toLowerCase().replace(/\s+/g, '')];
-        // Also include null-dose vendors (bucketed as "default") — e.g. a spray listing
-        // from the same vendor that has no amount_mg will be in "default" but should
-        // appear when the user switches to the Spray formulation tab.
         var byDefault = p._cardPricesByDose['default'] || [];
         if (byDose) {
-          rawVendors = byDefault.length
-            ? byDose.concat(byDefault.filter(function(v) { return !byDose.some(function(ev) { return sameVendorListing(ev, v); }); }))
-            : byDose;
+          rawVendors = byDose.concat(byDefault.filter(function(v) { return !byDose.some(function(ev) { return sameVendorListing(ev, v); }); }));
         } else {
-          rawVendors = d.top_vendors || [];
+          rawVendors = (d.top_vendors || []).slice();
         }
+        // Always also merge pre-loaded top_vendors: the products endpoint gives them
+        // correct _formulation (e.g. 'spray' from "dispersal" in product name) while
+        // the prices endpoint may return a plain name that can't be classified.
+        (d.top_vendors || []).forEach(function(v) {
+          if (!rawVendors.some(function(ev) { return sameVendorListing(ev, v); })) rawVendors.push(v);
+        });
       } else {
         rawVendors = d.top_vendors || [];
       }
