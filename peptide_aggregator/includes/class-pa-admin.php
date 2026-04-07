@@ -981,6 +981,7 @@ class PA_Admin {
                 </a>
                 <button type="button" class="button" id="pa-filter-btn">Filter</button>
                 <button type="button" class="button" id="pa-clear-btn" style="display:none">Clear</button>
+                <button type="button" class="button" id="pa-sync-doses-btn" title="Re-save all dose-locked listings to sync variant_amounts with amount_mg">Sync Stale Doses</button>
                 <span id="pa-product-count" style="color:#666;font-size:13px"></span>
             </div>
 
@@ -1399,6 +1400,62 @@ class PA_Admin {
                 currentPage = 1;
                 renderTable();
             });
+            // ── Sync Stale Doses ────────────────────────────────────────
+            document.getElementById('pa-sync-doses-btn').addEventListener('click', function() {
+                var btn = this;
+                if (!confirm('This will re-save every dose-locked listing to sync variant_amounts with amount_mg. Continue?')) return;
+                btn.disabled = true;
+                btn.textContent = 'Scanning…';
+                var productIds = PA_PRODUCTS.map(function(p) { return p.id; });
+                var total = 0, patched = 0, errors = 0, scanned = 0;
+
+                function scanNext() {
+                    if (productIds.length === 0) {
+                        btn.textContent = 'Done — ' + patched + ' synced' + (errors ? ', ' + errors + ' errors' : '');
+                        btn.disabled = false;
+                        // Clear WP cache so frontend picks up changes.
+                        var cXhr = new XMLHttpRequest();
+                        cXhr.open('POST', ajaxurl);
+                        cXhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                        cXhr.send('action=pa_clear_products_cache&_wpnonce=' + PA_CLEAR_CACHE_NONCE);
+                        showNotice('success', 'Sync complete: ' + patched + ' listings patched out of ' + total + ' dose-locked.' + (errors ? ' (' + errors + ' errors)' : ''));
+                        return;
+                    }
+                    var pid = productIds.shift();
+                    scanned++;
+                    btn.textContent = 'Scanning ' + scanned + '/' + (scanned + productIds.length) + '…';
+                    fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products/' + encodeURIComponent(pid) + '/prices')
+                        .then(function(r) { return r.json(); })
+                        .then(function(listings) {
+                            if (!Array.isArray(listings)) { scanNext(); return; }
+                            var locked = listings.filter(function(v) { return v.dose_locked && v.amount_mg != null; });
+                            total += locked.length;
+                            if (locked.length === 0) { scanNext(); return; }
+                            var pending = locked.length;
+                            locked.forEach(function(v) {
+                                var body = { amount_mg: v.amount_mg, amount_unit: v.amount_unit || 'mg' };
+                                if (v.variant_label) body.variant_label = v.variant_label;
+                                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/admin/listings/' + v.listing_id, {
+                                    method: 'PATCH',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify(body)
+                                })
+                                .then(function(r) { return r.json(); })
+                                .then(function(r) {
+                                    if (r.ok) { patched++; } else { errors++; }
+                                })
+                                .catch(function() { errors++; })
+                                .finally(function() {
+                                    pending--;
+                                    if (pending === 0) scanNext();
+                                });
+                            });
+                        })
+                        .catch(function() { scanNext(); });
+                }
+                scanNext();
+            });
+
             // Search on Enter
             document.getElementById('pa-search-input').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
