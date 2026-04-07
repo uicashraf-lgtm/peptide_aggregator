@@ -328,7 +328,7 @@
             }
           });
           // Re-sort by price
-          existing.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+          existing.vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
         } else {
           grp.available_dosages.push(Object.assign({}, d, { vendors: (d.vendors || []).map(stampVendor) }));
         }
@@ -353,11 +353,11 @@
           grp.dosages.forEach(function(dos) {
             if (!dos.top_vendors.some(function(ev) { return sameVendorListing(ev, stamped); })) {
               dos.top_vendors.push(stamped);
-              dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+              dos.top_vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
             }
           });
         });
-        if (grp.top_vendors) grp.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+        if (grp.top_vendors) grp.top_vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
         grp.vendor_count = (grp.vendor_count || 0) + (p.vendor_count || 0);
         if (p.min_price != null && (grp.min_price == null || p.min_price < grp.min_price)) grp.min_price = p.min_price;
       }
@@ -391,7 +391,7 @@
                 dos.top_vendors.push(v);
               }
             });
-            dos.top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+            dos.top_vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
           });
           // Also reflect in the root top_vendors (now pointing to first dosage)
           nullDosageVendors.forEach(function(v) {
@@ -399,7 +399,7 @@
               map[k].top_vendors.push(v);
             }
           });
-          map[k].top_vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+          map[k].top_vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
         }
       }
       // Merge top_vendors from dosage-variant products into matching available_dosages entries.
@@ -417,7 +417,7 @@
               avail.vendors.push(v);
             }
           });
-          avail.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+          avail.vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
         }
       });
       // Backfill vendors from purchase-size dosage entries ("single", "5 pack", etc.) into
@@ -458,7 +458,7 @@
             var vNorm = (vAmt + '' + (v.amount_unit || 'mg')).toLowerCase().replace(/\s+/g, '');
             return vNorm === bucketNorm;
           });
-          d.vendors.sort(function(a, b) { return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0); });
+          d.vendors.sort(function(a, b) { var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0); });
         }
       });
       // If a "default" remap is configured and the target dose bucket doesn't already
@@ -613,7 +613,7 @@
             });
             Object.keys(cardDosageMap).forEach(function(k) {
               cardDosageMap[k].sort(function(a, b) {
-                return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
+                var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0);
               });
             });
             p._cardPricesByDose = cardDosageMap;
@@ -1152,7 +1152,7 @@
           // Sort each bucket by price (mirrors detail view)
           Object.keys(dosageMap).forEach(function(k) {
             dosageMap[k].sort(function(a, b) {
-              return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
+              var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price); return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0);
             });
           });
           p._cardPricesByDose = dosageMap;
@@ -2404,7 +2404,7 @@
       el2.innerHTML = '<p class="pa-no-prices">No prices available yet. The crawler may still be running.</p>';
       return;
     }
-    prices.sort(function (a, b) { var pa = a.effective_price != null ? a.effective_price : (a.price || 0); var pb = b.effective_price != null ? b.effective_price : (b.price || 0); return pa - pb; });
+    prices.sort(function (a, b) { var pa = a.effective_price != null ? a.effective_price : (discountedPrice(a.vendor, a.price) || 0); var pb = b.effective_price != null ? b.effective_price : (discountedPrice(b.vendor, b.price) || 0); return pa - pb; });
     var wrap = el('div', 'pa-detail-vendor-list');
     prices.forEach(function (p, i) {
       var row = el('div', 'pa-detail-vrow' + (i === 0 ? ' is-best' : ''));
