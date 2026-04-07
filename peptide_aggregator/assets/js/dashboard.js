@@ -1208,6 +1208,11 @@
           return true;
         });
       }
+      // Re-sort after merging from multiple sources so order reflects discounted prices
+      vendors.sort(function(a, b) {
+        var _ap = discountedPrice(a.vendor, a.price), _bp = discountedPrice(b.vendor, b.price);
+        return (_ap == null) - (_bp == null) || (_ap || 0) - (_bp || 0);
+      });
       return vendors;
     }
 
