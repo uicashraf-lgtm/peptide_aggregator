@@ -18,7 +18,7 @@
   // Order matters: most specific first so the first match wins.
   var FORMULATIONS = [
     { key: 'tablet',  label: 'Tablets',  terms: ['tablet', 'tab', 'capsule', 'caps'] },
-    { key: 'liquid',  label: 'Liquid',   terms: ['liquid', 'solution', 'dropper'] },
+    { key: 'liquid',  label: 'Liquid',   terms: ['liquid', 'solution', 'dropper', '/ml'] },
     { key: 'topical', label: 'Topical',  terms: ['topical', 'cream', 'gel', 'patch', 'lotion', 'balm'] },
     { key: 'spray',   label: 'Spray',    terms: ['spray', 'nasal', 'aerosol', 'dispersal', 'air dispersal'] },
   ];

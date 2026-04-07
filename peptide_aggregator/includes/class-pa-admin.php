@@ -1026,7 +1026,7 @@ class PA_Admin {
             // Must match FORMULATIONS in dashboard.js (most-specific first).
             var ADMIN_FORMULATIONS = [
                 { key: 'tablet',  label: 'Capsules/Tablets', terms: ['tablet', 'tab', 'capsule', 'caps'] },
-                { key: 'liquid',  label: 'Liquid',           terms: ['liquid', 'solution', 'dropper'] },
+                { key: 'liquid',  label: 'Liquid',           terms: ['liquid', 'solution', 'dropper', '/ml'] },
                 { key: 'topical', label: 'Topical',          terms: ['topical', 'cream', 'gel', 'patch', 'lotion', 'balm'] },
                 { key: 'spray',   label: 'Spray',            terms: ['spray', 'nasal', 'aerosol', 'dispersal', 'air dispersal'] },
             ];
