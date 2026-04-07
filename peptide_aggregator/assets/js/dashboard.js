@@ -1200,7 +1200,15 @@
           vendors.push(v);
         });
       } else {
-        vendors = fallbackVendors;
+        // Merge fallbackVendors with the null-dose "default" bucket so that vendors
+        // whose amount_mg was not scraped (and whose product name lacks a dosage
+        // pattern) still appear on every dosage pill instead of being silently dropped.
+        vendors = (fallbackVendors || []).slice();
+        byDefault.forEach(function(v) {
+          if (!vendors.some(function(ev) { return sameVendorListing(ev, v); })) {
+            vendors.push(v);
+          }
+        });
       }
       // Deduplicate by vendor+formulation when kits filter is OFF — mirrors the detail view's
       // kitFilterVendors behaviour: no isKitTerm exclusion, just deduplicate so vendors with
