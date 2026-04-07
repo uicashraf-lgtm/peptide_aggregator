@@ -231,6 +231,7 @@
       if (!map[key]) {
         var pKey0 = (pd.base || '').toLowerCase().trim();
         var remapMap0 = (UI.dose_remaps && UI.dose_remaps[pKey0]) || {};
+        if (pKey0.indexOf('bpc') !== -1 && Object.keys(remapMap0).length) { console.log('[PA Dose Debug] groupByDosage remapMap for', pKey0, ':', remapMap0); }
         map[key] = {
           id: p.id, name: pd.base, category: (p.category || '').trim(),
           description: p.description, dosages: [],
@@ -1016,10 +1017,12 @@
     var isKitProduct = p._is_kit_product || (p.tags || []).some(function(t) {
       var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto';
     });
+    if ((p.name || '').toLowerCase().indexOf('bpc') !== -1) { console.log('[PA Dose Debug] Card dosages BEFORE hasMgLabels filter:', p.name, dosages.map(function(d){return d.label;})); }
     var hasMgLabels = !isKitProduct && dosages.some(function(d) { return /^\d/.test((d.label || '').trim()); });
     if (hasMgLabels) {
       dosages = dosages.filter(function(d) { return /^\d/.test((d.label || '').trim()); });
     }
+    if ((p.name || '').toLowerCase().indexOf('bpc') !== -1) { console.log('[PA Dose Debug] Card dosages AFTER hasMgLabels filter:', p.name, dosages.map(function(d){return d.label;})); }
     // Remove dosages hidden via admin dose labels (__exclude__ sentinel) so that
     // the active-index logic and vendor list always start on a visible dosage.
     dosages = dosages.filter(function(d) { return getDoseLabel(p.name, d.label) !== null; });
@@ -1123,6 +1126,7 @@
           p._cardPricesByDose = dosageMap;
           p._cardDosageLabelMap = dosageLabelMap;
           p._cardAllPricesReady = true;
+          if ((p.name || '').toLowerCase().indexOf('bpc') !== -1) { console.log('[PA Dose Debug] ensureCardAllPricesLoaded result:', p.name, 'doses:', Object.keys(dosageMap)); }
         })
         .catch(function() {
           p._cardPricesByDose = {};
