@@ -733,6 +733,9 @@ class PA_Admin {
         // dosages but a same-group variant does (mirrors groupByDosage merging).
         $public_dosages_by_base   = array();
         $dosage_re_pub = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+        // Separate regex that captures the numeric amount and unit, used to
+        // extract a normalised dose label from the product name suffix.
+        $name_dose_cap_re = '/\s+(\d+(?:\.\d+)?)\s*(mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
         if ($public_resp['ok'] && is_array($public_resp['data'])) {
             foreach ($public_resp['data'] as $fp) {
                 $fpid   = (string) ($fp['id'] ?? '');
@@ -757,6 +760,31 @@ class PA_Admin {
                             if ($lbl !== '' && !in_array($lbl, $existing_lbls, true)) {
                                 $public_dosages_by_base[$fpbase][] = $d;
                             }
+                        }
+                    }
+                }
+
+                // Also extract the dosage suffix from the product name itself and
+                // inject it into the base-name bucket.  This mirrors the frontend's
+                // parseDosage() fallback: when available_dosages is empty the compact
+                // card derives dose pills from the product name (e.g. "BPC-157 157mg"
+                // → "157 mg" pill).  Without this step the admin dose-labels section
+                // never surfaces such name-derived doses, so the user can't hide them.
+                if ($fpbase !== '') {
+                    $nm = array();
+                    if (preg_match($name_dose_cap_re, $fp['name'] ?? '', $nm)) {
+                        // Normalise to "X unit" with exactly one space (matches parseDosage output).
+                        $name_lbl = $nm[1] . ' ' . strtolower($nm[2]);
+                        if (!isset($public_dosages_by_base[$fpbase])) {
+                            $public_dosages_by_base[$fpbase] = array();
+                        }
+                        $existing_lbls = array_map(function($e) {
+                            return is_array($e) ? (string) ($e['label'] ?? '') : (string) $e;
+                        }, $public_dosages_by_base[$fpbase]);
+                        if (!in_array($name_lbl, $existing_lbls, true)) {
+                            // Label-only entry (no vendors); its sole purpose is to surface
+                            // this dose row in the admin so the user can Hide / Remap it.
+                            $public_dosages_by_base[$fpbase][] = array('label' => $name_lbl, 'vendors' => array());
                         }
                     }
                 }
@@ -1932,8 +1960,11 @@ class PA_Admin {
                         if (lbl && doseLabelList.indexOf(lbl) === -1) doseLabelList.push(lbl);
                     });
                 });
-                // 2. If still empty, fall back to the PHP-built base-name bucket.
-                if (!doseLabelList.length && PA_PUBLIC_DOSAGES_BY_BASE.hasOwnProperty(pBaseKey)) {
+                // 2. Always merge from the PHP-built base-name bucket — it now
+                //    also contains labels derived from product-name suffixes (e.g.
+                //    "BPC-157 157mg" → "157 mg"), so run this even when step 1
+                //    already found dosages to avoid missing name-derived entries.
+                if (PA_PUBLIC_DOSAGES_BY_BASE.hasOwnProperty(pBaseKey)) {
                     PA_PUBLIC_DOSAGES_BY_BASE[pBaseKey].forEach(function(d) {
                         var lbl = (d && typeof d === 'object') ? String(d.label || '') : String(d || '');
                         if (lbl && doseLabelList.indexOf(lbl) === -1) doseLabelList.push(lbl);
