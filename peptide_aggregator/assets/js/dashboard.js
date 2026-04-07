@@ -531,6 +531,65 @@
           p._allVendorNames = names;
           p._vendorsByDoseLabel = doseVendors;
           p._allVendorNamesReady = true;
+          // Also pre-populate the card price cache so cards built after a supplier
+          // filter re-render don't need a second fetch and show "No prices scraped yet".
+          if (!p._cardAllPricesPromise) {
+            var cardDosageMap = {};
+            var cardDosageLabelMap = {};
+            var pKeyAV = (p.name || '').toLowerCase().trim();
+            var remapMapAV = (UI.dose_remaps && UI.dose_remaps[pKeyAV]) || {};
+            (Array.isArray(raw) ? raw : []).forEach(function(v) {
+              var lbl2 = null;
+              if (v.amount_mg != null && v.amount_unit) {
+                var amt2 = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
+                lbl2 = amt2 + ' ' + (v.amount_unit || 'mg').toLowerCase();
+              }
+              if (!lbl2) {
+                var m3 = (v.product || v.product_name || '').match(DOSAGE_RE_AV);
+                if (m3) lbl2 = m3[1] + ' ' + m3[2].toLowerCase();
+              }
+              if (!lbl2) lbl2 = 'default';
+              var normLbl2 = lbl2.toLowerCase().replace(/\s+/g, '');
+              if (remapMapAV[normLbl2]) {
+                lbl2 = remapMapAV[normLbl2];
+                normLbl2 = lbl2.toLowerCase().replace(/\s+/g, '');
+                var remapM2 = lbl2.match(/^(\d+(?:\.\d+)?)\s*(mg|mcg|ug|g|iu|ml)\s*$/i);
+                if (remapM2 && v.amount_mg == null) {
+                  v = Object.assign({}, v, { amount_mg: parseFloat(remapM2[1]), amount_unit: remapM2[2].toLowerCase() });
+                }
+              }
+              if (!cardDosageMap[normLbl2]) { cardDosageMap[normLbl2] = []; cardDosageLabelMap[normLbl2] = lbl2; }
+              var effName = v.product_name || v.product || '';
+              var pn2 = effName.toLowerCase();
+              cardDosageMap[normLbl2].push(Object.assign({}, v, {
+                vendor: v.vendor,
+                product_name: effName,
+                price: v.effective_price != null ? v.effective_price : v.price,
+                previous_price: v.previous_price,
+                currency: v.currency,
+                listing_id: v.listing_id,
+                amount_mg: v.amount_mg,
+                amount_unit: v.amount_unit,
+                price_per_mg: v.price_per_mg,
+                link: v.link,
+                logo_url: v.logo_url,
+                coupon_code: v.coupon_code,
+                country: v.country,
+                in_stock: v.in_stock,
+                _formulation: getFormulationKey(pn2) || v._formulation || v.formulation || v.formulation_key || null,
+                _is_kit: v._is_kit === true || isKitTerm(pn2)
+              }));
+            });
+            Object.keys(cardDosageMap).forEach(function(k) {
+              cardDosageMap[k].sort(function(a, b) {
+                return (a.price == null) - (b.price == null) || (a.price || 0) - (b.price || 0);
+              });
+            });
+            p._cardPricesByDose = cardDosageMap;
+            p._cardDosageLabelMap = cardDosageLabelMap;
+            p._cardAllPricesReady = true;
+            p._cardAllPricesPromise = Promise.resolve();
+          }
           // Merge any newly discovered vendors into UI.suppliers
           var changed = false;
           Object.keys(supplierInfo).forEach(function(name) {
