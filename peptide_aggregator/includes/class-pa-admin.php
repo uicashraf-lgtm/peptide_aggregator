@@ -1028,7 +1028,7 @@ class PA_Admin {
             var currentNullDoseFormulations = [];
             // Must match FORMULATIONS in dashboard.js (most-specific first).
             var ADMIN_FORMULATIONS = [
-                { key: 'tablet',  label: 'Capsules/Tablets', terms: ['tablet', 'tab', 'capsule', 'caps'] },
+                { key: 'tablet',  label: 'Capsules/Tablets', terms: ['tablet', 'tab', 'capsule', 'caps'], patterns: [/x\s*\d+/i] },
                 { key: 'liquid',  label: 'Liquid',           terms: ['liquid', 'solution', 'dropper', '/ml'] },
                 { key: 'topical', label: 'Topical',          terms: ['topical', 'cream', 'gel', 'patch', 'lotion', 'balm'] },
                 { key: 'spray',   label: 'Spray',            terms: ['spray', 'nasal', 'aerosol', 'dispersal', 'air dispersal'] },
@@ -1039,6 +1039,11 @@ class PA_Admin {
                     var _f = ADMIN_FORMULATIONS[_fi];
                     for (var _fj = 0; _fj < _f.terms.length; _fj++) {
                         if (s.indexOf(_f.terms[_fj]) !== -1) return _f.key;
+                    }
+                    if (_f.patterns) {
+                        for (var _fp = 0; _fp < _f.patterns.length; _fp++) {
+                            if (_f.patterns[_fp].test(s)) return _f.key;
+                        }
                     }
                 }
                 return null;
