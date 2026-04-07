@@ -1174,10 +1174,17 @@
       return vendors;
     }
 
-    // Compute which non-vial formulations exist for this product (needed before pill render)
+    // Compute which non-vial formulations exist for this product (needed before pill render).
+    // Include enriched price data when available so formulations discovered after the
+    // initial /products call (e.g. "Air Dispersal Kit" → Spray) appear in the row.
     var allCardVendors = [];
     dosages.forEach(function(d) { (d.top_vendors || []).forEach(function(v) { allCardVendors.push(v); }); });
     if (allCardVendors.length === 0) (p.top_vendors || []).forEach(function(v) { allCardVendors.push(v); });
+    if (p._cardPricesByDose) {
+      Object.keys(p._cardPricesByDose).forEach(function(k) {
+        (p._cardPricesByDose[k] || []).forEach(function(v) { allCardVendors.push(v); });
+      });
+    }
 
     // Tag-aware formulation resolver for compact card — mirrors vendorFormulationKey()
     // but uses this card's product tags instead of state.detailProductTags.
