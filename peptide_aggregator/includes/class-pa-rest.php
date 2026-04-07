@@ -201,12 +201,12 @@ class PA_Rest {
                 unset($product);
             }
 
-            // Auto-tag products as 'kit_auto' when a vendor/dosage name
-            // contains 'kit' or a standalone vial quantity (e.g. "10 vials").
-            // The vial regex requires the number to be preceded by whitespace
-            // or start of string to avoid false positives like "CJC-1295 Vial".
-            // Admin tag overrides applied above always take precedence.
+            // Auto-tag products as 'kit_auto' only when BOTH conditions are met:
+            //   1. The product is toggled as a kit in admin (pa_kit_product_ids)
+            //   2. A vendor/dosage name contains 'kit' or a standalone vial
+            //      quantity (e.g. "10 vials")
             if (is_array($products)) {
+                $admin_kit_ids = array_map('intval', (array) get_option('pa_kit_product_ids', array()));
                 // Returns true if a lowercase label/product_name signals a kit.
                 $is_kit_name = function($s) {
                     return strpos($s, 'kit') !== false
@@ -216,6 +216,11 @@ class PA_Rest {
                     $existing_tags = array_map('strtolower', (array) ($product['tags'] ?? []));
                     if (in_array('kit', $existing_tags, true) || in_array('kit_auto', $existing_tags, true)) {
                         continue; // already tagged — do not overwrite
+                    }
+                    // Must be toggled as kit in admin to qualify for auto-tagging.
+                    $pid = intval($product['id'] ?? 0);
+                    if (!in_array($pid, $admin_kit_ids, true)) {
+                        continue;
                     }
                     $has_kit = false;
                     // Check available_dosages labels first — most reliable field in /products response.
