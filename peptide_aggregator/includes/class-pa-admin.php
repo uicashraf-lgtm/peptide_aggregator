@@ -18,6 +18,7 @@ class PA_Admin {
         add_action('wp_ajax_pa_save_default_dose', array($this, 'ajax_save_default_dose'));
         add_action('wp_ajax_pa_save_product_tags', array($this, 'ajax_save_product_tags'));
         add_action('wp_ajax_pa_toggle_kit_product', array($this, 'ajax_toggle_kit_product'));
+        add_action('wp_ajax_pa_clear_products_cache', array($this, 'ajax_clear_products_cache'));
     }
 
     public function register_menu() {
@@ -1011,6 +1012,7 @@ class PA_Admin {
             var PA_TAGS_NONCE = '<?php echo wp_create_nonce('pa_save_product_tags'); ?>';
             var PA_KIT_IDS = <?php echo wp_json_encode($kit_ids); ?>;
             var PA_KIT_NONCE = '<?php echo wp_create_nonce('pa_toggle_kit_product'); ?>';
+            var PA_CLEAR_CACHE_NONCE = '<?php echo wp_create_nonce('pa_clear_products_cache'); ?>';
             var PER_PAGE = 25;
             var currentPage = 1;
             var currentSearch = '';
@@ -2200,6 +2202,11 @@ class PA_Admin {
 
             // ── Reload products from API ────────────────────────────────────
             function reloadProducts(callback) {
+                // Clear WP transient cache so the public frontend fetches fresh data.
+                var cacheXhr = new XMLHttpRequest();
+                cacheXhr.open('POST', ajaxurl);
+                cacheXhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                cacheXhr.send('action=pa_clear_products_cache&_wpnonce=' + PA_CLEAR_CACHE_NONCE);
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', PA_API_BASE + '/api/admin/products');
                 xhr.onload = function() {
@@ -2476,6 +2483,15 @@ class PA_Admin {
         delete_transient('pa_products_cache');
         PA_Rest::clear_prices_cache();
         wp_send_json_success(array('is_kit' => $is_kit, 'product_id' => $pid));
+    }
+
+    public function ajax_clear_products_cache() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
+        wp_send_json_success();
     }
 
     public function render_monitoring_page() {
