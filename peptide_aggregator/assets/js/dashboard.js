@@ -1069,7 +1069,7 @@
           var dosageLabelMap = {}; // normLbl -> display label
           allPrices.forEach(function(v) {
             var lbl = null;
-            if (v.amount_mg != null && v.amount_unit) {
+            if (v.amount_mg != null) {
               var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
               lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
             }
@@ -1780,7 +1780,7 @@
       var detailRemapMap = (UI.dose_remaps && state.detailProductName && UI.dose_remaps[state.detailProductName.toLowerCase().trim()]) || {};
       allPrices.forEach(function(v) {
         var lbl = null;
-        if (v.amount_mg != null && v.amount_unit) {
+        if (v.amount_mg != null) {
           var amt = v.amount_mg == Math.floor(v.amount_mg) ? Math.floor(v.amount_mg) : v.amount_mg;
           lbl = amt + ' ' + (v.amount_unit || 'mg').toLowerCase();
         }
