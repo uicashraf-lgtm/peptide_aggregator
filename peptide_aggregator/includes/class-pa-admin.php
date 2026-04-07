@@ -1027,7 +1027,7 @@ class PA_Admin {
             var ADMIN_FORMULATIONS = [
                 { key: 'tablet',  label: 'Capsules/Tablets', terms: ['tablet', 'tab', 'capsule', 'caps'] },
                 { key: 'liquid',  label: 'Liquid',           terms: ['liquid', 'solution', 'dropper'] },
-                { key: 'topical', label: 'Topical',          terms: ['topical', 'cream', 'gel', 'patch', 'lotion'] },
+                { key: 'topical', label: 'Topical',          terms: ['topical', 'cream', 'gel', 'patch', 'lotion', 'balm'] },
                 { key: 'spray',   label: 'Spray',            terms: ['spray', 'nasal', 'aerosol', 'dispersal', 'air dispersal'] },
             ];
             function adminGetFormulationKey(str) {
