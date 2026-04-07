@@ -1150,12 +1150,18 @@
       } else {
         vendors = fallbackVendors;
       }
-      // Hide kit vendors unless the Kits bar filter or the card-local toggle is active.
+      // Deduplicate by vendor+formulation when kits filter is OFF — mirrors the detail view's
+      // kitFilterVendors behaviour: no isKitTerm exclusion, just deduplicate so vendors with
+      // a detected formulation (e.g. Spray kit) are still visible.
       var kitsOn = cardKitsActive || state.barFilters.kits || (state.applied && state.applied.toggles.kits);
       if (!kitsOn) {
+        var seen = {};
         vendors = (vendors || []).filter(function(v) {
-          var pn = (v.product_name || '').toLowerCase();
-          return !isKitTerm(pn) && !v._is_kit;
+          var f = getCardFormulationKey(v) || '';
+          var key = (v.vendor || '') + '::' + f;
+          if (seen[key]) return false;
+          seen[key] = true;
+          return true;
         });
       }
       return vendors;
