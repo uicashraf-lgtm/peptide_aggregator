@@ -222,9 +222,12 @@
         var effectiveName = v.product_name || v.product || '';
         var pn = effectiveName.toLowerCase();
         var formulation = getFormulationKey(pn) || srcFormulation || v.formulation || v.formulation_key || v._formulation || null;
+        // If the product name has a detected formulation (e.g. "dispersal" → spray),
+        // don't also flag it as a kit — "Air Dispersal Kit" is a delivery method, not a bundle.
+        var isKitByName = formulation === null && isKitTerm(pn);
         return Object.assign({}, v, {
           product_name: effectiveName,
-          _is_kit: v._is_kit === true || srcIsKit || isKitTerm(pn),
+          _is_kit: v._is_kit === true || srcIsKit || isKitByName,
           _formulation: formulation
         });
       }
@@ -577,7 +580,7 @@
                 country: v.country,
                 in_stock: v.in_stock,
                 _formulation: getFormulationKey(pn2) || v._formulation || v.formulation || v.formulation_key || null,
-                _is_kit: v._is_kit === true || isKitTerm(pn2)
+                _is_kit: v._is_kit === true || (getFormulationKey(pn2) === null && isKitTerm(pn2))
               }));
             });
             Object.keys(cardDosageMap).forEach(function(k) {
@@ -1108,7 +1111,7 @@
               country: v.country,
               in_stock: v.in_stock,
               _formulation: formulation,
-              _is_kit: v._is_kit === true || isKitTerm(pn)
+              _is_kit: v._is_kit === true || (formulation === null && isKitTerm(pn))
             }));
           });
           // Sort each bucket by price (mirrors detail view)
