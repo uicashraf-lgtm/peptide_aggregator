@@ -1028,6 +1028,7 @@ class PA_Admin {
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
             var PA_DEFAULT_DOSE_NONCE = '<?php echo wp_create_nonce('pa_default_dose_action'); ?>';
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
+            var PA_REST_PRODUCTS_URL = <?php echo wp_json_encode(rest_url('pa/v1/products')); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_DEFAULT_DOSES = <?php echo wp_json_encode((array) get_option('pa_default_doses', array())); ?>;
             var PA_DOSE_REMAPS = <?php echo wp_json_encode((array) get_option('pa_dose_remaps', array())); ?>;
@@ -2028,14 +2029,15 @@ class PA_Admin {
                     })
                     .catch(function() { /* silently ignore */ });
 
-                // 5. Fetch the full public /api/products list and run the exact same
-                //    parseDosage + available_dosages extraction the frontend uses in
-                //    groupByDosage().  This is the definitive source: if the compact
-                //    card shows a dose pill, this step will find it.
+                // 5. Fetch the full public products list via the WordPress REST endpoint
+                //    (same URL the frontend uses) and run the exact same parseDosage
+                //    + available_dosages extraction as groupByDosage().
+                //    This is the definitive source: if the compact card shows a dose
+                //    pill, this step will surface the same label in the admin.
                 var _pBaseKey5   = pBaseKey;
                 var _pName5      = currentDoseLabelProductName;
                 var _DOSAGE_RE5  = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)(?:\s*\([^)]*\))?$/i;
-                fetch(PA_API_BASE.replace(/\/$/, '') + '/api/products')
+                fetch(PA_REST_PRODUCTS_URL)
                     .then(function(r) { return r.json(); })
                     .then(function(allProducts) {
                         if (!Array.isArray(allProducts)) return;
