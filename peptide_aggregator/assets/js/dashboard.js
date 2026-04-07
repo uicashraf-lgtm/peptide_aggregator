@@ -231,7 +231,6 @@
       if (!map[key]) {
         var pKey0 = (pd.base || '').toLowerCase().trim();
         var remapMap0 = (UI.dose_remaps && UI.dose_remaps[pKey0]) || {};
-        if (pKey0.indexOf('bpc') !== -1 && Object.keys(remapMap0).length) { console.log('[PA Dose Debug] groupByDosage remapMap for', pKey0, ':', remapMap0); }
         map[key] = {
           id: p.id, name: pd.base, category: (p.category || '').trim(),
           description: p.description, dosages: [],
@@ -243,7 +242,6 @@
           available_dosages: (function() {
             var initDosages = [];
             (p.available_dosages || []).forEach(function(d) {
-              if ((d.label || '').indexOf('157') !== -1) { console.log('[PA Dose Debug] 157 in available_dosages (init) - product:', p.name, 'label:', d.label); }
               var normRaw0 = (d.label || '').toLowerCase().replace(/\s+/g, '');
               var remapped = d;
               if (remapMap0[normRaw0]) {
@@ -279,7 +277,6 @@
       (p.tags || []).forEach(function(t) { if (grp.tags.indexOf(t) === -1) grp.tags.push(t); });
       // Merge available_dosages (objects with {label, vendors})
       (p.available_dosages || []).forEach(function(d) {
-        if ((d.label || d + '').indexOf('157') !== -1) { console.log('[PA Dose Debug] 157 in available_dosages (merge) - product:', p.name, 'key:', key, 'label:', d.label || d); }
         var rawLabel = (d.label || d);
         // Apply dose remap: if this product has a remap for this scraped label,
         // rewrite the label so it merges into the correct canonical bucket.
@@ -317,7 +314,6 @@
         var dosageRemap = (UI.dose_remaps && UI.dose_remaps[(pd.base || '').toLowerCase().trim()]) || {};
         var dosageNorm = pd.dosage.toLowerCase().replace(/\s+/g, '');
         var mappedDosageLabel = dosageRemap[dosageNorm] || pd.dosage;
-        if (pd.dosage.indexOf('157') !== -1) { console.log('[PA Dose Debug] 157 from parseDosage - product:', p.name, 'base:', pd.base, 'dose:', pd.dosage, 'mapped:', mappedDosageLabel); }
         grp.dosages.push({ label: mappedDosageLabel, id: p.id, top_vendors: (p.top_vendors || []).map(stampVendor), min_price: p.min_price, vendor_count: p.vendor_count });
       } else {
         // Merge top_vendors from duplicate products.
@@ -1017,12 +1013,10 @@
     var isKitProduct = p._is_kit_product || (p.tags || []).some(function(t) {
       var tl = t.toLowerCase(); return tl === 'kit' || tl === 'kits' || tl === 'kit_auto';
     });
-    if ((p.name || '').toLowerCase().indexOf('bpc') !== -1) { console.log('[PA Dose Debug] Card dosages BEFORE hasMgLabels filter:', p.name, dosages.map(function(d){return d.label;})); }
     var hasMgLabels = !isKitProduct && dosages.some(function(d) { return /^\d/.test((d.label || '').trim()); });
     if (hasMgLabels) {
       dosages = dosages.filter(function(d) { return /^\d/.test((d.label || '').trim()); });
     }
-    if ((p.name || '').toLowerCase().indexOf('bpc') !== -1) { console.log('[PA Dose Debug] Card dosages AFTER hasMgLabels filter:', p.name, dosages.map(function(d){return d.label;})); }
     // Remove dosages hidden via admin dose labels (__exclude__ sentinel) so that
     // the active-index logic and vendor list always start on a visible dosage.
     dosages = dosages.filter(function(d) { return getDoseLabel(p.name, d.label) !== null; });
@@ -1126,7 +1120,6 @@
           p._cardPricesByDose = dosageMap;
           p._cardDosageLabelMap = dosageLabelMap;
           p._cardAllPricesReady = true;
-          if ((p.name || '').toLowerCase().indexOf('bpc') !== -1) { console.log('[PA Dose Debug] ensureCardAllPricesLoaded result:', p.name, 'doses:', Object.keys(dosageMap)); }
         })
         .catch(function() {
           p._cardPricesByDose = {};

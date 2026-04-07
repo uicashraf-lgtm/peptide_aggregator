@@ -733,9 +733,6 @@ class PA_Admin {
         // dosages but a same-group variant does (mirrors groupByDosage merging).
         $public_dosages_by_base   = array();
         $dosage_re_pub = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
-        // Separate regex that captures the numeric amount and unit, used to
-        // extract a normalised dose label from the product name suffix.
-        $name_dose_cap_re = '/\s+(\d+(?:\.\d+)?)\s*(mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
         if ($public_resp['ok'] && is_array($public_resp['data'])) {
             foreach ($public_resp['data'] as $fp) {
                 $fpid   = (string) ($fp['id'] ?? '');
@@ -764,30 +761,6 @@ class PA_Admin {
                     }
                 }
 
-                // Also extract the dosage suffix from the product name itself and
-                // inject it into the base-name bucket.  This mirrors the frontend's
-                // parseDosage() fallback: when available_dosages is empty the compact
-                // card derives dose pills from the product name (e.g. "BPC-157 157mg"
-                // → "157 mg" pill).  Without this step the admin dose-labels section
-                // never surfaces such name-derived doses, so the user can't hide them.
-                if ($fpbase !== '') {
-                    $nm = array();
-                    if (preg_match($name_dose_cap_re, $fp['name'] ?? '', $nm)) {
-                        // Normalise to "X unit" with exactly one space (matches parseDosage output).
-                        $name_lbl = $nm[1] . ' ' . strtolower($nm[2]);
-                        if (!isset($public_dosages_by_base[$fpbase])) {
-                            $public_dosages_by_base[$fpbase] = array();
-                        }
-                        $existing_lbls = array_map(function($e) {
-                            return is_array($e) ? (string) ($e['label'] ?? '') : (string) $e;
-                        }, $public_dosages_by_base[$fpbase]);
-                        if (!in_array($name_lbl, $existing_lbls, true)) {
-                            // Label-only entry (no vendors); its sole purpose is to surface
-                            // this dose row in the admin so the user can Hide / Remap it.
-                            $public_dosages_by_base[$fpbase][] = array('label' => $name_lbl, 'vendors' => array());
-                        }
-                    }
-                }
             }
         }
         // Fill in missing tags and available_dosages from the public endpoint
@@ -1028,7 +1001,6 @@ class PA_Admin {
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
             var PA_DEFAULT_DOSE_NONCE = '<?php echo wp_create_nonce('pa_default_dose_action'); ?>';
             var PA_API_BASE = <?php echo wp_json_encode($this->api->base_url()); ?>;
-            var PA_REST_PRODUCTS_URL = <?php echo wp_json_encode(rest_url('pa/v1/products')); ?>;
             var PA_DOSE_LABELS = <?php echo wp_json_encode((array) get_option('pa_dose_labels', array())); ?>;
             var PA_DEFAULT_DOSES = <?php echo wp_json_encode((array) get_option('pa_default_doses', array())); ?>;
             var PA_DOSE_REMAPS = <?php echo wp_json_encode((array) get_option('pa_dose_remaps', array())); ?>;
@@ -1561,6 +1533,20 @@ class PA_Admin {
 
             // ── Dose label management ───────────────────────────────────────
             function renderDoseLabelsSection(dosages) {
+                // Also show remapped target labels so users can hide what the compact
+                // card actually displays. groupByDosage() applies dose_remaps before
+                // rendering pills, so the pill label is the remap target, not the
+                // original scraped label. Without this, hiding a remapped dose would
+                // require knowing the obscure original label (e.g. "bpc157+tb50010 mg").
+                var fullDosages = dosages ? dosages.slice() : [];
+                Object.keys(currentDoseRemaps).forEach(function(normOrigLbl) {
+                    var remapped = currentDoseRemaps[normOrigLbl];
+                    if (remapped && remapped !== '__exclude__' && fullDosages.indexOf(remapped) === -1) {
+                        fullDosages.push(remapped);
+                    }
+                });
+                dosages = fullDosages;
+
                 var section = document.getElementById('pa_dose_labels_list');
                 var saveBtn = document.getElementById('pa_dose_labels_save');
                 section.innerHTML = '';
@@ -2028,59 +2014,6 @@ class PA_Admin {
                         }
                     })
                     .catch(function() { /* silently ignore */ });
-
-                // 5. Fetch the full public products list via the WordPress REST endpoint
-                //    (same URL the frontend uses) and run the exact same parseDosage
-                //    + available_dosages extraction as groupByDosage().
-                //    This is the definitive source: if the compact card shows a dose
-                //    pill, this step will surface the same label in the admin.
-                var _pBaseKey5   = pBaseKey;
-                var _pName5      = currentDoseLabelProductName;
-                var _DOSAGE_RE5  = /\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?)(?:\s*\([^)]*\))?$/i;
-                // Normalize base name for comparison: lowercase, collapse spaces/hyphens.
-                // Handles cases where admin has "BPC-157" but REST API returns "BPC 157".
-                function normBase5(s) { return (s || '').toLowerCase().replace(/[\s\-]+/g, ''); }
-                var _normPBaseKey5 = normBase5(_pBaseKey5);
-                fetch(PA_REST_PRODUCTS_URL)
-                    .then(function(r) { return r.json(); })
-                    .then(function(allProducts) {
-                        if (!Array.isArray(allProducts)) return;
-                        if (currentDoseLabelProductName !== _pName5) return;
-                        console.log('[PA Dose Debug] Step 5: REST products count=', allProducts.length, 'looking for base=', _pBaseKey5, '(norm='+_normPBaseKey5+')');
-                        var added = false;
-                        allProducts.forEach(function(prod) {
-                            var name = prod.name || '';
-                            // parseDosage: extract dosage suffix from product name.
-                            var dm = name.match(_DOSAGE_RE5);
-                            var base = dm
-                                ? name.slice(0, name.length - dm[0].length).trim().toLowerCase()
-                                : name.trim().toLowerCase();
-                            // Use normalized comparison to handle "bpc-157" vs "bpc 157".
-                            if (normBase5(base) !== _normPBaseKey5) return;
-                            console.log('[PA Dose Debug] Step 5 matched product:', name, '| base=', base, '| dm=', dm ? dm[1] : null, '| available_dosages=', (prod.available_dosages || []).map(function(d){return d && d.label || d;}));
-                            // Name-derived dose label.
-                            if (dm) {
-                                var lbl = dm[1].replace(/\s+/g, '').toLowerCase()
-                                               .replace(/(\d)([a-z])/, '$1 $2');
-                                if (lbl && _dllSnapshot.indexOf(lbl) === -1) {
-                                    _dllSnapshot.push(lbl);
-                                    added = true;
-                                }
-                            }
-                            // available_dosages labels.
-                            (prod.available_dosages || []).forEach(function(d) {
-                                var dlbl = (d && typeof d === 'object')
-                                    ? String(d.label || '') : String(d || '');
-                                if (dlbl && _dllSnapshot.indexOf(dlbl) === -1) {
-                                    _dllSnapshot.push(dlbl);
-                                    added = true;
-                                }
-                            });
-                        });
-                        console.log('[PA Dose Debug] Step 5 done: added=', added, 'snapshot=', _dllSnapshot.slice());
-                        if (added) renderDoseLabelsSection(_dllSnapshot);
-                    })
-                    .catch(function(err) { console.error('[PA Dose Debug] Step 5 fetch failed:', err); });
 
                 renderDoseLabelsSection(doseLabelList);
 
