@@ -227,7 +227,7 @@
         var isKitByName = formulation === null && isKitTerm(pn);
         return Object.assign({}, v, {
           product_name: effectiveName,
-          _is_kit: v._is_kit === true || srcIsKit || isKitByName,
+          _is_kit: formulation === null && (v._is_kit === true || srcIsKit || isKitByName),
           _formulation: formulation
         });
       }
@@ -580,7 +580,7 @@
                 country: v.country,
                 in_stock: v.in_stock,
                 _formulation: getFormulationKey(pn2) || v._formulation || v.formulation || v.formulation_key || null,
-                _is_kit: v._is_kit === true || (getFormulationKey(pn2) === null && isKitTerm(pn2))
+                _is_kit: getFormulationKey(pn2) === null && (v._is_kit === true || isKitTerm(pn2))
               }));
             });
             Object.keys(cardDosageMap).forEach(function(k) {
@@ -1111,7 +1111,7 @@
               country: v.country,
               in_stock: v.in_stock,
               _formulation: formulation,
-              _is_kit: v._is_kit === true || (formulation === null && isKitTerm(pn))
+              _is_kit: formulation === null && (v._is_kit === true || isKitTerm(pn))
             }));
           });
           // Sort each bucket by price (mirrors detail view)
