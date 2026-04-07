@@ -1713,10 +1713,10 @@
     foot.appendChild(arrow);
     card.appendChild(foot);
 
-    // If this product has a "default" remap but we couldn't detect formulations from the
-    // lightweight /products data, eagerly load full prices so the rebuilt card can show
-    // the formulation row. Rebuilds the grid once after enrichment; guarded by _formRowAdded
-    // so it doesn't loop.
+    // If the lightweight /products data didn't reveal any non-vial formulations,
+    // eagerly load full prices so the rebuilt card can show the formulation row
+    // (e.g. "Air Dispersal Kit" → Spray). Rebuilds the grid once after enrichment;
+    // guarded by _formRowAdded so it doesn't loop.
     if (!hasFormulationRow && !p._formRowAdded) {
       var pKeyEager = (p.name || '').toLowerCase().trim();
       var remapMapEager = (UI.dose_remaps && UI.dose_remaps[pKeyEager]) || {};
