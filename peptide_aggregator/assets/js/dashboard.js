@@ -12,6 +12,22 @@
   const COUPON_SAVINGS = UI.coupon_savings || {};
   let sseSource = null;
 
+  // Build a public product URL for sharing/copying. Uses the WordPress
+  // /prices/{slug} pretty route exposed by the plugin so the shared link
+  // points at the specific product instead of the current page.
+  function productSlug(name) {
+    return String(name || '').toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  function productShareUrl(name) {
+    var slug = productSlug(name);
+    if (!slug) return window.location.href;
+    var base = (UI.prices_base_url || '').replace(/\/$/, '');
+    if (!base) base = window.location.origin + '/prices';
+    return base + '/' + slug + '/';
+  }
+
   // Compute coupon-discounted price for a vendor; returns original price if no coupon applies.
   function discountedPrice(vendorName, price) {
     if (price == null) return null;
@@ -997,8 +1013,9 @@
     shareBtn.title = 'Share'; shareBtn.type = 'button';
     shareBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      if (navigator.share) { navigator.share({ title: p.name, url: window.location.href }); }
-      else { navigator.clipboard && navigator.clipboard.writeText(window.location.href); }
+      var shareUrl = productShareUrl(p.name);
+      if (navigator.share) { navigator.share({ title: p.name, url: shareUrl }); }
+      else { navigator.clipboard && navigator.clipboard.writeText(shareUrl); }
     });
     // Favourite button
     const isFav = state.favourites.has(p.id);
@@ -1891,8 +1908,9 @@
       var shareBtn = el('button', 'pa-icon-btn', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>');
       shareBtn.title = 'Share'; shareBtn.type = 'button';
       shareBtn.addEventListener('click', function () {
-        if (navigator.share) navigator.share({ title: productName, url: window.location.href });
-        else navigator.clipboard && navigator.clipboard.writeText(window.location.href);
+        var shareUrl = productShareUrl(productName);
+        if (navigator.share) navigator.share({ title: productName, url: shareUrl });
+        else navigator.clipboard && navigator.clipboard.writeText(shareUrl);
       });
       var pid = pData ? pData.id : productId;
       var isFav = state.favourites.has(pid);
