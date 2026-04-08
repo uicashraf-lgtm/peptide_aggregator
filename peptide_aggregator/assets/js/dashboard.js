@@ -1209,6 +1209,21 @@
             vendors.push(v);
           }
         });
+        // Last resort: if still empty (dose label doesn't match any price bucket
+        // and there are no default-bucket vendors), gather vendors from ALL buckets.
+        // This handles cases where /products reports a dosage label (e.g. "single")
+        // that doesn't match any key in _cardPricesByDose (e.g. "5mg", "10mg").
+        if (vendors.length === 0 && p._cardPricesByDose) {
+          var allKeys = Object.keys(p._cardPricesByDose);
+          for (var aki = 0; aki < allKeys.length; aki++) {
+            var bucket = p._cardPricesByDose[allKeys[aki]] || [];
+            for (var bki = 0; bki < bucket.length; bki++) {
+              if (!vendors.some(function(ev) { return sameVendorListing(ev, bucket[bki]); })) {
+                vendors.push(bucket[bki]);
+              }
+            }
+          }
+        }
       }
       // Deduplicate by vendor+formulation when kits filter is OFF — mirrors the detail view's
       // kitFilterVendors behaviour: no isKitTerm exclusion, just deduplicate so vendors with
@@ -1691,7 +1706,28 @@
       var vendors = curDosage
         ? getCardVendorsForDose(curDosage.label, curDosage.top_vendors)
         : (p.top_vendors || []);
-      renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), curDosage));
+      var finalVendors = cardKitFilter(filterByFormulation(vendors, activeFormulation), curDosage);
+      // If the initially-selected dosage has no vendors after filtering, try other
+      // dosages — the selected label may not match any key in _cardPricesByDose
+      // (e.g. "single" vs "5mg") so another pill's label might succeed.
+      if (finalVendors.length === 0 && p._cardPricesByDose && dosages.length > 1) {
+        for (var ri = 0; ri < dosages.length; ri++) {
+          if (ri === Math.min(curIdx, dosages.length - 1)) continue;
+          var tryVendors = getCardVendorsForDose(dosages[ri].label, dosages[ri].top_vendors);
+          var tryFiltered = cardKitFilter(filterByFormulation(tryVendors, activeFormulation), dosages[ri]);
+          if (tryFiltered.length > 0) {
+            curDosage = dosages[ri];
+            finalVendors = tryFiltered;
+            state.activeDosages[p.id] = ri;
+            // Update pill highlight to match the dosage we actually show
+            pillsContainer.querySelectorAll('.pa-dosage-pill').forEach(function(x, xi) {
+              x.classList.toggle('is-active', xi === ri);
+            });
+            break;
+          }
+        }
+      }
+      renderVendorRows(vendorList, finalVendors);
     };
     ensureCardAllPricesLoaded().then(function() {
       if (state.barFilters.kits || (state.applied && state.applied.toggles.kits)) {
