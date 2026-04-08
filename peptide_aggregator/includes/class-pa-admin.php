@@ -12,6 +12,8 @@ class PA_Admin {
         add_action('admin_menu', array($this, 'register_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('wp_ajax_pa_toggle_product_status', array($this, 'ajax_toggle_product_status'));
+        add_action('wp_ajax_pa_toggle_product_visibility', array($this, 'ajax_toggle_product_visibility'));
+        add_action('wp_ajax_pa_toggle_listing', array($this, 'ajax_toggle_listing'));
         add_action('wp_ajax_pa_delete_product', array($this, 'ajax_delete_product'));
         add_action('wp_ajax_pa_delete_vendor', array($this, 'ajax_delete_vendor'));
         add_action('wp_ajax_pa_save_dose_labels', array($this, 'ajax_save_dose_labels'));
@@ -999,6 +1001,9 @@ class PA_Admin {
             var PA_PRODUCTS = <?php echo wp_json_encode(array_values($products)); ?>;
             var PA_VENDORS = <?php echo wp_json_encode(array_values($vendors)); ?>;
             var PA_NONCE = '<?php echo wp_create_nonce('pa_toggle_status'); ?>';
+            var PA_VIS_NONCE = '<?php echo wp_create_nonce('pa_toggle_visibility'); ?>';
+            var PA_LISTING_NONCE = '<?php echo wp_create_nonce('pa_toggle_listing'); ?>';
+            var PA_HIDDEN_LISTING_IDS = <?php echo wp_json_encode(array_map('intval', (array) get_option('pa_hidden_listing_ids', array()))); ?>;
             var PA_DELETE_NONCE = '<?php echo wp_create_nonce('pa_product_delete_action'); ?>';
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
             var PA_DEFAULT_DOSE_NONCE = '<?php echo wp_create_nonce('pa_default_dose_action'); ?>';
@@ -1298,7 +1303,11 @@ class PA_Admin {
                         xhr.send('action=pa_toggle_product_status&pid=' + pid + '&status=' + next + '&_wpnonce=' + PA_NONCE);
                     });
                 });
-                // Visibility toggle
+                // Visibility toggle — goes through a plugin AJAX handler so
+                // the WordPress transient cache and prices cache are invalidated
+                // immediately. A direct PATCH to the external API would leave
+                // pa_products_cache stale and the hidden product would keep
+                // showing up on the frontend card for up to 30 minutes.
                 document.querySelectorAll('.pa-vis-toggle').forEach(function(el) {
                     el.addEventListener('click', function() {
                         var pid = this.dataset.pid;
@@ -1307,12 +1316,12 @@ class PA_Admin {
                         var span = this;
                         span.style.opacity = '0.5';
                         var xhr = new XMLHttpRequest();
-                        xhr.open('PATCH', PA_API_BASE + '/api/admin/products/' + pid);
-                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.open('POST', ajaxurl);
+                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                         xhr.onload = function() {
                             try {
                                 var r = JSON.parse(xhr.responseText);
-                                if (r.ok) {
+                                if (r.success) {
                                     span.dataset.vis = nextVis ? '1' : '0';
                                     if (nextVis) {
                                         span.innerHTML = '&#9679; On';
@@ -1326,11 +1335,13 @@ class PA_Admin {
                                     for (var i = 0; i < PA_PRODUCTS.length; i++) {
                                         if (PA_PRODUCTS[i].id == pid) { PA_PRODUCTS[i].is_visible = nextVis; break; }
                                     }
-                                } else { alert('Failed to update visibility'); }
+                                } else { alert('Failed to update visibility: ' + (r.data || 'unknown error')); }
                             } catch(e) { alert('Error updating visibility'); }
                             span.style.opacity = '1';
                         };
-                        xhr.send(JSON.stringify({is_visible: nextVis}));
+                        xhr.send('action=pa_toggle_product_visibility&pid=' + encodeURIComponent(pid)
+                            + '&is_visible=' + (nextVis ? '1' : '0')
+                            + '&_wpnonce=' + PA_VIS_NONCE);
                     });
                 });
                 // Kit toggle
@@ -1853,6 +1864,7 @@ class PA_Admin {
                             + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 0;font-weight:600">Vendor &amp; Price</th>'
                             + '<th style="text-align:left;font-size:11px;color:#888;padding:0 16px 4px 0;font-weight:600">Set Dose</th>'
                             + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 0;font-weight:600">Product URL</th>'
+                            + '<th style="text-align:left;font-size:11px;color:#888;padding:0 0 4px 8px;font-weight:600">Show</th>'
                             + '</tr></thead><tbody>';
                         var rowIdx = 0;
                         dosageOrder.forEach(function(lbl) {
@@ -1884,11 +1896,21 @@ class PA_Admin {
                                         + 'style="font-size:11px;color:#2271b1;word-break:break-all;max-width:220px;display:inline-block">'
                                         + esc(v.link) + '</a>'
                                     : '<span style="color:#bbb;font-size:11px">\u2014</span>';
-                                html += '<tr style="border-top:1px solid #f0f0f0">'
+                                var isHidden = v.listing_id && PA_HIDDEN_LISTING_IDS.indexOf(Number(v.listing_id)) !== -1;
+                                var hideCell = v.listing_id
+                                    ? '<span class="pa-listing-toggle" data-listing-id="' + v.listing_id + '" data-hidden="' + (isHidden ? '1' : '0') + '" '
+                                        + 'style="cursor:pointer;font-weight:bold;font-size:12px;color:' + (isHidden ? '#b32d2e' : '#1d8348') + '" '
+                                        + 'title="' + (isHidden ? 'Click to show this listing on the frontend' : 'Click to hide this listing from the frontend') + '">'
+                                        + (isHidden ? '&#9675; Hidden' : '&#9679; Shown')
+                                        + '</span>'
+                                    : '<span style="color:#bbb;font-size:11px">\u2014</span>';
+                                var rowStyle = isHidden ? 'border-top:1px solid #f0f0f0;opacity:.55;background:#fff5f5' : 'border-top:1px solid #f0f0f0';
+                                html += '<tr style="' + rowStyle + '">'
                                     + '<td style="padding:5px 16px 5px 0;font-size:12px;white-space:nowrap;font-weight:600;color:#444">' + esc(lbl) + '</td>'
                                     + '<td style="padding:5px 8px 5px 0;font-size:12px">' + vendorPrice + '</td>'
                                     + '<td style="padding:5px 16px 5px 0;font-size:12px">' + doseCell + '</td>'
                                     + '<td style="padding:5px 0;font-size:12px">' + urlCell + '</td>'
+                                    + '<td style="padding:5px 0 5px 8px;font-size:12px;white-space:nowrap">' + hideCell + '</td>'
                                     + '</tr>';
                             });
                         });
@@ -1929,6 +1951,35 @@ class PA_Admin {
                                     }
                                 })
                                 .catch(function() { btn.disabled = false; btn.textContent = 'Save'; showNotice('error', 'Network error saving dose.'); });
+                            });
+                        });
+
+                        // Wire up per-listing Hide/Show toggles. Hidden listings are
+                        // filtered out of /pa/v1/products and /pa/v1/products/{id}/prices
+                        // so they disappear from both the grid card and the detail view.
+                        list.querySelectorAll('.pa-listing-toggle').forEach(function(span) {
+                            span.addEventListener('click', function() {
+                                var lid = Number(span.getAttribute('data-listing-id'));
+                                if (!lid) return;
+                                var nextHidden = span.getAttribute('data-hidden') !== '1';
+                                span.style.opacity = '0.5';
+                                var xhr = new XMLHttpRequest();
+                                xhr.open('POST', ajaxurl);
+                                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                                xhr.onload = function() {
+                                    span.style.opacity = '1';
+                                    try {
+                                        var r = JSON.parse(xhr.responseText);
+                                        if (!r.success) { showNotice('error', 'Failed: ' + (r.data || 'unknown')); return; }
+                                        var idx = PA_HIDDEN_LISTING_IDS.indexOf(lid);
+                                        if (nextHidden && idx === -1) { PA_HIDDEN_LISTING_IDS.push(lid); }
+                                        else if (!nextHidden && idx !== -1) { PA_HIDDEN_LISTING_IDS.splice(idx, 1); }
+                                        loadScrapedPrices(pid);
+                                    } catch(e) { showNotice('error', 'Error updating listing'); }
+                                };
+                                xhr.send('action=pa_toggle_listing&listing_id=' + lid
+                                    + '&hidden=' + (nextHidden ? '1' : '0')
+                                    + '&_wpnonce=' + PA_LISTING_NONCE);
                             });
                         });
                     })
@@ -2342,6 +2393,60 @@ class PA_Admin {
         } else {
             wp_send_json_error($resp['error'] ?? 'API error');
         }
+    }
+
+    public function ajax_toggle_product_visibility() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_toggle_visibility', '_wpnonce');
+        $pid        = (int) ($_POST['pid'] ?? 0);
+        $is_visible = !empty($_POST['is_visible']) && $_POST['is_visible'] !== 'false' && $_POST['is_visible'] !== '0';
+        if (!$pid) {
+            wp_send_json_error('Invalid product ID');
+        }
+        // Forward the change to the external admin API.
+        $resp = $this->api->request('PATCH', '/api/admin/products/' . $pid, array('is_visible' => $is_visible), true);
+        if (!$resp['ok']) {
+            wp_send_json_error($resp['error'] ?? 'API error');
+        }
+        // Track the hidden-product list on the plugin side so the REST
+        // endpoint can filter it out even if the upstream /api/products
+        // endpoint still returns the product. This is what the frontend
+        // card actually reads.
+        $hidden_ids = array_map('intval', (array) get_option('pa_hidden_product_ids', array()));
+        if ($is_visible) {
+            $hidden_ids = array_values(array_filter($hidden_ids, function ($id) use ($pid) { return $id !== $pid; }));
+        } elseif (!in_array($pid, $hidden_ids, true)) {
+            $hidden_ids[] = $pid;
+        }
+        update_option('pa_hidden_product_ids', $hidden_ids, false);
+        // Invalidate caches so the frontend picks up the change immediately.
+        delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
+        wp_send_json_success(array('is_visible' => $is_visible));
+    }
+
+    public function ajax_toggle_listing() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_toggle_listing', '_wpnonce');
+        $lid    = (int) ($_POST['listing_id'] ?? 0);
+        $hidden = !empty($_POST['hidden']) && $_POST['hidden'] !== 'false' && $_POST['hidden'] !== '0';
+        if (!$lid) {
+            wp_send_json_error('Invalid listing ID');
+        }
+        $hidden_ids = array_map('intval', (array) get_option('pa_hidden_listing_ids', array()));
+        if ($hidden) {
+            if (!in_array($lid, $hidden_ids, true)) { $hidden_ids[] = $lid; }
+        } else {
+            $hidden_ids = array_values(array_filter($hidden_ids, function ($id) use ($lid) { return $id !== $lid; }));
+        }
+        update_option('pa_hidden_listing_ids', $hidden_ids, false);
+        delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
+        wp_send_json_success(array('listing_id' => $lid, 'hidden' => $hidden));
     }
 
     public function ajax_delete_product() {
