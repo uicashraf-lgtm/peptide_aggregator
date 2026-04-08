@@ -386,6 +386,41 @@ class PA_Rest {
             }));
         }
 
+        // Filter out individual vendor listings that an admin has hidden via the
+        // per-listing "Show/Hidden" toggle on the product edit screen. This lets
+        // the admin remove a single vendor's listing (e.g. SLP-322 from MileHigh
+        // Compounds) without hiding the whole product. Removed from both the
+        // top_vendors array and every available_dosages[].vendors array.
+        if (is_array($products)) {
+            $hidden_listing_ids = array_map('intval', (array) get_option('pa_hidden_listing_ids', array()));
+            if (!empty($hidden_listing_ids)) {
+                $hidden_set = array_flip($hidden_listing_ids);
+                $keep       = function ($v) use ($hidden_set) {
+                    $lid = isset($v['listing_id']) ? (int) $v['listing_id'] : 0;
+                    return $lid === 0 || !isset($hidden_set[$lid]);
+                };
+                foreach ($products as &$product) {
+                    if (!empty($product['top_vendors']) && is_array($product['top_vendors'])) {
+                        $product['top_vendors'] = array_values(array_filter($product['top_vendors'], $keep));
+                    }
+                    if (!empty($product['available_dosages']) && is_array($product['available_dosages'])) {
+                        foreach ($product['available_dosages'] as &$dosage) {
+                            if (!empty($dosage['vendors']) && is_array($dosage['vendors'])) {
+                                $dosage['vendors'] = array_values(array_filter($dosage['vendors'], $keep));
+                            }
+                        }
+                        unset($dosage);
+                        // Drop any dosage row that no longer has any vendors left.
+                        $product['available_dosages'] = array_values(array_filter(
+                            $product['available_dosages'],
+                            function ($d) { return !empty($d['vendors']); }
+                        ));
+                    }
+                }
+                unset($product);
+            }
+        }
+
         $response = rest_ensure_response($products);
         $response->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=300');
         return $response;
@@ -578,6 +613,20 @@ class PA_Rest {
             'source'       => 'pa/v1/products/{id}/prices',
             'api_endpoint' => '/api/products/' . rawurlencode($id) . '/prices',
         ));
+
+        // Drop any listings that an admin has hidden via the per-listing toggle,
+        // so the detail view doesn't show a vendor that has been disabled for
+        // this product.
+        if (is_array($prices)) {
+            $hidden_listing_ids = array_map('intval', (array) get_option('pa_hidden_listing_ids', array()));
+            if (!empty($hidden_listing_ids)) {
+                $hidden_set = array_flip($hidden_listing_ids);
+                $prices     = array_values(array_filter($prices, function ($p) use ($hidden_set) {
+                    $lid = isset($p['listing_id']) ? (int) $p['listing_id'] : 0;
+                    return $lid === 0 || !isset($hidden_set[$lid]);
+                }));
+            }
+        }
 
         // Apply affiliate templates to each price entry's link.
         $affiliate_map = $this->get_affiliate_map();
