@@ -12,6 +12,7 @@ class PA_Admin {
         add_action('admin_menu', array($this, 'register_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('wp_ajax_pa_toggle_product_status', array($this, 'ajax_toggle_product_status'));
+        add_action('wp_ajax_pa_toggle_product_visibility', array($this, 'ajax_toggle_product_visibility'));
         add_action('wp_ajax_pa_delete_product', array($this, 'ajax_delete_product'));
         add_action('wp_ajax_pa_delete_vendor', array($this, 'ajax_delete_vendor'));
         add_action('wp_ajax_pa_save_dose_labels', array($this, 'ajax_save_dose_labels'));
@@ -999,6 +1000,7 @@ class PA_Admin {
             var PA_PRODUCTS = <?php echo wp_json_encode(array_values($products)); ?>;
             var PA_VENDORS = <?php echo wp_json_encode(array_values($vendors)); ?>;
             var PA_NONCE = '<?php echo wp_create_nonce('pa_toggle_status'); ?>';
+            var PA_VIS_NONCE = '<?php echo wp_create_nonce('pa_toggle_visibility'); ?>';
             var PA_DELETE_NONCE = '<?php echo wp_create_nonce('pa_product_delete_action'); ?>';
             var PA_DOSE_LABELS_NONCE = '<?php echo wp_create_nonce('pa_dose_labels_action'); ?>';
             var PA_DEFAULT_DOSE_NONCE = '<?php echo wp_create_nonce('pa_default_dose_action'); ?>';
@@ -1298,7 +1300,11 @@ class PA_Admin {
                         xhr.send('action=pa_toggle_product_status&pid=' + pid + '&status=' + next + '&_wpnonce=' + PA_NONCE);
                     });
                 });
-                // Visibility toggle
+                // Visibility toggle — goes through a plugin AJAX handler so
+                // the WordPress transient cache and prices cache are invalidated
+                // immediately. A direct PATCH to the external API would leave
+                // pa_products_cache stale and the hidden product would keep
+                // showing up on the frontend card for up to 30 minutes.
                 document.querySelectorAll('.pa-vis-toggle').forEach(function(el) {
                     el.addEventListener('click', function() {
                         var pid = this.dataset.pid;
@@ -1307,12 +1313,12 @@ class PA_Admin {
                         var span = this;
                         span.style.opacity = '0.5';
                         var xhr = new XMLHttpRequest();
-                        xhr.open('PATCH', PA_API_BASE + '/api/admin/products/' + pid);
-                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.open('POST', ajaxurl);
+                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                         xhr.onload = function() {
                             try {
                                 var r = JSON.parse(xhr.responseText);
-                                if (r.ok) {
+                                if (r.success) {
                                     span.dataset.vis = nextVis ? '1' : '0';
                                     if (nextVis) {
                                         span.innerHTML = '&#9679; On';
@@ -1326,11 +1332,13 @@ class PA_Admin {
                                     for (var i = 0; i < PA_PRODUCTS.length; i++) {
                                         if (PA_PRODUCTS[i].id == pid) { PA_PRODUCTS[i].is_visible = nextVis; break; }
                                     }
-                                } else { alert('Failed to update visibility'); }
+                                } else { alert('Failed to update visibility: ' + (r.data || 'unknown error')); }
                             } catch(e) { alert('Error updating visibility'); }
                             span.style.opacity = '1';
                         };
-                        xhr.send(JSON.stringify({is_visible: nextVis}));
+                        xhr.send('action=pa_toggle_product_visibility&pid=' + encodeURIComponent(pid)
+                            + '&is_visible=' + (nextVis ? '1' : '0')
+                            + '&_wpnonce=' + PA_VIS_NONCE);
                     });
                 });
                 // Kit toggle
@@ -2342,6 +2350,38 @@ class PA_Admin {
         } else {
             wp_send_json_error($resp['error'] ?? 'API error');
         }
+    }
+
+    public function ajax_toggle_product_visibility() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_toggle_visibility', '_wpnonce');
+        $pid        = (int) ($_POST['pid'] ?? 0);
+        $is_visible = !empty($_POST['is_visible']) && $_POST['is_visible'] !== 'false' && $_POST['is_visible'] !== '0';
+        if (!$pid) {
+            wp_send_json_error('Invalid product ID');
+        }
+        // Forward the change to the external admin API.
+        $resp = $this->api->request('PATCH', '/api/admin/products/' . $pid, array('is_visible' => $is_visible), true);
+        if (!$resp['ok']) {
+            wp_send_json_error($resp['error'] ?? 'API error');
+        }
+        // Track the hidden-product list on the plugin side so the REST
+        // endpoint can filter it out even if the upstream /api/products
+        // endpoint still returns the product. This is what the frontend
+        // card actually reads.
+        $hidden_ids = array_map('intval', (array) get_option('pa_hidden_product_ids', array()));
+        if ($is_visible) {
+            $hidden_ids = array_values(array_filter($hidden_ids, function ($id) use ($pid) { return $id !== $pid; }));
+        } elseif (!in_array($pid, $hidden_ids, true)) {
+            $hidden_ids[] = $pid;
+        }
+        update_option('pa_hidden_product_ids', $hidden_ids, false);
+        // Invalidate caches so the frontend picks up the change immediately.
+        delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
+        wp_send_json_success(array('is_visible' => $is_visible));
     }
 
     public function ajax_delete_product() {

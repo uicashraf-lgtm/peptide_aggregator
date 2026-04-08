@@ -368,6 +368,24 @@ class PA_Rest {
             set_transient('pa_products_cache', $products, 30 * MINUTE_IN_SECONDS);
         } // end cache miss block
 
+        // Filter out products that an admin has hidden via the "Visible" toggle.
+        // Applied after the cache lookup so toggling visibility takes effect
+        // immediately (the admin AJAX handler clears pa_products_cache on change,
+        // but legacy cached entries may still contain hidden products).
+        if (is_array($products)) {
+            $hidden_ids = array_map('intval', (array) get_option('pa_hidden_product_ids', array()));
+            $products   = array_values(array_filter($products, function ($p) use ($hidden_ids) {
+                // Respect the external API's is_visible flag when present.
+                if (array_key_exists('is_visible', $p) && $p['is_visible'] === false) {
+                    return false;
+                }
+                // Also honour the plugin-side hidden-product list so toggling works
+                // even if the external /api/products endpoint does not return the flag.
+                $pid = (int) ($p['id'] ?? 0);
+                return !in_array($pid, $hidden_ids, true);
+            }));
+        }
+
         $response = rest_ensure_response($products);
         $response->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=300');
         return $response;
