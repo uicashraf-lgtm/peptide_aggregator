@@ -2570,11 +2570,31 @@
     const host = document.getElementById('pa-active-filters');
     if (!host) return;
     host.innerHTML = '';
+    // Helper: detect if a chip name corresponds to a known vendor/supplier and
+    // build the chip's inner HTML (with logo or initials avatar) accordingly.
+    function buildChipInner(name) {
+      var nameLc = String(name || '').toLowerCase();
+      var supplier = (UI.suppliers || []).find(function (s) {
+        return String(s.name || '').toLowerCase() === nameLc;
+      });
+      var isVendorChip = !!supplier || !!(state.applied && state.applied.suppliers && state.applied.suppliers.has(name));
+      var inner = '';
+      if (isVendorChip) {
+        if (supplier && supplier.logo_url) {
+          inner += '<img class="pa-active-chip-logo" src="' + escHtml(supplier.logo_url) + '" alt="">';
+        } else {
+          inner += '<span class="pa-active-chip-avatar">' + escHtml(vendorInitials(name)) + '</span>';
+        }
+      }
+      inner += escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
+      return { html: inner, isVendor: isVendorChip };
+    }
     // Tag filters from popular chips
     Array.from(state.tagFilters).forEach(function (name) {
-      const chip = el('button', 'pa-active-chip');
+      var built = buildChipInner(name);
+      const chip = el('button', 'pa-active-chip' + (built.isVendor ? ' is-vendor' : ''));
       chip.type = 'button';
-      chip.innerHTML = escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
+      chip.innerHTML = built.html;
       chip.addEventListener('click', function () {
         state.tagFilters.delete(name);
         renderPopular();
@@ -2585,20 +2605,10 @@
     });
     // Modal-applied filters
     Array.from(state.activeFilters).forEach(function (name) {
-      var isVendor = !!(state.applied && state.applied.suppliers && state.applied.suppliers.has(name));
-      const chip = el('button', 'pa-active-chip' + (isVendor ? ' is-vendor' : ''));
+      var built = buildChipInner(name);
+      const chip = el('button', 'pa-active-chip' + (built.isVendor ? ' is-vendor' : ''));
       chip.type = 'button';
-      var chipInner = '';
-      if (isVendor) {
-        var supplier = (UI.suppliers || []).find(function (s) { return s.name === name; });
-        if (supplier && supplier.logo_url) {
-          chipInner += '<img class="pa-active-chip-logo" src="' + escHtml(supplier.logo_url) + '" alt="">';
-        } else {
-          chipInner += '<span class="pa-active-chip-avatar">' + escHtml(vendorInitials(name)) + '</span>';
-        }
-      }
-      chipInner += escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
-      chip.innerHTML = chipInner;
+      chip.innerHTML = built.html;
       chip.addEventListener('click', function () {
         state.activeFilters.delete(name);
         // Also clear the matching applied state so filteredProducts() stops filtering on it
