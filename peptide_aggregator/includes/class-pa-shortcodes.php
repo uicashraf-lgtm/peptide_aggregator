@@ -281,6 +281,7 @@ class PA_Shortcodes {
                 'api_base:'     . json_encode($this->api->base_url()) . ',' .
                 'rest_base:'    . json_encode(rest_url('pa/v1'))      . ',' .
                 'sse_url:'      . json_encode($this->api->sse_url())  . ',' .
+                'prices_base_url:' . json_encode(home_url('/prices')) . ',' .
                 'popular:'      . json_encode(['Retatrutide','Tirzepatide','Tesamorelin','GHK-Cu','Glow','BPC-157 / TB4 Blend','MOTS-c','BPC-157']) . ',' .
                 'categories:'   . '[]' . ',' .
                 'price_ranges:' . json_encode(['Any Price','$0 - $50','$50 - $100','$100 - $250','$250 - $500','$500+']) . ',' .
@@ -324,6 +325,7 @@ class PA_Shortcodes {
         window.PA_UI.api_base = <?php echo json_encode($this->api->base_url()); ?>;
         window.PA_UI.rest_base = <?php echo json_encode(rest_url('pa/v1')); ?>;
         window.PA_UI.sse_url  = <?php echo json_encode($this->api->sse_url()); ?>;
+        window.PA_UI.prices_base_url = <?php echo json_encode(home_url('/prices')); ?>;
         window.PA_UI.dose_labels    = <?php echo json_encode( empty($sc_dose_labels) ? new stdClass() : $sc_dose_labels ); ?>;
         window.PA_UI.default_doses  = <?php echo json_encode( empty($sc_default_doses) ? new stdClass() : $sc_default_doses ); ?>;
         window.PA_UI.dose_remaps    = <?php echo json_encode( empty($sc_dose_remaps) ? new stdClass() : $sc_dose_remaps ); ?>;
