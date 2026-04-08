@@ -2585,9 +2585,20 @@
     });
     // Modal-applied filters
     Array.from(state.activeFilters).forEach(function (name) {
-      const chip = el('button', 'pa-active-chip');
+      var isVendor = !!(state.applied && state.applied.suppliers && state.applied.suppliers.has(name));
+      const chip = el('button', 'pa-active-chip' + (isVendor ? ' is-vendor' : ''));
       chip.type = 'button';
-      chip.innerHTML = escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
+      var chipInner = '';
+      if (isVendor) {
+        var supplier = (UI.suppliers || []).find(function (s) { return s.name === name; });
+        if (supplier && supplier.logo_url) {
+          chipInner += '<img class="pa-active-chip-logo" src="' + escHtml(supplier.logo_url) + '" alt="">';
+        } else {
+          chipInner += '<span class="pa-active-chip-avatar">' + escHtml(vendorInitials(name)) + '</span>';
+        }
+      }
+      chipInner += escHtml(name) + ' <span aria-hidden="true">\u00d7</span>';
+      chip.innerHTML = chipInner;
       chip.addEventListener('click', function () {
         state.activeFilters.delete(name);
         // Also clear the matching applied state so filteredProducts() stops filtering on it

@@ -254,6 +254,36 @@
     line-height: 1 !important;
 }
 
+.pa-shell .pa-active-chip.is-vendor {
+    background: #e0f2fe !important;
+    border-color: #7dd3fc !important;
+    color: #0369a1 !important;
+    padding-left: 4px !important;
+}
+
+.pa-shell .pa-active-chip.is-vendor .pa-active-chip-logo {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    background: #fff !important;
+    flex-shrink: 0 !important;
+}
+
+.pa-shell .pa-active-chip.is-vendor .pa-active-chip-avatar {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    color: #0369a1 !important;
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
 .pa-shell .pa-clear-all,
 #pa-clear-all,
 #pa-dsm-clear-all,
