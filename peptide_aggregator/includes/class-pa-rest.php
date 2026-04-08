@@ -251,6 +251,52 @@ class PA_Rest {
                 unset($product);
             }
 
+            // Normalize available_dosages labels: strip parenthetical container/material
+            // descriptors (e.g. "10 ml(glass)" → "10 ml") so they merge into the base dose
+            // tab instead of appearing as separate phantom dosages. Container materials
+            // like glass/polypropylene aren't actual dose variants — they're packaging.
+            if (is_array($products)) {
+                foreach ($products as &$product) {
+                    if (empty($product['available_dosages']) || !is_array($product['available_dosages'])) {
+                        continue;
+                    }
+                    $merged = array();
+                    foreach ($product['available_dosages'] as $dosage) {
+                        if (!is_array($dosage)) continue;
+                        $rawLabel = (string) ($dosage['label'] ?? '');
+                        // Strip parenthetical suffixes like "(glass)", "(polypropylene)", "(plastic)".
+                        $normLabel = trim(preg_replace('/\s*\([^)]*\)\s*$/', '', $rawLabel));
+                        if ($normLabel === '') $normLabel = $rawLabel;
+                        $key = strtolower(preg_replace('/\s+/', '', $normLabel));
+                        if (!isset($merged[$key])) {
+                            $merged[$key] = array(
+                                'label'   => $normLabel,
+                                'vendors' => array(),
+                            );
+                            // Preserve any other fields from the first occurrence.
+                            foreach ($dosage as $k => $v) {
+                                if ($k !== 'label' && $k !== 'vendors') {
+                                    $merged[$key][$k] = $v;
+                                }
+                            }
+                        }
+                        // Merge vendors, deduplicating by listing_id when available.
+                        foreach ((array) ($dosage['vendors'] ?? array()) as $v) {
+                            $lid = $v['listing_id'] ?? null;
+                            $dup = false;
+                            if ($lid !== null) {
+                                foreach ($merged[$key]['vendors'] as $existing) {
+                                    if (($existing['listing_id'] ?? null) === $lid) { $dup = true; break; }
+                                }
+                            }
+                            if (!$dup) $merged[$key]['vendors'][] = $v;
+                        }
+                    }
+                    $product['available_dosages'] = array_values($merged);
+                }
+                unset($product);
+            }
+
             // Apply affiliate templates to all vendor links (top_vendors and available_dosages).
             $affiliate_map = $this->get_affiliate_map();
             if (!empty($affiliate_map) && is_array($products)) {

@@ -734,7 +734,39 @@ class PA_Admin {
         // dosages but a same-group variant does (mirrors groupByDosage merging).
         $public_dosages_by_base   = array();
         $dosage_re_pub = '/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|g|u)(?:\/(?:ml|vial))?$/i';
+        // Normalize available_dosages labels: strip parenthetical container/material
+        // descriptors (e.g. "10 ml(glass)" → "10 ml") so packaging variants merge into
+        // their base dose tab instead of appearing as separate phantom dosages.
         if ($public_resp['ok'] && is_array($public_resp['data'])) {
+            foreach ($public_resp['data'] as &$fp_norm) {
+                if (empty($fp_norm['available_dosages']) || !is_array($fp_norm['available_dosages'])) continue;
+                $merged_norm = array();
+                foreach ($fp_norm['available_dosages'] as $dosage) {
+                    if (!is_array($dosage)) continue;
+                    $rawLabel  = (string) ($dosage['label'] ?? '');
+                    $normLabel = trim(preg_replace('/\s*\([^)]*\)\s*$/', '', $rawLabel));
+                    if ($normLabel === '') $normLabel = $rawLabel;
+                    $key = strtolower(preg_replace('/\s+/', '', $normLabel));
+                    if (!isset($merged_norm[$key])) {
+                        $merged_norm[$key] = array('label' => $normLabel, 'vendors' => array());
+                        foreach ($dosage as $k => $v) {
+                            if ($k !== 'label' && $k !== 'vendors') $merged_norm[$key][$k] = $v;
+                        }
+                    }
+                    foreach ((array) ($dosage['vendors'] ?? array()) as $v) {
+                        $lid = $v['listing_id'] ?? null;
+                        $dup = false;
+                        if ($lid !== null) {
+                            foreach ($merged_norm[$key]['vendors'] as $existing) {
+                                if (($existing['listing_id'] ?? null) === $lid) { $dup = true; break; }
+                            }
+                        }
+                        if (!$dup) $merged_norm[$key]['vendors'][] = $v;
+                    }
+                }
+                $fp_norm['available_dosages'] = array_values($merged_norm);
+            }
+            unset($fp_norm);
             foreach ($public_resp['data'] as $fp) {
                 $fpid   = (string) ($fp['id'] ?? '');
                 $fpbase = strtolower(trim(preg_replace($dosage_re_pub, '', $fp['name'] ?? '')));
