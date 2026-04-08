@@ -184,9 +184,9 @@ class PA_Shortcodes {
 .pa-check-avatar{width:28px!important;height:28px!important;border-radius:50%!important;background:#253a5e!important;color:#fff!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:10px!important;font-weight:700!important;flex-shrink:0!important}
 .pa-count-pill,.pa-country-pill{font-size:11px!important;color:#6b7a90!important;background:#f0f4fa!important;border-radius:10px!important;padding:1px 7px!important;flex-shrink:0!important}
 .pa-price-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:8px!important}
-.pa-price-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:7px 10px!important;border:1.5px solid #2563eb!important;border-radius:8px!important;background:#ffffff!important;color:#2563eb!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;line-height:1!important}
-.pa-price-btn:hover{background:#eff6ff!important}
-.pa-price-btn.is-selected{background:#2563eb!important;color:#ffffff!important}
+.pa-price-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:7px 10px!important;border:1.5px solid #e4e9f0!important;border-radius:8px!important;background:#ffffff!important;color:#6b7a90!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;line-height:1!important}
+.pa-price-btn:hover:not(.is-selected){border-color:#2563eb!important;color:#2563eb!important}
+.pa-price-btn.is-selected{background:#2563eb!important;color:#ffffff!important;border-color:#2563eb!important;box-shadow:0 2px 8px rgba(37,99,235,0.25)!important}
 .pa-foot-btn,.pa-modal-cancel-btn,.pa-modal-apply-btn{height:40px!important;padding:0 22px!important;border-radius:8px!important;font-size:13px!important;font-weight:600!important;cursor:pointer!important;transition:all 0.15s ease!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .pa-foot-btn.is-cancel,.pa-modal-cancel-btn{background:#f7f9fc!important;border:1.5px solid #e4e9f0!important;color:#6b7a90!important}
 .pa-foot-btn.is-cancel:hover,.pa-modal-cancel-btn:hover{color:#1a2332!important;border-color:#c0cad8!important}
