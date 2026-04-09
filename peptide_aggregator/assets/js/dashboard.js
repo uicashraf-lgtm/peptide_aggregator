@@ -12,46 +12,15 @@
   const COUPON_SAVINGS = UI.coupon_savings || {};
   let sseSource = null;
 
-  // Build a public product URL for sharing/copying. Uses the WordPress
-  // /prices/{slug} pretty route exposed by the plugin so the shared link
-  // points at the specific product instead of the current page.
-  function productSlug(name) {
-    return String(name || '').toLowerCase().trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-  function productShareUrl(name) {
-    var slug = productSlug(name);
-    if (!slug) return window.location.href;
-    var base = (UI.prices_base_url || '').replace(/\/$/, '');
-    if (!base) base = window.location.origin + '/prices';
-    return base + '/' + slug + '/';
-  }
-
-  // Read the initial product slug from either the PA_UI config (set by the
-  // server from the pa_product_slug query var) or, as a fallback, by
-  // parsing the current URL path. Returns '' when no slug is present.
-  function readInitialProductSlug() {
-    var fromUI = (UI.initial_product_slug || '').toString().trim();
-    if (fromUI) return productSlug(fromUI);
-    var path = (window.location.pathname || '').replace(/\/+$/, '');
-    var m = path.match(/\/prices\/([^\/]+)$/i);
-    return m ? productSlug(decodeURIComponent(m[1])) : '';
-  }
-
-  // After products have loaded, if a deep-link slug is present open the
-  // matching product's detail view. Called once on initial load.
-  var _initialProductOpened = false;
-  function maybeOpenInitialProduct() {
-    if (_initialProductOpened) return;
-    var slug = readInitialProductSlug();
-    if (!slug) return;
-    var match = (state.allProducts || []).find(function (p) {
-      return productSlug(p.name) === slug;
-    });
-    if (!match) return;
-    _initialProductOpened = true;
-    loadProductDetail(match._activeId || match.id, match.name);
+  // Return the scraped product URL from the cheapest/top vendor, which the
+  // share button uses so the shared link points at the actual vendor page.
+  function topVendorLink(product) {
+    if (!product) return '';
+    var vendors = product.top_vendors || [];
+    for (var i = 0; i < vendors.length; i++) {
+      if (vendors[i] && vendors[i].link) return vendors[i].link;
+    }
+    return '';
   }
 
   // Compute coupon-discounted price for a vendor; returns original price if no coupon applies.
@@ -566,9 +535,6 @@
       });
       UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
       renderProductGrid(state.allProducts);
-      // If the page was loaded via a shared /prices/{slug}/ deep link, find
-      // the matching product and open its detail view automatically.
-      maybeOpenInitialProduct();
       // Kick off full vendor data loading in background so supplier filter is accurate
       loadAllVendorNames();
     } catch (e) {
@@ -1042,7 +1008,8 @@
     shareBtn.title = 'Share'; shareBtn.type = 'button';
     shareBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      var shareUrl = productShareUrl(p.name);
+      var shareUrl = topVendorLink(p);
+      if (!shareUrl) return;
       if (navigator.share) { navigator.share({ title: p.name, url: shareUrl }); }
       else { navigator.clipboard && navigator.clipboard.writeText(shareUrl); }
     });
@@ -1937,7 +1904,8 @@
       var shareBtn = el('button', 'pa-icon-btn', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>');
       shareBtn.title = 'Share'; shareBtn.type = 'button';
       shareBtn.addEventListener('click', function () {
-        var shareUrl = productShareUrl(productName);
+        var shareUrl = topVendorLink(pData);
+        if (!shareUrl) return;
         if (navigator.share) navigator.share({ title: productName, url: shareUrl });
         else navigator.clipboard && navigator.clipboard.writeText(shareUrl);
       });
