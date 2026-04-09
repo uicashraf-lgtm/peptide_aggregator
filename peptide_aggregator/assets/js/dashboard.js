@@ -28,6 +28,21 @@
     return base + '/' + slug + '/';
   }
 
+  // Return a safe absolute URL for a vendor link, or null if the value is
+  // missing / relative / obviously malformed. Without this guard,
+  // window.open or <a href=...> will resolve a relative path against the
+  // current origin and open the WordPress home page instead of the vendor.
+  function safeVendorLink(link) {
+    if (link == null) return null;
+    var s = String(link).trim();
+    if (!s) return null;
+    if (/^https?:\/\//i.test(s)) return s;
+    if (/^\/\//.test(s)) return 'https:' + s;
+    // Bare hostname like "vendor.com/product" — assume https
+    if (/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:\/|$)/i.test(s)) return 'https://' + s;
+    return null;
+  }
+
   // Compute coupon-discounted price for a vendor; returns original price if no coupon applies.
   function discountedPrice(vendorName, price) {
     if (price == null) return null;
@@ -875,14 +890,17 @@
 
   function buildVendorRow(v, isBest) {
     const row = el('div', 'pa-pcard-vendor-row' + (isBest ? ' is-best' : ''));
-// ADD THIS: Make the row look clickable and add the listener
-  row.style.cursor = 'pointer';
-  row.addEventListener('click', function(e) {
-    e.stopPropagation(); // THIS PREVENTS THE DETAIL VIEW FROM OPENING
-    if (v.link) {
-      window.open(v.link, '_blank', 'noopener noreferrer');
+    // Make the row open the vendor's product page when clicked, but only
+    // if we actually have a usable absolute URL. Otherwise let the click
+    // fall through to the card's detail-view handler.
+    var _rowVendorUrl = safeVendorLink(v.link);
+    if (_rowVendorUrl) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.open(_rowVendorUrl, '_blank', 'noopener,noreferrer');
+      });
     }
-  });
     // Avatar
     const avatar = el('div', 'pa-pcard-avatar');
     if (v.logo_url) {
@@ -946,9 +964,10 @@
     // Coupon price tooltip — shown on row hover when a savings value is configured
     priceLinkRow.appendChild(priceWrap);
     // 1. Handle the external link icon (if it exists)
-    if (v.link) {
+    var _extUrl = safeVendorLink(v.link);
+    if (_extUrl) {
       const a = document.createElement('a');
-      a.href = v.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.href = _extUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
       a.className = 'pa-pcard-extlink';
       a.innerHTML = '<svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
       a.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -2351,9 +2370,10 @@
       // Coupon price tooltip — shown on row hover when a savings value is configured
       priceRow.appendChild(priceWrap);
 
-      if (v.link) {
+      var _detailExtUrl = safeVendorLink(v.link);
+      if (_detailExtUrl) {
         var a = document.createElement('a');
-        a.href = v.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.href = _detailExtUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
         a.className = 'pa-detail-link-icon';
         a.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
         a.addEventListener('click', function(e) { e.stopPropagation(); });
@@ -2499,9 +2519,10 @@
       var priceEl = el('span', 'pa-detail-price', escHtml(fmt(p.effective_price, p.currency)));
       priceEl.setAttribute('data-listing-id', p.listing_id);
       right.appendChild(priceEl);
-      if (p.link) {
+      var _buyUrl = safeVendorLink(p.link);
+      if (_buyUrl) {
         var a = document.createElement('a');
-        a.href = p.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.href = _buyUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
         a.className = 'pa-buy-link'; a.textContent = 'Buy \u2192';
         right.appendChild(a);
       }
