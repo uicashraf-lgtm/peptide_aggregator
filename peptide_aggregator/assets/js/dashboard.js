@@ -28,6 +28,32 @@
     return base + '/' + slug + '/';
   }
 
+  // Read the initial product slug from either the PA_UI config (set by the
+  // server from the pa_product_slug query var) or, as a fallback, by
+  // parsing the current URL path. Returns '' when no slug is present.
+  function readInitialProductSlug() {
+    var fromUI = (UI.initial_product_slug || '').toString().trim();
+    if (fromUI) return productSlug(fromUI);
+    var path = (window.location.pathname || '').replace(/\/+$/, '');
+    var m = path.match(/\/prices\/([^\/]+)$/i);
+    return m ? productSlug(decodeURIComponent(m[1])) : '';
+  }
+
+  // After products have loaded, if a deep-link slug is present open the
+  // matching product's detail view. Called once on initial load.
+  var _initialProductOpened = false;
+  function maybeOpenInitialProduct() {
+    if (_initialProductOpened) return;
+    var slug = readInitialProductSlug();
+    if (!slug) return;
+    var match = (state.allProducts || []).find(function (p) {
+      return productSlug(p.name) === slug;
+    });
+    if (!match) return;
+    _initialProductOpened = true;
+    loadProductDetail(match._activeId || match.id, match.name);
+  }
+
   // Compute coupon-discounted price for a vendor; returns original price if no coupon applies.
   function discountedPrice(vendorName, price) {
     if (price == null) return null;
@@ -540,6 +566,9 @@
       });
       UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
       renderProductGrid(state.allProducts);
+      // If the page was loaded via a shared /prices/{slug}/ deep link, find
+      // the matching product and open its detail view automatically.
+      maybeOpenInitialProduct();
       // Kick off full vendor data loading in background so supplier filter is accurate
       loadAllVendorNames();
     } catch (e) {
