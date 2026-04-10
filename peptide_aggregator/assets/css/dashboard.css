@@ -731,7 +731,7 @@
 .pa-shell .pa-pcard-vname,
 .pa-shell .pa-pcard-vendor-name {
     font-size: 14px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     color: var(--text) !important;
     line-height: 1.3 !important;
     white-space: nowrap !important;
@@ -792,7 +792,7 @@
 
 .pa-shell .pa-pcard-price {
     font-size: 13px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     color: var(--text) !important;
     letter-spacing: -0.01em !important;
 }
