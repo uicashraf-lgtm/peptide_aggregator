@@ -770,15 +770,16 @@
         return (p.top_vendors || []).some(function(v) { return v.vendor === gv; });
       });
     }
-    // Desktop results-bar price range dropdown filter
+    // Desktop results-bar price range dropdown filter.
+    // Uses the maximum vendor price (after coupon discounts) so the bucket
+    // reflects the highest post-coupon price across all known vendors.
     if (state.gridPriceFilter && state.gridPriceFilter !== 'Any Price') {
       var gpr = state.gridPriceFilter;
       list = list.filter(function(p) {
-        var price = p.min_price;
-        if (price == null) {
-          var vprices = (p.top_vendors || []).map(function(v) { return v.price; }).filter(function(pr) { return pr != null && pr > 0; });
-          price = vprices.length > 0 ? Math.min.apply(null, vprices) : null;
-        }
+        var vprices = (p.top_vendors || [])
+          .map(function(v) { return discountedPrice(v.vendor, v.price); })
+          .filter(function(pr) { return pr != null && pr > 0; });
+        var price = vprices.length > 0 ? Math.max.apply(null, vprices) : null;
         if (price == null) return true;
         if (gpr === '$0 - $50')    return price >= 0   && price <= 50;
         if (gpr === '$50 - $100')  return price >  50  && price <= 100;
