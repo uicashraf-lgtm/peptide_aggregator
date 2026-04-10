@@ -705,7 +705,7 @@
     background: #eef4ff !important;
     border-color: #c7d8f5 !important;
     transform: none !important;
-    box-shadow: var(--shadow-sm) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06) !important;
 }
 
 .pa-shell .pa-pcard-avatar {
