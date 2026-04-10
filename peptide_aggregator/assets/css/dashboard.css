@@ -1989,5 +1989,10 @@
         font-size: 11px !important;
         padding: 0 6px !important;
     }
+
+    /* Hide desktop-only filter dropdowns on mobile */
+    .pa-shell .pa-desktop-only-filter {
+        display: none !important;
+    }
 }
 
