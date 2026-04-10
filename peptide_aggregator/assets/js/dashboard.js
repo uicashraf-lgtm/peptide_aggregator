@@ -2654,9 +2654,36 @@
       });
       host.appendChild(chip);
     });
+    // Desktop results-bar vendor dropdown chip
+    if (state.gridVendorFilter) {
+      var gvBuilt = buildChipInner(state.gridVendorFilter);
+      const gvChip = el('button', 'pa-active-chip' + (gvBuilt.isVendor ? ' is-vendor' : ''));
+      gvChip.type = 'button';
+      gvChip.innerHTML = gvBuilt.html;
+      gvChip.addEventListener('click', function () {
+        setGridVendorFilter('');
+      });
+      host.appendChild(gvChip);
+    }
+    // Desktop results-bar price range dropdown chip
+    if (state.gridPriceFilter && state.gridPriceFilter !== 'Any Price') {
+      var gpBuilt = buildChipInner(state.gridPriceFilter);
+      const gpChip = el('button', 'pa-active-chip');
+      gpChip.type = 'button';
+      gpChip.innerHTML = gpBuilt.html;
+      gpChip.addEventListener('click', function () {
+        setGridPriceFilter('');
+      });
+      host.appendChild(gpChip);
+    }
     // Show/hide the entire row based on whether any filters are active
     const row = host.closest('.pa-active-row');
-    if (row) row.classList.toggle('is-visible', state.tagFilters.size > 0 || state.activeFilters.size > 0);
+    if (row) row.classList.toggle('is-visible',
+      state.tagFilters.size > 0 ||
+      state.activeFilters.size > 0 ||
+      !!state.gridVendorFilter ||
+      (!!state.gridPriceFilter && state.gridPriceFilter !== 'Any Price')
+    );
   }
 
   function syncDraftToControls() {
@@ -2950,6 +2977,11 @@
     if (clearBtn) clearBtn.addEventListener('click', function () {
       state.activeFilters.clear();
       state.tagFilters.clear();
+      state.gridVendorFilter = '';
+      state.gridPriceFilter = '';
+      var priceSel = document.getElementById('pa-grid-price-filter');
+      if (priceSel) priceSel.value = '';
+      renderGridVendorButton();
       renderPopular();
       renderActiveFilters();
       renderProductGrid(filteredProducts());
@@ -2958,18 +2990,32 @@
     const sort = document.getElementById('pa-grid-sort');
     if (sort) sort.addEventListener('change', function () { renderProductGrid(filteredProducts()); showProductGrid(); });
 
-    const vendorFilter = document.getElementById('pa-grid-vendor-filter');
-    if (vendorFilter) vendorFilter.addEventListener('change', function () {
-      state.gridVendorFilter = vendorFilter.value;
-      renderProductGrid(filteredProducts());
-      showProductGrid();
-    });
+    // Custom vendor dropdown (button + popup with logos)
+    const vendorBtn = document.getElementById('pa-grid-vendor-btn');
+    const vendorPopup = document.getElementById('pa-grid-vendor-popup');
+    if (vendorBtn && vendorPopup) {
+      vendorBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = !vendorPopup.hidden;
+        if (isOpen) {
+          vendorPopup.hidden = true;
+        } else {
+          renderGridVendorPopup();
+          vendorPopup.hidden = false;
+        }
+      });
+      // Close popup on outside click
+      document.addEventListener('click', function (e) {
+        if (vendorPopup.hidden) return;
+        if (!vendorPopup.contains(e.target) && e.target !== vendorBtn && !vendorBtn.contains(e.target)) {
+          vendorPopup.hidden = true;
+        }
+      });
+    }
 
     const priceFilter = document.getElementById('pa-grid-price-filter');
     if (priceFilter) priceFilter.addEventListener('change', function () {
-      state.gridPriceFilter = priceFilter.value;
-      renderProductGrid(filteredProducts());
-      showProductGrid();
+      setGridPriceFilter(priceFilter.value);
     });
 
     const backBtn = document.getElementById('pa-detail-back');
@@ -2977,23 +3023,83 @@
 
   }
 
+  // Apply a new vendor selection from the custom dropdown.
+  function setGridVendorFilter(name) {
+    state.gridVendorFilter = name || '';
+    renderGridVendorButton();
+    renderActiveFilters();
+    renderProductGrid(filteredProducts());
+    showProductGrid();
+  }
+
+  // Apply a new price range selection from the native dropdown.
+  function setGridPriceFilter(value) {
+    state.gridPriceFilter = value || '';
+    var priceSel = document.getElementById('pa-grid-price-filter');
+    if (priceSel) priceSel.value = state.gridPriceFilter;
+    renderActiveFilters();
+    renderProductGrid(filteredProducts());
+    showProductGrid();
+  }
+
+  // Render the vendor dropdown button label / logo based on current selection.
+  function renderGridVendorButton() {
+    var btnLabel = document.getElementById('pa-grid-vendor-btn-label');
+    var btnLogo = document.getElementById('pa-grid-vendor-btn-logo');
+    if (!btnLabel || !btnLogo) return;
+    var name = state.gridVendorFilter || '';
+    if (!name) {
+      btnLabel.textContent = 'All Vendors';
+      btnLogo.innerHTML = '';
+      btnLogo.classList.remove('is-visible');
+      return;
+    }
+    btnLabel.textContent = name;
+    var supplier = (UI.suppliers || []).find(function (s) { return s.name === name; });
+    if (supplier && supplier.logo_url) {
+      btnLogo.innerHTML = '<img src="' + escHtml(supplier.logo_url) + '" alt="">';
+    } else {
+      btnLogo.textContent = vendorInitials(name);
+    }
+    btnLogo.classList.add('is-visible');
+  }
+
+  // Render the vendor popup list (logo + name rows).
+  function renderGridVendorPopup() {
+    var popup = document.getElementById('pa-grid-vendor-popup');
+    if (!popup) return;
+    popup.innerHTML = '';
+    // "All Vendors" row to clear the filter
+    var allRow = el('button', 'pa-grid-vendor-opt' + (state.gridVendorFilter ? '' : ' is-selected'));
+    allRow.type = 'button';
+    allRow.innerHTML = '<span class="pa-grid-vendor-opt-logo"></span><span class="pa-grid-vendor-opt-name">All Vendors</span>';
+    allRow.addEventListener('click', function () {
+      popup.hidden = true;
+      setGridVendorFilter('');
+    });
+    popup.appendChild(allRow);
+    (UI.suppliers || []).forEach(function (s) {
+      var row = el('button', 'pa-grid-vendor-opt' + (state.gridVendorFilter === s.name ? ' is-selected' : ''));
+      row.type = 'button';
+      var logoHtml = s.logo_url
+        ? '<span class="pa-grid-vendor-opt-logo"><img src="' + escHtml(s.logo_url) + '" alt=""></span>'
+        : '<span class="pa-grid-vendor-opt-logo">' + escHtml(vendorInitials(s.name)) + '</span>';
+      row.innerHTML = logoHtml + '<span class="pa-grid-vendor-opt-name">' + escHtml(s.name) + '</span>';
+      row.addEventListener('click', function () {
+        popup.hidden = true;
+        setGridVendorFilter(s.name);
+      });
+      popup.appendChild(row);
+    });
+  }
+
   // Populate desktop results-bar vendor and price range dropdowns.
   // Called after products load (vendors derived from top_vendors) and again
   // after full vendor data is loaded so newly discovered vendors appear.
   function populateGridFilterDropdowns() {
-    var vendorSel = document.getElementById('pa-grid-vendor-filter');
-    if (vendorSel) {
-      var currentVendor = state.gridVendorFilter || '';
-      var vendorNames = (UI.suppliers || []).map(function (s) { return s.name; });
-      vendorSel.innerHTML = '<option value="">All Vendors</option>' +
-        vendorNames.map(function (n) {
-          var safe = n.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-          return '<option value="' + safe + '">' + safe + '</option>';
-        }).join('');
-      if (currentVendor && vendorNames.indexOf(currentVendor) !== -1) {
-        vendorSel.value = currentVendor;
-      }
-    }
+    renderGridVendorButton();
+    var popup = document.getElementById('pa-grid-vendor-popup');
+    if (popup && !popup.hidden) renderGridVendorPopup();
     var priceSel = document.getElementById('pa-grid-price-filter');
     if (priceSel && priceSel.options.length <= 1) {
       var currentPrice = state.gridPriceFilter || '';
