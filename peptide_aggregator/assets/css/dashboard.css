@@ -698,14 +698,14 @@
     border: 1px solid var(--line-soft) !important;
     margin-bottom: 0 !important;
     min-height: 0 !important;
-    transition: background 0.15s ease, border-color 0.15s ease !important;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
 .pa-shell .pa-pcard-vendor-row:hover {
     background: #eef4ff !important;
     border-color: #c7d8f5 !important;
     transform: none !important;
-    box-shadow: none !important;
+    box-shadow: var(--shadow-sm) !important;
 }
 
 .pa-shell .pa-pcard-avatar {
