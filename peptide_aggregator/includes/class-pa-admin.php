@@ -21,14 +21,85 @@ class PA_Admin {
         add_action('wp_ajax_pa_save_product_tags', array($this, 'ajax_save_product_tags'));
         add_action('wp_ajax_pa_toggle_kit_product', array($this, 'ajax_toggle_kit_product'));
         add_action('wp_ajax_pa_clear_products_cache', array($this, 'ajax_clear_products_cache'));
+        add_action('wp_ajax_pa_approve_review_product', array($this, 'ajax_approve_review_product'));
+        add_action('wp_ajax_pa_dismiss_review_product', array($this, 'ajax_dismiss_review_product'));
     }
 
     public function register_menu() {
+        $pending_count = count((array) get_option('pa_pending_review_products', array()));
+        $review_label  = 'Review New Products';
+        if ($pending_count > 0) {
+            $review_label .= ' <span class="awaiting-mod">' . (int) $pending_count . '</span>';
+        }
+
         add_menu_page('Peptide Aggregator', 'Peptide Aggregator', 'manage_options', 'pa-dashboard', array($this, 'render_settings_page'), 'dashicons-chart-line');
         add_submenu_page('pa-dashboard', 'Settings', 'Settings', 'manage_options', 'pa-dashboard', array($this, 'render_settings_page'));
         add_submenu_page('pa-dashboard', 'Vendors', 'Vendors', 'manage_options', 'pa-vendors', array($this, 'render_vendors_page'));
         add_submenu_page('pa-dashboard', 'Products', 'Products', 'manage_options', 'pa-products', array($this, 'render_products_page'));
+        add_submenu_page('pa-dashboard', 'Review New Products', $review_label, 'manage_options', 'pa-review-products', array($this, 'render_review_products_page'));
         add_submenu_page('pa-dashboard', 'Monitoring', 'Monitoring', 'manage_options', 'pa-monitoring', array($this, 'render_monitoring_page'));
+    }
+
+    /**
+     * Detect product IDs that weren't present the last time we looked, and add
+     * them to the "pending review" queue so admins can approve/dismiss them.
+     *
+     * On first invocation the known-ids list is seeded from the current feed
+     * and nothing is flagged — otherwise every existing product would appear
+     * in the queue on upgrade.
+     */
+    private function detect_new_products($products) {
+        if (!is_array($products)) {
+            return 0;
+        }
+        $current_ids = array();
+        $meta_by_id  = array();
+        foreach ($products as $p) {
+            $pid = (int) ($p['id'] ?? 0);
+            if ($pid <= 0) {
+                continue;
+            }
+            $current_ids[$pid] = true;
+            $meta_by_id[$pid]  = array(
+                'name'     => (string) ($p['name'] ?? ''),
+                'category' => (string) ($p['category'] ?? ''),
+            );
+        }
+
+        $known = get_option('pa_known_product_ids', null);
+        if ($known === null) {
+            // First run — seed and exit without flagging anything.
+            update_option('pa_known_product_ids', array_keys($current_ids), false);
+            return 0;
+        }
+
+        $known_map = array();
+        foreach ((array) $known as $kid) {
+            $known_map[(int) $kid] = true;
+        }
+
+        $pending = (array) get_option('pa_pending_review_products', array());
+        $added   = 0;
+        $now     = time();
+        foreach ($current_ids as $pid => $_) {
+            if (isset($known_map[$pid]) || isset($pending[$pid])) {
+                continue;
+            }
+            $pending[$pid] = array(
+                'first_seen' => $now,
+                'name'       => $meta_by_id[$pid]['name'],
+                'category'   => $meta_by_id[$pid]['category'],
+            );
+            $added++;
+        }
+
+        if ($added > 0) {
+            update_option('pa_pending_review_products', $pending, false);
+        }
+        // Always refresh the known set to the current feed so temporary
+        // disappearances don't permanently lock products out of detection.
+        update_option('pa_known_product_ids', array_keys($current_ids), false);
+        return $added;
     }
 
     public function register_settings() {
@@ -722,6 +793,9 @@ class PA_Admin {
         // ── Load data ─────────────────────────────────────────────────────────
         $products_resp = $this->admin_get('/api/admin/products');
         $products = $products_resp['ok'] && is_array($products_resp['data']) ? $products_resp['data'] : array();
+
+        // Queue any brand-new (never-before-seen) products for admin review.
+        $this->detect_new_products($products);
 
         // The admin API endpoint may not include the same tags that appear on the
         // public-facing frontend (which uses /api/products). Fetch the public
@@ -2375,6 +2449,244 @@ class PA_Admin {
         })();
         </script>
         <?php
+    }
+
+    public function render_review_products_page() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Pull the current product feed so the detector can pick up anything
+        // the crawler added since the last page load.
+        $products_resp = $this->admin_get('/api/admin/products');
+        $products = ($products_resp['ok'] ?? false) && is_array($products_resp['data'] ?? null)
+            ? $products_resp['data']
+            : array();
+        $this->detect_new_products($products);
+
+        $pending = (array) get_option('pa_pending_review_products', array());
+
+        // Index live products by id for enrichment.
+        $product_map = array();
+        foreach ($products as $p) {
+            $pid = (int) ($p['id'] ?? 0);
+            if ($pid > 0) {
+                $product_map[$pid] = $p;
+            }
+        }
+
+        // Sort pending by first_seen desc (newest first).
+        uasort($pending, function ($a, $b) {
+            return (int) ($b['first_seen'] ?? 0) - (int) ($a['first_seen'] ?? 0);
+        });
+        ?>
+        <div class="wrap">
+            <h1>Review New Products</h1>
+            <p>
+                Products discovered by crawlers that have not yet been reviewed.
+                Approve to accept them (sets backend status to <code>approved</code>)
+                or dismiss to remove them from this list without changing the product.
+            </p>
+
+            <?php if (empty($pending)) : ?>
+                <div class="notice notice-info inline" style="padding:10px 14px">
+                    <p style="margin:0">No new products awaiting review. Newly crawled products will appear here automatically.</p>
+                </div>
+            <?php else : ?>
+                <div style="margin:12px 0;display:flex;gap:8px;align-items:center">
+                    <strong><?php echo (int) count($pending); ?></strong>
+                    product(s) awaiting review.
+                    <button type="button" class="button" id="pa-review-approve-all">Approve all</button>
+                    <button type="button" class="button" id="pa-review-dismiss-all">Dismiss all</button>
+                </div>
+
+                <table class="wp-list-table widefat fixed striped" id="pa-review-table">
+                    <thead>
+                        <tr>
+                            <th style="width:70px">ID</th>
+                            <th>Name</th>
+                            <th style="width:140px">Category</th>
+                            <th style="width:140px">Price</th>
+                            <th style="width:80px">Vendors</th>
+                            <th style="width:140px">First seen</th>
+                            <th style="width:280px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($pending as $pid => $meta) :
+                        $pid      = (int) $pid;
+                        $live     = $product_map[$pid] ?? null;
+                        $name     = $live['name'] ?? ($meta['name'] ?? '');
+                        $category = $live['category'] ?? ($meta['category'] ?? '');
+                        $missing  = ($live === null);
+
+                        $price_html = '--';
+                        if ($live && isset($live['price_min']) && $live['price_min'] !== null) {
+                            $pmin = (float) $live['price_min'];
+                            $pmax = isset($live['price_max']) && $live['price_max'] !== null ? (float) $live['price_max'] : null;
+                            if ($pmax !== null && $pmax != $pmin) {
+                                $price_html = '$' . number_format($pmin, 2) . ' &ndash; $' . number_format($pmax, 2);
+                            } else {
+                                $price_html = '$' . number_format($pmin, 2);
+                            }
+                        }
+
+                        $vendor_count = 0;
+                        if ($live) {
+                            if (!empty($live['vendor_ids']) && is_array($live['vendor_ids'])) {
+                                $vendor_count = count($live['vendor_ids']);
+                            } elseif (!empty($live['top_vendors']) && is_array($live['top_vendors'])) {
+                                $vendor_count = count($live['top_vendors']);
+                            }
+                        }
+
+                        $first_seen_ts  = (int) ($meta['first_seen'] ?? 0);
+                        $first_seen_txt = $first_seen_ts > 0
+                            ? human_time_diff($first_seen_ts, time()) . ' ago'
+                            : '&mdash;';
+                    ?>
+                        <tr data-pid="<?php echo esc_attr($pid); ?>"<?php echo $missing ? ' style="opacity:0.55"' : ''; ?>>
+                            <td><?php echo esc_html((string) $pid); ?></td>
+                            <td>
+                                <strong><?php echo esc_html($name ?: '(unnamed)'); ?></strong>
+                                <?php if ($missing) : ?>
+                                    <br><small style="color:#b32d2e">No longer in products feed</small>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo esc_html($category ?: '--'); ?></td>
+                            <td><?php echo wp_kses_post($price_html); ?></td>
+                            <td><?php echo (int) $vendor_count; ?></td>
+                            <td><?php echo esc_html($first_seen_txt); ?></td>
+                            <td>
+                                <button type="button" class="button button-primary pa-review-approve" data-pid="<?php echo esc_attr($pid); ?>">Approve</button>
+                                <button type="button" class="button pa-review-dismiss" data-pid="<?php echo esc_attr($pid); ?>">Dismiss</button>
+                                <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=pa-products')); ?>">Edit</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+
+        <script>
+        (function(){
+            var PA_REVIEW_NONCE = '<?php echo wp_create_nonce('pa_review_product'); ?>';
+
+            function postAction(action, pid, cb) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', ajaxurl);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function() {
+                    var ok = false, data = null;
+                    try { data = JSON.parse(xhr.responseText); ok = !!(data && data.success); } catch(e) {}
+                    cb(ok, data);
+                };
+                xhr.onerror = function() { cb(false, null); };
+                xhr.send('action=' + action + '&pid=' + encodeURIComponent(pid) + '&_wpnonce=' + PA_REVIEW_NONCE);
+            }
+
+            function removeRow(pid) {
+                var row = document.querySelector('#pa-review-table tr[data-pid="' + pid + '"]');
+                if (row && row.parentNode) row.parentNode.removeChild(row);
+                var tbody = document.querySelector('#pa-review-table tbody');
+                if (tbody && !tbody.querySelector('tr')) {
+                    location.reload();
+                }
+            }
+
+            document.querySelectorAll('.pa-review-approve').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var pid = this.dataset.pid;
+                    var b   = this;
+                    b.disabled = true;
+                    postAction('pa_approve_review_product', pid, function(ok, data) {
+                        if (ok) {
+                            removeRow(pid);
+                        } else {
+                            alert('Approve failed: ' + ((data && data.data) || 'unknown error'));
+                            b.disabled = false;
+                        }
+                    });
+                });
+            });
+
+            document.querySelectorAll('.pa-review-dismiss').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var pid = this.dataset.pid;
+                    var b   = this;
+                    b.disabled = true;
+                    postAction('pa_dismiss_review_product', pid, function(ok, data) {
+                        if (ok) {
+                            removeRow(pid);
+                        } else {
+                            alert('Dismiss failed: ' + ((data && data.data) || 'unknown error'));
+                            b.disabled = false;
+                        }
+                    });
+                });
+            });
+
+            var approveAll = document.getElementById('pa-review-approve-all');
+            if (approveAll) {
+                approveAll.addEventListener('click', function() {
+                    if (!confirm('Approve ALL pending products?')) return;
+                    document.querySelectorAll('.pa-review-approve').forEach(function(b) { b.click(); });
+                });
+            }
+            var dismissAll = document.getElementById('pa-review-dismiss-all');
+            if (dismissAll) {
+                dismissAll.addEventListener('click', function() {
+                    if (!confirm('Dismiss ALL pending products? This does not delete them, only clears the review queue.')) return;
+                    document.querySelectorAll('.pa-review-dismiss').forEach(function(b) { b.click(); });
+                });
+            }
+        })();
+        </script>
+        <?php
+    }
+
+    public function ajax_approve_review_product() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_review_product', '_wpnonce');
+        $pid = (int) ($_POST['pid'] ?? 0);
+        if (!$pid) {
+            wp_send_json_error('Invalid product ID');
+        }
+
+        // Flip backend status to approved.
+        $resp = $this->api->request('PATCH', '/api/admin/products/' . $pid, array('status' => 'approved'), true);
+
+        // Always clear from the pending queue on success so the admin can move on.
+        if ($resp['ok']) {
+            $pending = (array) get_option('pa_pending_review_products', array());
+            if (isset($pending[$pid])) {
+                unset($pending[$pid]);
+                update_option('pa_pending_review_products', $pending, false);
+            }
+            wp_send_json_success();
+        } else {
+            wp_send_json_error($resp['error'] ?? 'API error');
+        }
+    }
+
+    public function ajax_dismiss_review_product() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        check_ajax_referer('pa_review_product', '_wpnonce');
+        $pid = (int) ($_POST['pid'] ?? 0);
+        if (!$pid) {
+            wp_send_json_error('Invalid product ID');
+        }
+        $pending = (array) get_option('pa_pending_review_products', array());
+        if (isset($pending[$pid])) {
+            unset($pending[$pid]);
+            update_option('pa_pending_review_products', $pending, false);
+        }
+        wp_send_json_success();
     }
 
     public function ajax_toggle_product_status() {
