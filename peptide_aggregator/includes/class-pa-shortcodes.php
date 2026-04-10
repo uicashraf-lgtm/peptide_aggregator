@@ -379,11 +379,16 @@ class PA_Shortcodes {
                                 <option value="vendors">Most Vendors</option>
                             </select>
                         </label>
-                        <label class="pa-sort-label pa-desktop-only-filter">Filter by vendor:
-                            <select id="pa-grid-vendor-filter" class="pa-grid-sort-select">
-                                <option value="">All Vendors</option>
-                            </select>
-                        </label>
+                        <div class="pa-sort-label pa-desktop-only-filter"><span class="pa-sort-label-text">Filter by vendor:</span>
+                            <div class="pa-grid-vendor-dd" id="pa-grid-vendor-dd">
+                                <button type="button" id="pa-grid-vendor-btn" class="pa-grid-vendor-btn">
+                                    <span id="pa-grid-vendor-btn-logo" class="pa-grid-vendor-btn-logo" aria-hidden="true"></span>
+                                    <span id="pa-grid-vendor-btn-label">All Vendors</span>
+                                    <span class="pa-grid-vendor-caret" aria-hidden="true">&#9662;</span>
+                                </button>
+                                <div id="pa-grid-vendor-popup" class="pa-grid-vendor-popup" hidden></div>
+                            </div>
+                        </div>
                         <label class="pa-sort-label pa-desktop-only-filter">Filter by price range:
                             <select id="pa-grid-price-filter" class="pa-grid-sort-select">
                                 <option value="">Any Price</option>

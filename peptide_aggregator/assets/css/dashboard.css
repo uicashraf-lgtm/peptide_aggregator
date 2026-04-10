@@ -391,6 +391,120 @@
     outline: none !important;
 }
 
+/* Custom vendor filter dropdown (with logos) */
+.pa-shell .pa-grid-vendor-dd {
+    position: relative !important;
+    display: inline-block !important;
+}
+.pa-shell .pa-grid-vendor-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: 34px !important;
+    min-width: 160px !important;
+    max-width: 220px !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--panel) !important;
+    color: var(--text-soft) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    padding: 0 10px !important;
+    cursor: pointer !important;
+    outline: none !important;
+}
+.pa-shell .pa-grid-vendor-btn-logo {
+    display: none;
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    background: #f1f1f1 !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    color: #555 !important;
+}
+.pa-shell .pa-grid-vendor-btn-logo.is-visible { display: inline-flex !important; }
+.pa-shell .pa-grid-vendor-btn-logo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+}
+.pa-shell #pa-grid-vendor-btn-label {
+    flex: 1 1 auto !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: left !important;
+}
+.pa-shell .pa-grid-vendor-caret {
+    font-size: 10px !important;
+    color: var(--muted) !important;
+    margin-left: auto !important;
+}
+.pa-shell .pa-grid-vendor-popup {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    right: 0 !important;
+    min-width: 220px !important;
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    background: var(--panel) !important;
+    border: 1.5px solid var(--line) !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+    z-index: 1000 !important;
+    padding: 4px !important;
+}
+.pa-shell .pa-grid-vendor-popup[hidden] { display: none !important; }
+.pa-shell .pa-grid-vendor-opt {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    padding: 6px 8px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-soft) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+}
+.pa-shell .pa-grid-vendor-opt:hover,
+.pa-shell .pa-grid-vendor-opt.is-selected {
+    background: rgba(0,0,0,0.05) !important;
+}
+.pa-shell .pa-grid-vendor-opt-logo {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    background: #f1f1f1 !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    color: #555 !important;
+}
+.pa-shell .pa-grid-vendor-opt-logo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+}
+.pa-shell .pa-grid-vendor-opt-name {
+    flex: 1 1 auto !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
 .pa-shell .pa-bar-icon {
     height: 34px !important;
     width: 34px !important;
