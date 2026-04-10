@@ -389,11 +389,15 @@ class PA_Shortcodes {
                                 <div id="pa-grid-vendor-popup" class="pa-grid-vendor-popup" hidden></div>
                             </div>
                         </div>
-                        <label class="pa-sort-label pa-desktop-only-filter">Filter by price range:
-                            <select id="pa-grid-price-filter" class="pa-grid-sort-select">
-                                <option value="">Any Price</option>
-                            </select>
-                        </label>
+                        <div class="pa-sort-label pa-desktop-only-filter"><span class="pa-sort-label-text">Filter by price range:</span>
+                            <div class="pa-grid-vendor-dd" id="pa-grid-price-dd">
+                                <button type="button" id="pa-grid-price-btn" class="pa-grid-vendor-btn">
+                                    <span id="pa-grid-price-btn-label">Any Price</span>
+                                    <span class="pa-grid-vendor-caret" aria-hidden="true">&#9662;</span>
+                                </button>
+                                <div id="pa-grid-price-popup" class="pa-grid-vendor-popup" hidden></div>
+                            </div>
+                        </div>
                         <div class="pa-bar-icons">
 
                             <button class="pa-bar-icon" type="button" title="Favourites"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>

@@ -261,6 +261,12 @@
     padding-left: 4px !important;
 }
 
+.pa-shell .pa-active-chip.is-price {
+    background: #dcfce7 !important;
+    border-color: #86efac !important;
+    color: #166534 !important;
+}
+
 .pa-shell .pa-active-chip.is-vendor .pa-active-chip-logo {
     width: 18px !important;
     height: 18px !important;
@@ -478,6 +484,19 @@
 .pa-shell .pa-grid-vendor-opt:hover,
 .pa-shell .pa-grid-vendor-opt.is-selected {
     background: rgba(0,0,0,0.05) !important;
+}
+.pa-shell .pa-grid-vendor-opt-check {
+    width: 14px !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: var(--accent, #0369a1) !important;
+}
+.pa-shell .pa-grid-vendor-opt.is-selected {
+    background: rgba(3,105,161,0.08) !important;
 }
 .pa-shell .pa-grid-vendor-opt-logo {
     width: 20px !important;
