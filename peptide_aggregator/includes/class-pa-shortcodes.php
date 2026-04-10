@@ -206,6 +206,10 @@ class PA_Shortcodes {
 .pa-dsm-status-actions{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-dsm-list{overflow-y:auto!important;max-height:280px!important;padding:0 20px!important}
 .pa-inline-check{display:flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
+@media(min-width:601px){
+#pa-filter-btn{display:none!important}
+.pa-shell:not(#pas-shell) .pa-search-row{grid-template-columns:1fr!important}
+}
 @media(max-width:600px){
 .pa-shell .pa-detail-layout{flex-direction:column!important;gap:12px!important}
 .pa-shell .pa-detail-sidebar{width:100%!important}
