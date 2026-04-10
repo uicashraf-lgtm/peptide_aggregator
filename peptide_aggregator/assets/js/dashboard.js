@@ -217,6 +217,8 @@
     detailCurrentVendors: [],        // full unfiltered vendor list for current dosage
     detailFormKeys: [],              // formulation keys present for current detail product
     detailHasVials: true,            // whether current detail product has any vial vendors
+    gridVendorFilter: '',            // desktop results-bar vendor dropdown selection
+    gridPriceFilter: '',             // desktop results-bar price range dropdown selection
   };
 
   function copyDraft(src) {
@@ -534,6 +536,7 @@
         });
       });
       UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
+      populateGridFilterDropdowns();
       renderProductGrid(state.allProducts);
       // Kick off full vendor data loading in background so supplier filter is accurate
       loadAllVendorNames();
@@ -657,8 +660,10 @@
           p._allVendorNamesReady = true;
         });
     })).then(function() {
+      // Refresh vendor dropdown in case new vendors were discovered
+      populateGridFilterDropdowns();
       // Re-render if a supplier filter is currently active so the full data is used
-      if (state.applied && state.applied.suppliers.size > 0) {
+      if ((state.applied && state.applied.suppliers.size > 0) || state.gridVendorFilter) {
         renderProductGrid(filteredProducts());
       }
     });
@@ -755,6 +760,32 @@
           return Array.from(state.applied.suppliers).some(function(s) { return p._allVendorNames.has(s); });
         }
         return (p.top_vendors || []).some(function(v) { return state.applied.suppliers.has(v.vendor); });
+      });
+    }
+    // Desktop results-bar vendor dropdown filter
+    if (state.gridVendorFilter) {
+      var gv = state.gridVendorFilter;
+      list = list.filter(function(p) {
+        if (p._allVendorNamesReady) return p._allVendorNames.has(gv);
+        return (p.top_vendors || []).some(function(v) { return v.vendor === gv; });
+      });
+    }
+    // Desktop results-bar price range dropdown filter
+    if (state.gridPriceFilter && state.gridPriceFilter !== 'Any Price') {
+      var gpr = state.gridPriceFilter;
+      list = list.filter(function(p) {
+        var price = p.min_price;
+        if (price == null) {
+          var vprices = (p.top_vendors || []).map(function(v) { return v.price; }).filter(function(pr) { return pr != null && pr > 0; });
+          price = vprices.length > 0 ? Math.min.apply(null, vprices) : null;
+        }
+        if (price == null) return true;
+        if (gpr === '$0 - $50')    return price >= 0   && price <= 50;
+        if (gpr === '$50 - $100')  return price >  50  && price <= 100;
+        if (gpr === '$100 - $250') return price >  100 && price <= 250;
+        if (gpr === '$250 - $500') return price >  250 && price <= 500;
+        if (gpr === '$500+')       return price >= 500;
+        return true;
       });
     }
     const sort = (document.getElementById('pa-grid-sort') || {}).value || 'name';
@@ -2926,10 +2957,51 @@
     const sort = document.getElementById('pa-grid-sort');
     if (sort) sort.addEventListener('change', function () { renderProductGrid(filteredProducts()); showProductGrid(); });
 
+    const vendorFilter = document.getElementById('pa-grid-vendor-filter');
+    if (vendorFilter) vendorFilter.addEventListener('change', function () {
+      state.gridVendorFilter = vendorFilter.value;
+      renderProductGrid(filteredProducts());
+      showProductGrid();
+    });
+
+    const priceFilter = document.getElementById('pa-grid-price-filter');
+    if (priceFilter) priceFilter.addEventListener('change', function () {
+      state.gridPriceFilter = priceFilter.value;
+      renderProductGrid(filteredProducts());
+      showProductGrid();
+    });
 
     const backBtn = document.getElementById('pa-detail-back');
     if (backBtn) backBtn.addEventListener('click', showProductGrid);
 
+  }
+
+  // Populate desktop results-bar vendor and price range dropdowns.
+  // Called after products load (vendors derived from top_vendors) and again
+  // after full vendor data is loaded so newly discovered vendors appear.
+  function populateGridFilterDropdowns() {
+    var vendorSel = document.getElementById('pa-grid-vendor-filter');
+    if (vendorSel) {
+      var currentVendor = state.gridVendorFilter || '';
+      var vendorNames = (UI.suppliers || []).map(function (s) { return s.name; });
+      vendorSel.innerHTML = '<option value="">All Vendors</option>' +
+        vendorNames.map(function (n) {
+          var safe = n.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          return '<option value="' + safe + '">' + safe + '</option>';
+        }).join('');
+      if (currentVendor && vendorNames.indexOf(currentVendor) !== -1) {
+        vendorSel.value = currentVendor;
+      }
+    }
+    var priceSel = document.getElementById('pa-grid-price-filter');
+    if (priceSel && priceSel.options.length <= 1) {
+      var currentPrice = state.gridPriceFilter || '';
+      priceSel.innerHTML = '<option value="">Any Price</option>' +
+        (UI.price_ranges || []).filter(function (r) { return r !== 'Any Price'; }).map(function (r) {
+          return '<option value="' + r + '">' + r + '</option>';
+        }).join('');
+      if (currentPrice) priceSel.value = currentPrice;
+    }
   }
 
   // ─── Init ────────────────────────────────────────────────────────────────
