@@ -64,7 +64,7 @@ class PA_Shortcodes {
 .pa-shell .pa-ptoggle{display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .pa-shell .pa-bar-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important}
 .pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;border:none!important}
-.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))!important;gap:10px!important;margin-top:4px!important}
+.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%, 360px),1fr))!important;gap:10px!important;margin-top:4px!important}
 @media(min-width:1100px){.pa-shell .pa-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 .pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}
 @media(min-width:1100px){.pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}}
