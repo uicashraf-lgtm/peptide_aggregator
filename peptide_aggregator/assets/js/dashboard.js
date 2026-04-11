@@ -1133,7 +1133,7 @@
           vList.appendChild(expandBtn);
         }
       } else {
-        vList.appendChild(el('p', 'pa-pcard-empty', cardKitsActive ? 'No kits available for this product' : 'No prices scraped yet'));
+        vList.appendChild(el('p', 'pa-pcard-empty', cardKitsActive ? 'No kits available for this product' : (cardStockActive ? 'No in-stock listings for this product' : 'No prices scraped yet')));
       }
     }
 
@@ -1360,6 +1360,8 @@
     // Returns true if a dosage has at least one vendor visible under the given formulation.
     // Per-card kit filter toggle state (independent of the global bar filter).
     var cardKitsActive = false;
+    // Per-card in-stock filter toggle state (independent of the global bar filter).
+    var cardStockActive = false;
 
     // When Kits Only is active, only count kit listings (to avoid showing dosage/formulation
     // options that would render an empty vendor list).
@@ -1397,12 +1399,20 @@
     }
 
     // Card-local kit filter: applies cardKitsActive on top of (or instead of) the global state.
+    // Also applies cardStockActive to hide out-of-stock listings.
     function cardKitFilter(vendors, dosage) {
-      if (!cardKitsActive) return kitFilterVendors(vendors, dosage, isKitProduct);
-      var orig = state.barFilters.kits;
-      state.barFilters.kits = true;
-      var r = kitFilterVendors(vendors, dosage, isKitProduct);
-      state.barFilters.kits = orig;
+      var r;
+      if (!cardKitsActive) {
+        r = kitFilterVendors(vendors, dosage, isKitProduct);
+      } else {
+        var orig = state.barFilters.kits;
+        state.barFilters.kits = true;
+        r = kitFilterVendors(vendors, dosage, isKitProduct);
+        state.barFilters.kits = orig;
+      }
+      if (cardStockActive) {
+        r = (r || []).filter(function(v) { return v.in_stock !== false; });
+      }
       return r;
     }
 
@@ -1738,6 +1748,58 @@
       });
     });
     kitRow.appendChild(kitToggleLabel);
+
+    // In Stock Only toggle — positioned on the right side of the kit row.
+    // Styled the same as the KIT toggle but turns green when active.
+    var stockWrap = document.createElement('div');
+    stockWrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-left:auto;';
+    stockWrap.appendChild(el('span', 'pa-dosage-label', 'In Stock Only'));
+    var stockToggleLabel = document.createElement('label');
+    stockToggleLabel.className = 'pa-stock-toggle-label';
+    stockToggleLabel.style.cssText = 'display:inline-flex;align-items:center;cursor:pointer;position:relative;';
+    var stockToggleInput = document.createElement('input');
+    stockToggleInput.type = 'checkbox';
+    stockToggleInput.style.cssText = 'position:absolute;opacity:0;width:0;height:0;';
+    var stockToggleTrack = document.createElement('span');
+    stockToggleTrack.className = 'pa-stock-toggle-track';
+    stockToggleTrack.style.cssText = 'display:inline-flex;align-items:center;width:52px;height:22px;background:#d1d5db;border-radius:11px;position:relative;transition:background 0.25s ease;flex-shrink:0;';
+    var stockToggleKnob = document.createElement('span');
+    stockToggleKnob.style.cssText = 'position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform 0.25s ease;box-shadow:0 1px 4px rgba(0,0,0,0.25);';
+    var stockToggleText = document.createElement('span');
+    stockToggleText.style.cssText = 'position:absolute;right:6px;font-size:9px;font-weight:700;color:#999;letter-spacing:0.5px;pointer-events:none;';
+    stockToggleText.textContent = 'OFF';
+    stockToggleTrack.appendChild(stockToggleKnob);
+    stockToggleTrack.appendChild(stockToggleText);
+    stockToggleLabel.appendChild(stockToggleInput);
+    stockToggleLabel.appendChild(stockToggleTrack);
+    stockToggleLabel.addEventListener('click', function(e) { e.stopPropagation(); });
+    stockToggleInput.addEventListener('change', function(e) {
+      e.stopPropagation();
+      cardStockActive = stockToggleInput.checked;
+      if (cardStockActive) {
+        stockToggleTrack.style.background = '#16a34a';
+        stockToggleKnob.style.transform = 'translateX(30px)';
+        stockToggleText.style.cssText = 'position:absolute;left:6px;font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px;pointer-events:none;';
+        stockToggleText.textContent = 'ON';
+      } else {
+        stockToggleTrack.style.background = '#d1d5db';
+        stockToggleKnob.style.transform = 'translateX(0)';
+        stockToggleText.style.cssText = 'position:absolute;right:6px;font-size:9px;font-weight:700;color:#999;letter-spacing:0.5px;pointer-events:none;';
+        stockToggleText.textContent = 'OFF';
+      }
+      // Re-filter and re-render the vendor list for the currently active dosage/formulation.
+      ensureCardAllPricesLoaded().then(function() {
+        var curIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
+        var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
+        var vendors = curDosage
+          ? getCardVendorsForDose(curDosage.label, curDosage.top_vendors)
+          : (p.top_vendors || []);
+        renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), curDosage));
+      });
+    });
+    stockWrap.appendChild(stockToggleLabel);
+    kitRow.appendChild(stockWrap);
+
     card.appendChild(kitRow);
 
     // Vendor rows — fetch from /prices API (same as detail view) then render.
