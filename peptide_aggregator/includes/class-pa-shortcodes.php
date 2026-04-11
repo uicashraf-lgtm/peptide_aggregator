@@ -37,7 +37,7 @@ class PA_Shortcodes {
 /* pa: critical layout â€“ injected after Elementor to guarantee source-order win */
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
 .pa-shell{display:block!important;width:100%!important;max-width:100%!important}
-@media(min-width:1100px){.pa-shell{width:min(1500px, calc(100vw - 40px))!important;max-width:min(1500px, calc(100vw - 40px))!important;margin-left:calc((100% - min(1500px, calc(100vw - 40px))) / 2)!important;margin-right:calc((100% - min(1500px, calc(100vw - 40px))) / 2)!important}}
+@media(min-width:1100px){.pa-shell{width:min(1350px, calc(100vw - 40px))!important;max-width:min(1350px, calc(100vw - 40px))!important;margin-left:calc((100% - min(1350px, calc(100vw - 40px))) / 2)!important;margin-right:calc((100% - min(1350px, calc(100vw - 40px))) / 2)!important}}
 /* detail view show/hide â€” pa-hidden/pa-visible toggled on each element */
 /* belt-and-suspenders: height:0+overflow:hidden ensures no space even if display is overridden */
 #pa-product-detail{display:none!important;height:0!important;max-height:0!important;overflow:hidden!important}
