@@ -36,7 +36,8 @@ class PA_Shortcodes {
         return '
 /* pa: critical layout â€“ injected after Elementor to guarantee source-order win */
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
-.pa-shell{display:block!important;width:100%!important}
+.pa-shell{display:block!important;width:100%!important;max-width:100%!important}
+@media(min-width:1100px){.pa-shell{width:min(1500px, calc(100vw - 40px))!important;max-width:min(1500px, calc(100vw - 40px))!important;margin-left:calc((100% - min(1500px, calc(100vw - 40px))) / 2)!important;margin-right:calc((100% - min(1500px, calc(100vw - 40px))) / 2)!important}}
 /* detail view show/hide â€” pa-hidden/pa-visible toggled on each element */
 /* belt-and-suspenders: height:0+overflow:hidden ensures no space even if display is overridden */
 #pa-product-detail{display:none!important;height:0!important;max-height:0!important;overflow:hidden!important}
@@ -63,7 +64,7 @@ class PA_Shortcodes {
 .pa-shell .pa-ptoggle{display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .pa-shell .pa-bar-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important}
 .pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;border:none!important}
-.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))!important;gap:10px!important;margin-top:4px!important}
+.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))!important;gap:10px!important;margin-top:4px!important}
 .pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}
 .pa-shell .pa-pcard{display:flex!important;flex-direction:column!important;gap:10px!important;padding:14px 14px 10px!important;cursor:pointer!important}
 .pa-shell .pa-pcard-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
