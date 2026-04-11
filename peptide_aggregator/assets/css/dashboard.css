@@ -922,6 +922,16 @@
     color: #f97316 !important;
 }
 
+/* Enlarge share / favourite icons in the product card header */
+.pa-shell .pa-pcard-head-icons .pa-icon-btn {
+    padding: 8px !important;
+}
+
+.pa-shell .pa-pcard-head-icons .pa-icon-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+}
+
 /* Coupon save text (shown inside the badge) */
 .pa-shell .pa-coupon-save-inline {
     color: #2563eb !important;
