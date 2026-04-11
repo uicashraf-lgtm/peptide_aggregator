@@ -561,8 +561,8 @@
 }
 
 .pa-shell .pa-view-btn {
-    width: 30px !important;
-    height: 30px !important;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: var(--radius-sm) !important;
     background: none !important;
     border: 1.5px solid transparent !important;
@@ -583,8 +583,8 @@
 }
 
 .pa-shell .pa-view-btn svg {
-    width: 14px !important;
-    height: 14px !important;
+    width: 20px !important;
+    height: 20px !important;
 }
 
 /* ─── PRODUCT GRID & CARDS ─── */
