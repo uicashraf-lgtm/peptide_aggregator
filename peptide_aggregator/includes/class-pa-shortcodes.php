@@ -71,7 +71,7 @@ class PA_Shortcodes {
 .pa-shell .pa-pcard{display:flex!important;flex-direction:column!important;gap:10px!important;padding:14px 14px 10px!important;cursor:pointer!important}
 .pa-shell .pa-pcard-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-pcard-head-left{flex:1!important;min-width:0!important}
-.pa-shell .pa-pcard-head-icons{display:flex!important;align-items:center!important;gap:4px!important;flex-shrink:0!important}
+.pa-shell .pa-pcard-head-icons{display:flex!important;align-items:center!important;gap:6px!important;flex-shrink:0!important}
 .pa-shell .pa-pcard-tags{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
 .pa-shell .pa-pcard-dosage{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-dosage-scroll-wrap{display:flex!important;align-items:center!important;gap:4px!important;flex:1!important;min-width:0!important}
