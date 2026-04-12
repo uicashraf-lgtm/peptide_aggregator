@@ -2446,6 +2446,16 @@ class PA_Admin {
 
             // ── Initial render ──────────────────────────────────────────────
             renderTable();
+
+            // If the URL contains ?edit_pid=<id> (e.g. from the Review page),
+            // auto-open the product edit form on load.
+            var _qs = new URLSearchParams(window.location.search);
+            var _editPid = _qs.get('edit_pid');
+            if (_editPid) {
+                loadProduct(_editPid);
+                var formWrap = document.getElementById('pa-product-form-wrap');
+                if (formWrap) formWrap.scrollIntoView({behavior: 'smooth'});
+            }
         })();
         </script>
         <?php
@@ -2560,7 +2570,7 @@ class PA_Admin {
                             <td>
                                 <button type="button" class="button button-primary pa-review-approve" data-pid="<?php echo esc_attr($pid); ?>">Approve</button>
                                 <button type="button" class="button pa-review-dismiss" data-pid="<?php echo esc_attr($pid); ?>">Dismiss</button>
-                                <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=pa-products')); ?>">Edit</a>
+                                <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=pa-products&edit_pid=' . (int) $pid)); ?>">Edit</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -2666,6 +2676,9 @@ class PA_Admin {
                 unset($pending[$pid]);
                 update_option('pa_pending_review_products', $pending, false);
             }
+            // Invalidate frontend caches so the approved product appears immediately.
+            delete_transient('pa_products_cache');
+            PA_Rest::clear_prices_cache();
             wp_send_json_success();
         } else {
             wp_send_json_error($resp['error'] ?? 'API error');
@@ -2686,6 +2699,9 @@ class PA_Admin {
             unset($pending[$pid]);
             update_option('pa_pending_review_products', $pending, false);
         }
+        // Invalidate frontend caches so the dismissed product appears immediately.
+        delete_transient('pa_products_cache');
+        PA_Rest::clear_prices_cache();
         wp_send_json_success();
     }
 

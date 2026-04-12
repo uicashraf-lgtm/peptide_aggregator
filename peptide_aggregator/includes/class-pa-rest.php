@@ -374,7 +374,10 @@ class PA_Rest {
         // but legacy cached entries may still contain hidden products).
         if (is_array($products)) {
             $hidden_ids = array_map('intval', (array) get_option('pa_hidden_product_ids', array()));
-            $products   = array_values(array_filter($products, function ($p) use ($hidden_ids) {
+            // Also hide products that are still in the "pending review" queue —
+            // they should not appear on the frontend until an admin approves them.
+            $pending_pids = array_map('intval', array_keys((array) get_option('pa_pending_review_products', array())));
+            $products   = array_values(array_filter($products, function ($p) use ($hidden_ids, $pending_pids) {
                 // Respect the external API's is_visible flag when present.
                 if (array_key_exists('is_visible', $p) && $p['is_visible'] === false) {
                     return false;
@@ -382,7 +385,14 @@ class PA_Rest {
                 // Also honour the plugin-side hidden-product list so toggling works
                 // even if the external /api/products endpoint does not return the flag.
                 $pid = (int) ($p['id'] ?? 0);
-                return !in_array($pid, $hidden_ids, true);
+                if (in_array($pid, $hidden_ids, true)) {
+                    return false;
+                }
+                // Hide products awaiting review.
+                if (in_array($pid, $pending_pids, true)) {
+                    return false;
+                }
+                return true;
             }));
         }
 
