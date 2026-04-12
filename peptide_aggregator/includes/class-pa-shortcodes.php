@@ -36,7 +36,8 @@ class PA_Shortcodes {
         return '
 /* pa: critical layout â€“ injected after Elementor to guarantee source-order win */
 .pa-shell,.pa-shell *,.pa-shell *::before,.pa-shell *::after{box-sizing:border-box!important}
-.pa-shell{display:block!important;width:100%!important}
+.pa-shell{display:block!important;width:100%!important;max-width:100%!important}
+@media(min-width:1100px){.pa-shell{width:min(1350px, calc(100vw - 40px))!important;max-width:min(1350px, calc(100vw - 40px))!important;margin-left:calc((100% - min(1350px, calc(100vw - 40px))) / 2)!important;margin-right:calc((100% - min(1350px, calc(100vw - 40px))) / 2)!important}}
 /* detail view show/hide â€” pa-hidden/pa-visible toggled on each element */
 /* belt-and-suspenders: height:0+overflow:hidden ensures no space even if display is overridden */
 #pa-product-detail{display:none!important;height:0!important;max-height:0!important;overflow:hidden!important}
@@ -62,13 +63,15 @@ class PA_Shortcodes {
 .pa-shell .pa-view-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;gap:2px!important}
 .pa-shell .pa-ptoggle{display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .pa-shell .pa-bar-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important}
-.pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;border:none!important}
-.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))!important;gap:10px!important;margin-top:4px!important}
+.pa-shell .pa-view-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:40px!important;height:40px!important;border:none!important}
+.pa-shell .pa-product-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%, 360px),1fr))!important;gap:10px!important;margin-top:4px!important}
+@media(min-width:1100px){.pa-shell .pa-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 .pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}
+@media(min-width:1100px){.pa-shell .pa-product-grid.is-list{grid-template-columns:1fr!important}}
 .pa-shell .pa-pcard{display:flex!important;flex-direction:column!important;gap:10px!important;padding:14px 14px 10px!important;cursor:pointer!important}
 .pa-shell .pa-pcard-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
 .pa-shell .pa-pcard-head-left{flex:1!important;min-width:0!important}
-.pa-shell .pa-pcard-head-icons{display:flex!important;align-items:center!important;gap:4px!important;flex-shrink:0!important}
+.pa-shell .pa-pcard-head-icons{display:flex!important;align-items:center!important;gap:6px!important;flex-shrink:0!important}
 .pa-shell .pa-pcard-tags{display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
 .pa-shell .pa-pcard-dosage{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-shell .pa-dosage-scroll-wrap{display:flex!important;align-items:center!important;gap:4px!important;flex:1!important;min-width:0!important}
@@ -206,6 +209,10 @@ class PA_Shortcodes {
 .pa-dsm-status-actions{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-dsm-list{overflow-y:auto!important;max-height:280px!important;padding:0 20px!important}
 .pa-inline-check{display:flex!important;align-items:center!important;gap:5px!important;cursor:pointer!important}
+@media(min-width:601px){
+#pa-filter-btn{display:none!important}
+.pa-shell:not(#pas-shell) .pa-search-row{grid-template-columns:1fr!important}
+}
 @media(max-width:600px){
 .pa-shell .pa-detail-layout{flex-direction:column!important;gap:12px!important}
 .pa-shell .pa-detail-sidebar{width:100%!important}
@@ -379,6 +386,25 @@ class PA_Shortcodes {
                                 <option value="vendors">Most Vendors</option>
                             </select>
                         </label>
+                        <div class="pa-sort-label pa-desktop-only-filter"><span class="pa-sort-label-text">Filter by vendor:</span>
+                            <div class="pa-grid-vendor-dd" id="pa-grid-vendor-dd">
+                                <button type="button" id="pa-grid-vendor-btn" class="pa-grid-vendor-btn">
+                                    <span id="pa-grid-vendor-btn-logo" class="pa-grid-vendor-btn-logo" aria-hidden="true"></span>
+                                    <span id="pa-grid-vendor-btn-label">All Vendors</span>
+                                    <span class="pa-grid-vendor-caret" aria-hidden="true">&#9662;</span>
+                                </button>
+                                <div id="pa-grid-vendor-popup" class="pa-grid-vendor-popup" hidden></div>
+                            </div>
+                        </div>
+                        <div class="pa-sort-label pa-desktop-only-filter"><span class="pa-sort-label-text">Filter by price range:</span>
+                            <div class="pa-grid-vendor-dd" id="pa-grid-price-dd">
+                                <button type="button" id="pa-grid-price-btn" class="pa-grid-vendor-btn">
+                                    <span id="pa-grid-price-btn-label">Any Price</span>
+                                    <span class="pa-grid-vendor-caret" aria-hidden="true">&#9662;</span>
+                                </button>
+                                <div id="pa-grid-price-popup" class="pa-grid-vendor-popup" hidden></div>
+                            </div>
+                        </div>
                         <div class="pa-bar-icons">
 
                             <button class="pa-bar-icon" type="button" title="Favourites"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>

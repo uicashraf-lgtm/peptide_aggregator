@@ -217,6 +217,8 @@
     detailCurrentVendors: [],        // full unfiltered vendor list for current dosage
     detailFormKeys: [],              // formulation keys present for current detail product
     detailHasVials: true,            // whether current detail product has any vial vendors
+    gridVendorFilters: new Set(),    // desktop results-bar vendor dropdown selections
+    gridPriceFilters: new Set(),     // desktop results-bar price range dropdown selections
   };
 
   function copyDraft(src) {
@@ -534,6 +536,7 @@
         });
       });
       UI.suppliers = Object.keys(supplierMap).sort().map(function(name) { return supplierMap[name]; });
+      populateGridFilterDropdowns();
       renderProductGrid(state.allProducts);
       // Kick off full vendor data loading in background so supplier filter is accurate
       loadAllVendorNames();
@@ -657,8 +660,10 @@
           p._allVendorNamesReady = true;
         });
     })).then(function() {
+      // Refresh vendor dropdown in case new vendors were discovered
+      populateGridFilterDropdowns();
       // Re-render if a supplier filter is currently active so the full data is used
-      if (state.applied && state.applied.suppliers.size > 0) {
+      if ((state.applied && state.applied.suppliers.size > 0) || state.gridVendorFilters.size > 0) {
         renderProductGrid(filteredProducts());
       }
     });
@@ -755,6 +760,36 @@
           return Array.from(state.applied.suppliers).some(function(s) { return p._allVendorNames.has(s); });
         }
         return (p.top_vendors || []).some(function(v) { return state.applied.suppliers.has(v.vendor); });
+      });
+    }
+    // Desktop results-bar vendor dropdown filter (multi-select, OR).
+    if (state.gridVendorFilters && state.gridVendorFilters.size > 0) {
+      var gvSet = state.gridVendorFilters;
+      list = list.filter(function(p) {
+        if (p._allVendorNamesReady) {
+          return Array.from(gvSet).some(function(n) { return p._allVendorNames.has(n); });
+        }
+        return (p.top_vendors || []).some(function(v) { return gvSet.has(v.vendor); });
+      });
+    }
+    // Desktop results-bar price range dropdown filter (multi-select, OR).
+    // Uses the maximum vendor price (after coupon discounts) so the bucket
+    // reflects the highest post-coupon price across all known vendors.
+    if (state.gridPriceFilters && state.gridPriceFilters.size > 0 && !state.gridPriceFilters.has('Any Price')) {
+      list = list.filter(function(p) {
+        var vprices = (p.top_vendors || [])
+          .map(function(v) { return discountedPrice(v.vendor, v.price); })
+          .filter(function(pr) { return pr != null && pr > 0; });
+        var price = vprices.length > 0 ? Math.max.apply(null, vprices) : null;
+        if (price == null) return true;
+        return Array.from(state.gridPriceFilters).some(function(gpr) {
+          if (gpr === '$0 - $50')    return price >= 0   && price <= 50;
+          if (gpr === '$50 - $100')  return price >  50  && price <= 100;
+          if (gpr === '$100 - $250') return price >  100 && price <= 250;
+          if (gpr === '$250 - $500') return price >  250 && price <= 500;
+          if (gpr === '$500+')       return price >= 500;
+          return true;
+        });
       });
     }
     const sort = (document.getElementById('pa-grid-sort') || {}).value || 'name';
@@ -999,10 +1034,6 @@
     headLeft.appendChild(el('h3', 'pa-pcard-name', escHtml(p.name)));
     head.appendChild(headLeft);
     const headIcons = el('div', 'pa-pcard-head-icons');
-    // Info button
-    const infoBtn = el('button', 'pa-icon-btn', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>');
-    infoBtn.title = 'Info'; infoBtn.type = 'button';
-    infoBtn.addEventListener('click', function (e) { e.stopPropagation(); loadProductDetail(p.id, p.name); });
     // Share button
     const shareBtn = el('button', 'pa-icon-btn', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>');
     shareBtn.title = 'Share'; shareBtn.type = 'button';
@@ -1024,7 +1055,6 @@
       localStorage.setItem('pa_favs', JSON.stringify(Array.from(state.favourites)));
       renderProductGrid(filteredProducts());
     });
-    headIcons.appendChild(infoBtn);
     headIcons.appendChild(shareBtn);
     headIcons.appendChild(favBtn);
     head.appendChild(headIcons);
@@ -1103,7 +1133,7 @@
           vList.appendChild(expandBtn);
         }
       } else {
-        vList.appendChild(el('p', 'pa-pcard-empty', cardKitsActive ? 'No kits available for this product' : 'No prices scraped yet'));
+        vList.appendChild(el('p', 'pa-pcard-empty', cardKitsActive ? 'No kits available for this product' : (cardStockActive ? 'No in-stock listings for this product' : 'No prices scraped yet')));
       }
     }
 
@@ -1330,6 +1360,8 @@
     // Returns true if a dosage has at least one vendor visible under the given formulation.
     // Per-card kit filter toggle state (independent of the global bar filter).
     var cardKitsActive = false;
+    // Per-card in-stock filter toggle state (independent of the global bar filter).
+    var cardStockActive = false;
 
     // When Kits Only is active, only count kit listings (to avoid showing dosage/formulation
     // options that would render an empty vendor list).
@@ -1367,12 +1399,20 @@
     }
 
     // Card-local kit filter: applies cardKitsActive on top of (or instead of) the global state.
+    // Also applies cardStockActive to hide out-of-stock listings.
     function cardKitFilter(vendors, dosage) {
-      if (!cardKitsActive) return kitFilterVendors(vendors, dosage, isKitProduct);
-      var orig = state.barFilters.kits;
-      state.barFilters.kits = true;
-      var r = kitFilterVendors(vendors, dosage, isKitProduct);
-      state.barFilters.kits = orig;
+      var r;
+      if (!cardKitsActive) {
+        r = kitFilterVendors(vendors, dosage, isKitProduct);
+      } else {
+        var orig = state.barFilters.kits;
+        state.barFilters.kits = true;
+        r = kitFilterVendors(vendors, dosage, isKitProduct);
+        state.barFilters.kits = orig;
+      }
+      if (cardStockActive) {
+        r = (r || []).filter(function(v) { return v.in_stock !== false; });
+      }
       return r;
     }
 
@@ -1708,6 +1748,58 @@
       });
     });
     kitRow.appendChild(kitToggleLabel);
+
+    // In Stock Only toggle — positioned on the right side of the kit row.
+    // Styled the same as the KIT toggle but turns green when active.
+    var stockWrap = document.createElement('div');
+    stockWrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-left:auto;';
+    stockWrap.appendChild(el('span', 'pa-dosage-label', 'In Stock Only'));
+    var stockToggleLabel = document.createElement('label');
+    stockToggleLabel.className = 'pa-stock-toggle-label';
+    stockToggleLabel.style.cssText = 'display:inline-flex;align-items:center;cursor:pointer;position:relative;';
+    var stockToggleInput = document.createElement('input');
+    stockToggleInput.type = 'checkbox';
+    stockToggleInput.style.cssText = 'position:absolute;opacity:0;width:0;height:0;';
+    var stockToggleTrack = document.createElement('span');
+    stockToggleTrack.className = 'pa-stock-toggle-track';
+    stockToggleTrack.style.cssText = 'display:inline-flex;align-items:center;width:52px;height:22px;background:#d1d5db;border-radius:11px;position:relative;transition:background 0.25s ease;flex-shrink:0;';
+    var stockToggleKnob = document.createElement('span');
+    stockToggleKnob.style.cssText = 'position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform 0.25s ease;box-shadow:0 1px 4px rgba(0,0,0,0.25);';
+    var stockToggleText = document.createElement('span');
+    stockToggleText.style.cssText = 'position:absolute;right:6px;font-size:9px;font-weight:700;color:#999;letter-spacing:0.5px;pointer-events:none;';
+    stockToggleText.textContent = 'OFF';
+    stockToggleTrack.appendChild(stockToggleKnob);
+    stockToggleTrack.appendChild(stockToggleText);
+    stockToggleLabel.appendChild(stockToggleInput);
+    stockToggleLabel.appendChild(stockToggleTrack);
+    stockToggleLabel.addEventListener('click', function(e) { e.stopPropagation(); });
+    stockToggleInput.addEventListener('change', function(e) {
+      e.stopPropagation();
+      cardStockActive = stockToggleInput.checked;
+      if (cardStockActive) {
+        stockToggleTrack.style.background = '#16a34a';
+        stockToggleKnob.style.transform = 'translateX(30px)';
+        stockToggleText.style.cssText = 'position:absolute;left:6px;font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px;pointer-events:none;';
+        stockToggleText.textContent = 'ON';
+      } else {
+        stockToggleTrack.style.background = '#d1d5db';
+        stockToggleKnob.style.transform = 'translateX(0)';
+        stockToggleText.style.cssText = 'position:absolute;right:6px;font-size:9px;font-weight:700;color:#999;letter-spacing:0.5px;pointer-events:none;';
+        stockToggleText.textContent = 'OFF';
+      }
+      // Re-filter and re-render the vendor list for the currently active dosage/formulation.
+      ensureCardAllPricesLoaded().then(function() {
+        var curIdx = state.activeDosages[p.id] != null ? state.activeDosages[p.id] : bestDosageIdx(dosages, p.name);
+        var curDosage = dosages.length > 0 ? dosages[Math.min(curIdx, dosages.length - 1)] : null;
+        var vendors = curDosage
+          ? getCardVendorsForDose(curDosage.label, curDosage.top_vendors)
+          : (p.top_vendors || []);
+        renderVendorRows(vendorList, cardKitFilter(filterByFormulation(vendors, activeFormulation), curDosage));
+      });
+    });
+    stockWrap.appendChild(stockToggleLabel);
+    kitRow.appendChild(stockWrap);
+
     card.appendChild(kitRow);
 
     // Vendor rows — fetch from /prices API (same as detail view) then render.
@@ -1861,7 +1953,6 @@
       });
     }
 
-    card.addEventListener('click', function () { loadProductDetail(p._activeId || p.id, p.name); });
     return card;
   }
 
@@ -2622,9 +2713,33 @@
       });
       host.appendChild(chip);
     });
+    // Desktop results-bar vendor dropdown chips (multi-select)
+    Array.from(state.gridVendorFilters).forEach(function (name) {
+      var gvBuilt = buildChipInner(name);
+      const gvChip = el('button', 'pa-active-chip' + (gvBuilt.isVendor ? ' is-vendor' : ''));
+      gvChip.type = 'button';
+      gvChip.innerHTML = gvBuilt.html;
+      gvChip.addEventListener('click', function () { toggleGridVendorFilter(name); });
+      host.appendChild(gvChip);
+    });
+    // Desktop results-bar price range dropdown chips (multi-select, light green)
+    Array.from(state.gridPriceFilters).forEach(function (range) {
+      if (range === 'Any Price') return;
+      var gpBuilt = buildChipInner(range);
+      const gpChip = el('button', 'pa-active-chip is-price');
+      gpChip.type = 'button';
+      gpChip.innerHTML = gpBuilt.html;
+      gpChip.addEventListener('click', function () { toggleGridPriceFilter(range); });
+      host.appendChild(gpChip);
+    });
     // Show/hide the entire row based on whether any filters are active
     const row = host.closest('.pa-active-row');
-    if (row) row.classList.toggle('is-visible', state.tagFilters.size > 0 || state.activeFilters.size > 0);
+    if (row) row.classList.toggle('is-visible',
+      state.tagFilters.size > 0 ||
+      state.activeFilters.size > 0 ||
+      state.gridVendorFilters.size > 0 ||
+      state.gridPriceFilters.size > 0
+    );
   }
 
   function syncDraftToControls() {
@@ -2918,6 +3033,10 @@
     if (clearBtn) clearBtn.addEventListener('click', function () {
       state.activeFilters.clear();
       state.tagFilters.clear();
+      state.gridVendorFilters.clear();
+      state.gridPriceFilters.clear();
+      renderGridVendorButton();
+      renderGridPriceButton();
       renderPopular();
       renderActiveFilters();
       renderProductGrid(filteredProducts());
@@ -2926,10 +3045,171 @@
     const sort = document.getElementById('pa-grid-sort');
     if (sort) sort.addEventListener('change', function () { renderProductGrid(filteredProducts()); showProductGrid(); });
 
+    // Custom vendor dropdown (button + popup with logos, multi-select)
+    bindGridPopupDropdown('pa-grid-vendor-btn', 'pa-grid-vendor-popup', renderGridVendorPopup);
+    // Custom price range dropdown (button + popup, multi-select)
+    bindGridPopupDropdown('pa-grid-price-btn', 'pa-grid-price-popup', renderGridPricePopup);
 
     const backBtn = document.getElementById('pa-detail-back');
     if (backBtn) backBtn.addEventListener('click', showProductGrid);
 
+  }
+
+  // Shared open/close plumbing for the grid results-bar popup dropdowns.
+  function bindGridPopupDropdown(btnId, popupId, renderPopup) {
+    var btn = document.getElementById(btnId);
+    var popup = document.getElementById(popupId);
+    if (!btn || !popup) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!popup.hidden) {
+        popup.hidden = true;
+        return;
+      }
+      // Close any other open grid popup
+      document.querySelectorAll('.pa-grid-vendor-popup').forEach(function (p) { if (p !== popup) p.hidden = true; });
+      renderPopup();
+      popup.hidden = false;
+    });
+    popup.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function (e) {
+      if (popup.hidden) return;
+      if (!popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        popup.hidden = true;
+      }
+    });
+  }
+
+  // Toggle a vendor in/out of the multi-select set.
+  function toggleGridVendorFilter(name) {
+    if (!name) {
+      state.gridVendorFilters.clear();
+    } else if (state.gridVendorFilters.has(name)) {
+      state.gridVendorFilters.delete(name);
+    } else {
+      state.gridVendorFilters.add(name);
+    }
+    renderGridVendorButton();
+    var popup = document.getElementById('pa-grid-vendor-popup');
+    if (popup && !popup.hidden) renderGridVendorPopup();
+    renderActiveFilters();
+    renderProductGrid(filteredProducts());
+    showProductGrid();
+  }
+
+  // Toggle a price range in/out of the multi-select set.
+  function toggleGridPriceFilter(range) {
+    if (!range) {
+      state.gridPriceFilters.clear();
+    } else if (state.gridPriceFilters.has(range)) {
+      state.gridPriceFilters.delete(range);
+    } else {
+      state.gridPriceFilters.add(range);
+    }
+    renderGridPriceButton();
+    var popup = document.getElementById('pa-grid-price-popup');
+    if (popup && !popup.hidden) renderGridPricePopup();
+    renderActiveFilters();
+    renderProductGrid(filteredProducts());
+    showProductGrid();
+  }
+
+  // Render the vendor dropdown button label / logo based on current selection.
+  function renderGridVendorButton() {
+    var btnLabel = document.getElementById('pa-grid-vendor-btn-label');
+    var btnLogo = document.getElementById('pa-grid-vendor-btn-logo');
+    if (!btnLabel || !btnLogo) return;
+    var count = state.gridVendorFilters.size;
+    if (count === 0) {
+      btnLabel.textContent = 'All Vendors';
+      btnLogo.innerHTML = '';
+      btnLogo.classList.remove('is-visible');
+      return;
+    }
+    if (count === 1) {
+      var only = Array.from(state.gridVendorFilters)[0];
+      btnLabel.textContent = only;
+      var supplier = (UI.suppliers || []).find(function (s) { return s.name === only; });
+      if (supplier && supplier.logo_url) {
+        btnLogo.innerHTML = '<img src="' + escHtml(supplier.logo_url) + '" alt="">';
+      } else {
+        btnLogo.textContent = vendorInitials(only);
+      }
+      btnLogo.classList.add('is-visible');
+      return;
+    }
+    btnLabel.textContent = count + ' Vendors';
+    btnLogo.innerHTML = '';
+    btnLogo.classList.remove('is-visible');
+  }
+
+  // Render the price range dropdown button label.
+  function renderGridPriceButton() {
+    var btnLabel = document.getElementById('pa-grid-price-btn-label');
+    if (!btnLabel) return;
+    var count = state.gridPriceFilters.size;
+    if (count === 0) btnLabel.textContent = 'Any Price';
+    else if (count === 1) btnLabel.textContent = Array.from(state.gridPriceFilters)[0];
+    else btnLabel.textContent = count + ' Ranges';
+  }
+
+  // Render the vendor popup list (logo + name rows with check indicator).
+  function renderGridVendorPopup() {
+    var popup = document.getElementById('pa-grid-vendor-popup');
+    if (!popup) return;
+    popup.innerHTML = '';
+    // "All Vendors" row clears the set
+    var allRow = el('button', 'pa-grid-vendor-opt' + (state.gridVendorFilters.size === 0 ? ' is-selected' : ''));
+    allRow.type = 'button';
+    allRow.innerHTML = '<span class="pa-grid-vendor-opt-check"></span><span class="pa-grid-vendor-opt-logo"></span><span class="pa-grid-vendor-opt-name">All Vendors</span>';
+    allRow.addEventListener('click', function () { toggleGridVendorFilter(''); });
+    popup.appendChild(allRow);
+    (UI.suppliers || []).forEach(function (s) {
+      var selected = state.gridVendorFilters.has(s.name);
+      var row = el('button', 'pa-grid-vendor-opt' + (selected ? ' is-selected' : ''));
+      row.type = 'button';
+      var logoHtml = s.logo_url
+        ? '<span class="pa-grid-vendor-opt-logo"><img src="' + escHtml(s.logo_url) + '" alt=""></span>'
+        : '<span class="pa-grid-vendor-opt-logo">' + escHtml(vendorInitials(s.name)) + '</span>';
+      row.innerHTML = '<span class="pa-grid-vendor-opt-check">' + (selected ? '&#10003;' : '') + '</span>' +
+                      logoHtml +
+                      '<span class="pa-grid-vendor-opt-name">' + escHtml(s.name) + '</span>';
+      row.addEventListener('click', function () { toggleGridVendorFilter(s.name); });
+      popup.appendChild(row);
+    });
+  }
+
+  // Render the price range popup list (checkbox-style rows).
+  function renderGridPricePopup() {
+    var popup = document.getElementById('pa-grid-price-popup');
+    if (!popup) return;
+    popup.innerHTML = '';
+    var allRow = el('button', 'pa-grid-vendor-opt' + (state.gridPriceFilters.size === 0 ? ' is-selected' : ''));
+    allRow.type = 'button';
+    allRow.innerHTML = '<span class="pa-grid-vendor-opt-check"></span><span class="pa-grid-vendor-opt-name">Any Price</span>';
+    allRow.addEventListener('click', function () { toggleGridPriceFilter(''); });
+    popup.appendChild(allRow);
+    (UI.price_ranges || []).filter(function (r) { return r !== 'Any Price'; }).forEach(function (r) {
+      var selected = state.gridPriceFilters.has(r);
+      var row = el('button', 'pa-grid-vendor-opt' + (selected ? ' is-selected' : ''));
+      row.type = 'button';
+      row.innerHTML = '<span class="pa-grid-vendor-opt-check">' + (selected ? '&#10003;' : '') + '</span>' +
+                      '<span class="pa-grid-vendor-opt-name">' + escHtml(r) + '</span>';
+      row.addEventListener('click', function () { toggleGridPriceFilter(r); });
+      popup.appendChild(row);
+    });
+  }
+
+  // Populate desktop results-bar vendor and price range dropdowns.
+  // Called after products load (vendors derived from top_vendors) and again
+  // after full vendor data is loaded so newly discovered vendors appear.
+  function populateGridFilterDropdowns() {
+    renderGridVendorButton();
+    renderGridPriceButton();
+    var vPopup = document.getElementById('pa-grid-vendor-popup');
+    if (vPopup && !vPopup.hidden) renderGridVendorPopup();
+    var pPopup = document.getElementById('pa-grid-price-popup');
+    if (pPopup && !pPopup.hidden) renderGridPricePopup();
   }
 
   // ─── Init ────────────────────────────────────────────────────────────────

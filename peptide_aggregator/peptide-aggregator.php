@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Peptide Aggregator
  * Description: CMS-driven frontend and admin bridge for the AminoPrices FastAPI backend.
- * Version: 17.0.45
+ * Version: 17.0.62
  * Author: Peptide Aggregator
  */
 
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('PA_PLUGIN_VERSION', '17.0.45');
+define('PA_PLUGIN_VERSION', '17.0.62');
 define('PA_PLUGIN_FILE', __FILE__);
 define('PA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PA_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -44,6 +44,17 @@ final class Peptide_Aggregator_Plugin {
         new PA_Shortcodes($api_client);
         new PA_Rest($api_client);
         new PA_Cache_Warmer($api_client);
+
+        // One-time bust of any pa_prices_* transients written by an older
+        // build that had a broken cache-warmer apply_affiliate (it dropped
+        // the vendor URL when the affiliate template was a path suffix,
+        // leaving relative paths in the cache that pointed at the site
+        // origin instead of the vendor's product page).
+        if (get_option('pa_prices_cache_busted_v') !== PA_PLUGIN_VERSION) {
+            global $wpdb;
+            $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_pa_prices_%' OR option_name LIKE '_transient_timeout_pa_prices_%'");
+            update_option('pa_prices_cache_busted_v', PA_PLUGIN_VERSION, false);
+        }
     }
 }
 
