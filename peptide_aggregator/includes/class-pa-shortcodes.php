@@ -140,7 +140,7 @@ class PA_Shortcodes {
 .pa-about-stat{display:flex!important;flex-direction:column!important;align-items:center!important;gap:8px!important;min-width:0!important}
 .pa-about-actions{display:flex!important;justify-content:center!important;gap:12px!important;flex-wrap:wrap!important}
 .pa-about-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important}
-.pa-about-cta-wrap{display:flex!important;justify-content:center!important;margin:18px 0 4px!important;padding:0 8px!important}
+.pa-about-cta-wrap{display:flex!important;justify-content:center!important;margin:20px 0 28px!important;padding:0 8px!important}
 .pa-about-cta{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;width:100%!important;max-width:420px!important;min-height:58px!important;padding:14px 28px!important;border-radius:14px!important;background:var(--accent,#2563eb)!important;color:#ffffff!important;font-size:17px!important;font-weight:700!important;letter-spacing:0.01em!important;text-decoration:none!important;border:1.5px solid var(--accent,#2563eb)!important;box-shadow:0 6px 18px rgba(37,99,235,0.25)!important;transition:transform .15s ease,box-shadow .15s ease,background .15s ease!important;text-align:center!important;line-height:1.2!important}
 .pa-about-cta:hover,.pa-about-cta:focus{background:var(--accent-hover,#1d4ed8)!important;border-color:var(--accent-hover,#1d4ed8)!important;color:#ffffff!important;box-shadow:0 8px 22px rgba(37,99,235,0.32)!important;transform:translateY(-1px)!important}
 .pa-about-cta:active{transform:translateY(0)!important}
@@ -257,7 +257,7 @@ class PA_Shortcodes {
 .pa-about-shell .pa-about-contact-title{font-size:18px!important}
 .pa-about-shell .pa-about-contact-pill{flex-wrap:wrap!important;justify-content:center!important;word-break:break-all!important}
 .pa-about-cta{font-size:16px!important;min-height:54px!important;padding:12px 20px!important}
-.pa-about-cta-wrap{margin:14px 0 2px!important}
+.pa-about-cta-wrap{margin:16px 0 22px!important}
 }
 ';
     }
@@ -724,10 +724,6 @@ class PA_Shortcodes {
                         <div class="pa-about-stat-value"><?php echo esc_html($atts['speed_value']); ?></div>
                         <div class="pa-about-stat-label"><?php echo esc_html($atts['speed_label']); ?></div>
                     </div>
-                </div>
-                <div class="pa-about-actions">
-                    <a class="pa-about-btn is-outline" href="<?php echo esc_url($atts['suppliers_url']); ?>">Compare Suppliers</a>
-                    <a class="pa-about-btn is-primary" href="<?php echo esc_url($atts['prices_url']); ?>">View Prices</a>
                 </div>
             </section>
             <section class="pa-about-panels-section">
