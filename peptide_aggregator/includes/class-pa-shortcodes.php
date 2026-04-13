@@ -135,14 +135,20 @@ class PA_Shortcodes {
 .pa-shell .pa-scard{display:flex!important;flex-direction:column!important;gap:12px!important;padding:18px!important;cursor:pointer!important}
 .pa-shell .pa-scard-info-row{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:12px!important}
 .pa-shell.pa-about-shell{display:flex!important;flex-direction:column!important;gap:24px!important}
-.pa-about-stats{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:16px!important}
-.pa-about-stat{display:flex!important;flex-direction:column!important;align-items:center!important;gap:8px!important}
+.pa-about-stats{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+@media(min-width:760px){.pa-about-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:16px!important}}
+.pa-about-stat{display:flex!important;flex-direction:column!important;align-items:center!important;gap:8px!important;min-width:0!important}
 .pa-about-actions{display:flex!important;justify-content:center!important;gap:12px!important;flex-wrap:wrap!important}
-.pa-about-btn{display:inline-flex!important;align-items:center!important}
-.pa-about-panels{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:20px!important}
+.pa-about-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important}
+.pa-about-cta-wrap{display:flex!important;justify-content:center!important;margin:18px 0 4px!important;padding:0 8px!important}
+.pa-about-cta{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;width:100%!important;max-width:420px!important;min-height:58px!important;padding:14px 28px!important;border-radius:14px!important;background:var(--accent,#2563eb)!important;color:#ffffff!important;font-size:17px!important;font-weight:700!important;letter-spacing:0.01em!important;text-decoration:none!important;border:1.5px solid var(--accent,#2563eb)!important;box-shadow:0 6px 18px rgba(37,99,235,0.25)!important;transition:transform .15s ease,box-shadow .15s ease,background .15s ease!important;text-align:center!important;line-height:1.2!important}
+.pa-about-cta:hover,.pa-about-cta:focus{background:var(--accent-hover,#1d4ed8)!important;border-color:var(--accent-hover,#1d4ed8)!important;color:#ffffff!important;box-shadow:0 8px 22px rgba(37,99,235,0.32)!important;transform:translateY(-1px)!important}
+.pa-about-cta:active{transform:translateY(0)!important}
+.pa-about-panels{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
+@media(min-width:820px){.pa-about-panels{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:20px!important}}
 .pa-about-list{display:flex!important;flex-direction:column!important;gap:8px!important}
 .pa-about-list-item{display:flex!important;align-items:center!important;gap:10px!important}
-.pa-about-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
+.pa-about-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
 .pa-about-mini{display:flex!important;align-items:center!important;gap:8px!important}
 .pa-about-stat-icon,.pa-about-list-icon,.pa-about-mini-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
 .pa-about-contact-pill{display:inline-flex!important;align-items:center!important;gap:8px!important}
@@ -235,6 +241,23 @@ class PA_Shortcodes {
 .pa-shell .pa-bar-icons{gap:2px!important}
 .pa-shell .pa-bar-icon{width:26px!important;height:26px!important}
 .pa-shell .pa-view-toggle{display:none!important}
+.pa-about-shell{gap:16px!important}
+.pa-about-shell .pa-about-card{padding:18px 14px!important}
+.pa-about-shell .pa-about-title{font-size:22px!important;line-height:1.25!important;text-align:center!important}
+.pa-about-shell .pa-about-lead{font-size:14px!important;line-height:1.5!important;text-align:center!important}
+.pa-about-shell .pa-about-stat{padding:14px 8px!important}
+.pa-about-shell .pa-about-stat-value{font-size:22px!important}
+.pa-about-shell .pa-about-stat-label{font-size:11px!important}
+.pa-about-shell .pa-about-actions{flex-direction:column!important;align-items:stretch!important}
+.pa-about-shell .pa-about-actions .pa-about-btn{width:100%!important;max-width:100%!important}
+.pa-about-shell .pa-about-panel{padding:16px 14px!important}
+.pa-about-shell .pa-about-panel-title{font-size:17px!important}
+.pa-about-shell .pa-about-panel-lead{font-size:13px!important}
+.pa-about-shell .pa-about-contact-card{padding:18px 14px!important;text-align:center!important}
+.pa-about-shell .pa-about-contact-title{font-size:18px!important}
+.pa-about-shell .pa-about-contact-pill{flex-wrap:wrap!important;justify-content:center!important;word-break:break-all!important}
+.pa-about-cta{font-size:16px!important;min-height:54px!important;padding:12px 20px!important}
+.pa-about-cta-wrap{margin:14px 0 2px!important}
 }
 ';
     }
@@ -649,6 +672,15 @@ class PA_Shortcodes {
                 </div>
                 <h1 class="pa-about-title"><?php echo esc_html($atts['title']); ?></h1>
                 <p class="pa-about-lead"><?php echo esc_html($atts['lead']); ?></p>
+                <div class="pa-about-cta-wrap">
+                    <a class="pa-about-cta" href="<?php echo esc_url($atts['prices_url']); ?>">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"></circle>
+                            <line x1="20" y1="20" x2="16.5" y2="16.5"></line>
+                        </svg>
+                        <span>Check price tool</span>
+                    </a>
+                </div>
                 <div class="pa-about-stats">
                     <div class="pa-about-stat">
                         <span class="pa-about-stat-icon is-teal" aria-hidden="true">
