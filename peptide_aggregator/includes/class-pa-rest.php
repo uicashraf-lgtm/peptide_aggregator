@@ -368,6 +368,15 @@ class PA_Rest {
             set_transient('pa_products_cache', $products, 30 * MINUTE_IN_SECONDS);
         } // end cache miss block
 
+        // Queue any brand-new product IDs in the "pending review" list BEFORE
+        // the visibility filter runs. Without this, newly crawled products
+        // would leak to the frontend on their first fetch — detection is
+        // otherwise only triggered when an admin visits the admin pages, so
+        // the pending list is empty at the moment a public REST request hits.
+        if (is_array($products) && class_exists('PA_Admin')) {
+            PA_Admin::detect_new_products($products);
+        }
+
         // Filter out products that an admin has hidden via the "Visible" toggle.
         // Applied after the cache lookup so toggling visibility takes effect
         // immediately (the admin AJAX handler clears pa_products_cache on change,

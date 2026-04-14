@@ -146,6 +146,13 @@ class PA_Cache_Warmer {
             set_transient('pa_products_cache', $products, 30 * MINUTE_IN_SECONDS);
         }
 
+        // Queue any brand-new product IDs for admin review. Running this from
+        // the cron ensures newly crawled products get flagged even between
+        // frontend requests.
+        if (is_array($products) && class_exists('PA_Admin')) {
+            PA_Admin::detect_new_products($products);
+        }
+
         // Extract unique IDs (products list may have multiple entries per base product)
         $seen = array();
         $ids  = array();
