@@ -53,7 +53,13 @@ class PA_Admin {
      * that surfaces them — not only when an admin visits the admin pages.
      */
     public static function detect_new_products($products) {
-        if (!is_array($products)) {
+        // Refuse to operate on an empty or non-array product set. Previous
+        // versions seeded pa_known_product_ids from whatever they were handed,
+        // so a transient API failure that returned zero products would store
+        // an empty known-ids list — and every product on the next real fetch
+        // would then be flagged as "new", filling the review queue with the
+        // entire catalogue.
+        if (!is_array($products) || empty($products)) {
             return 0;
         }
         $current_ids = array();
@@ -69,16 +75,30 @@ class PA_Admin {
                 'category' => (string) ($p['category'] ?? ''),
             );
         }
-
-        $known = get_option('pa_known_product_ids', null);
-        if ($known === null) {
-            // First run — seed and exit without flagging anything.
-            update_option('pa_known_product_ids', array_keys($current_ids), false);
+        if (empty($current_ids)) {
             return 0;
         }
 
+        // Use a dedicated "seeded" flag rather than inspecting the known-ids
+        // option directly. The old check `$known === null` was false as soon
+        // as update_option() had ever written anything (even an empty array),
+        // which made recovery from a bad first seed impossible.
+        $seeded = (bool) get_option('pa_review_detection_seeded', false);
+        if (!$seeded) {
+            update_option('pa_known_product_ids', array_keys($current_ids), false);
+            update_option('pa_review_detection_seeded', true, false);
+            // Clear any stale pending entries that were queued during the
+            // broken seed state — users who upgraded into the bad state had
+            // their entire catalogue in the review queue, and wiping here
+            // gives them a clean slate without having to delete options by
+            // hand.
+            delete_option('pa_pending_review_products');
+            return 0;
+        }
+
+        $known     = (array) get_option('pa_known_product_ids', array());
         $known_map = array();
-        foreach ((array) $known as $kid) {
+        foreach ($known as $kid) {
             $known_map[(int) $kid] = true;
         }
 
