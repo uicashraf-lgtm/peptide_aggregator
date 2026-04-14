@@ -79,14 +79,23 @@ class PA_Admin {
             return 0;
         }
 
-        // Use a dedicated "seeded" flag rather than inspecting the known-ids
-        // option directly. The old check `$known === null` was false as soon
-        // as update_option() had ever written anything (even an empty array),
-        // which made recovery from a bad first seed impossible.
-        $seeded = (bool) get_option('pa_review_detection_seeded', false);
+        // v2 seeded flag — bumped from v1 so users stuck in the pre-fix
+        // broken state (every product queued, approvals re-flagging them)
+        // self-heal on the next detection pass after upgrading.
+        $seeded = (bool) get_option('pa_review_detection_seeded_v2', false);
         if (!$seeded) {
-            update_option('pa_known_product_ids', array_keys($current_ids), false);
-            update_option('pa_review_detection_seeded', true, false);
+            // Union whatever known-ids already exist with the current feed so
+            // we don't accidentally discard good state from a partial v1 seed.
+            $existing_known = (array) get_option('pa_known_product_ids', array());
+            $seed_map       = array();
+            foreach ($existing_known as $kid) {
+                $seed_map[(int) $kid] = true;
+            }
+            foreach ($current_ids as $pid => $_) {
+                $seed_map[$pid] = true;
+            }
+            update_option('pa_known_product_ids', array_keys($seed_map), false);
+            update_option('pa_review_detection_seeded_v2', true, false);
             // Clear any stale pending entries that were queued during the
             // broken seed state — users who upgraded into the bad state had
             // their entire catalogue in the review queue, and wiping here
@@ -120,9 +129,19 @@ class PA_Admin {
         if ($added > 0) {
             update_option('pa_pending_review_products', $pending, false);
         }
-        // Always refresh the known set to the current feed so temporary
-        // disappearances don't permanently lock products out of detection.
-        update_option('pa_known_product_ids', array_keys($current_ids), false);
+        // UNION the current fetch into the known-ids list — never shrink it.
+        // Different endpoints (/api/products vs /api/admin/products) can
+        // return slightly different ID sets, and overwriting with just the
+        // current fetch would drop IDs known only to the other endpoint,
+        // causing them to be re-flagged the next time that other endpoint
+        // ran detection (and undoing any approvals).
+        $merged_known = $known_map;
+        foreach ($current_ids as $pid => $_) {
+            $merged_known[$pid] = true;
+        }
+        if (count($merged_known) !== count($known_map)) {
+            update_option('pa_known_product_ids', array_keys($merged_known), false);
+        }
         return $added;
     }
 
@@ -2700,6 +2719,9 @@ class PA_Admin {
                 unset($pending[$pid]);
                 update_option('pa_pending_review_products', $pending, false);
             }
+            // Permanently mark this product as "known" so a subsequent
+            // detection run from any endpoint can't re-flag it.
+            self::mark_product_known($pid);
             // Invalidate frontend caches so the approved product appears immediately.
             delete_transient('pa_products_cache');
             PA_Rest::clear_prices_cache();
@@ -2723,10 +2745,35 @@ class PA_Admin {
             unset($pending[$pid]);
             update_option('pa_pending_review_products', $pending, false);
         }
+        // Mark as known so a subsequent detection run can't re-flag it.
+        self::mark_product_known($pid);
         // Invalidate frontend caches so the dismissed product appears immediately.
         delete_transient('pa_products_cache');
         PA_Rest::clear_prices_cache();
         wp_send_json_success();
+    }
+
+    /**
+     * Add a product id to the `pa_known_product_ids` option if not already
+     * present. Called from the approve/dismiss AJAX handlers so a resolved
+     * product can't re-enter the review queue even if a future detection run
+     * fetches a product feed that still lists it.
+     */
+    private static function mark_product_known($pid) {
+        $pid = (int) $pid;
+        if ($pid <= 0) {
+            return;
+        }
+        $known = (array) get_option('pa_known_product_ids', array());
+        $map   = array();
+        foreach ($known as $kid) {
+            $map[(int) $kid] = true;
+        }
+        if (isset($map[$pid])) {
+            return;
+        }
+        $map[$pid] = true;
+        update_option('pa_known_product_ids', array_keys($map), false);
     }
 
     public function ajax_toggle_product_status() {
