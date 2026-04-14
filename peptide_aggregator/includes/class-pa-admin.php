@@ -47,19 +47,9 @@ class PA_Admin {
      * On first invocation the known-ids list is seeded from the current feed
      * and nothing is flagged — otherwise every existing product would appear
      * in the queue on upgrade.
-     *
-     * Static so PA_Rest (and any other caller) can run detection before
-     * filtering, so newly crawled products get queued on the first request
-     * that surfaces them — not only when an admin visits the admin pages.
      */
-    public static function detect_new_products($products) {
-        // Refuse to operate on an empty or non-array product set. Previous
-        // versions seeded pa_known_product_ids from whatever they were handed,
-        // so a transient API failure that returned zero products would store
-        // an empty known-ids list — and every product on the next real fetch
-        // would then be flagged as "new", filling the review queue with the
-        // entire catalogue.
-        if (!is_array($products) || empty($products)) {
+    private function detect_new_products($products) {
+        if (!is_array($products)) {
             return 0;
         }
         $current_ids = array();
@@ -75,30 +65,16 @@ class PA_Admin {
                 'category' => (string) ($p['category'] ?? ''),
             );
         }
-        if (empty($current_ids)) {
-            return 0;
-        }
 
-        // Use a dedicated "seeded" flag rather than inspecting the known-ids
-        // option directly. The old check `$known === null` was false as soon
-        // as update_option() had ever written anything (even an empty array),
-        // which made recovery from a bad first seed impossible.
-        $seeded = (bool) get_option('pa_review_detection_seeded', false);
-        if (!$seeded) {
+        $known = get_option('pa_known_product_ids', null);
+        if ($known === null) {
+            // First run — seed and exit without flagging anything.
             update_option('pa_known_product_ids', array_keys($current_ids), false);
-            update_option('pa_review_detection_seeded', true, false);
-            // Clear any stale pending entries that were queued during the
-            // broken seed state — users who upgraded into the bad state had
-            // their entire catalogue in the review queue, and wiping here
-            // gives them a clean slate without having to delete options by
-            // hand.
-            delete_option('pa_pending_review_products');
             return 0;
         }
 
-        $known     = (array) get_option('pa_known_product_ids', array());
         $known_map = array();
-        foreach ($known as $kid) {
+        foreach ((array) $known as $kid) {
             $known_map[(int) $kid] = true;
         }
 
@@ -819,7 +795,7 @@ class PA_Admin {
         $products = $products_resp['ok'] && is_array($products_resp['data']) ? $products_resp['data'] : array();
 
         // Queue any brand-new (never-before-seen) products for admin review.
-        self::detect_new_products($products);
+        $this->detect_new_products($products);
 
         // The admin API endpoint may not include the same tags that appear on the
         // public-facing frontend (which uses /api/products). Fetch the public
@@ -2496,7 +2472,7 @@ class PA_Admin {
         $products = ($products_resp['ok'] ?? false) && is_array($products_resp['data'] ?? null)
             ? $products_resp['data']
             : array();
-        self::detect_new_products($products);
+        $this->detect_new_products($products);
 
         $pending = (array) get_option('pa_pending_review_products', array());
 
