@@ -47,12 +47,8 @@ class PA_Admin {
      * On first invocation the known-ids list is seeded from the current feed
      * and nothing is flagged — otherwise every existing product would appear
      * in the queue on upgrade.
-     *
-     * Static so PA_Rest (and any other caller) can run detection before
-     * filtering, so newly crawled products get queued on the first request
-     * that surfaces them — not only when an admin visits the admin pages.
      */
-    public static function detect_new_products($products) {
+    private function detect_new_products($products) {
         if (!is_array($products)) {
             return 0;
         }
@@ -799,7 +795,7 @@ class PA_Admin {
         $products = $products_resp['ok'] && is_array($products_resp['data']) ? $products_resp['data'] : array();
 
         // Queue any brand-new (never-before-seen) products for admin review.
-        self::detect_new_products($products);
+        $this->detect_new_products($products);
 
         // The admin API endpoint may not include the same tags that appear on the
         // public-facing frontend (which uses /api/products). Fetch the public
@@ -2476,7 +2472,7 @@ class PA_Admin {
         $products = ($products_resp['ok'] ?? false) && is_array($products_resp['data'] ?? null)
             ? $products_resp['data']
             : array();
-        self::detect_new_products($products);
+        $this->detect_new_products($products);
 
         $pending = (array) get_option('pa_pending_review_products', array());
 
